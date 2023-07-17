@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>bonsai.sgen</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <VersionPrefix>0.1.0</VersionPrefix>
     <Nullable>enable</Nullable>
@@ -12,6 +13,8 @@
     <PackageReference Include="NJsonSchema.CodeGeneration" Version="10.9.0" />
     <PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="10.9.0" />
     <PackageReference Include="NJsonSchema.Yaml" Version="10.9.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="System.CodeDom" Version="6.0.0" />
   </ItemGroup>
 
 </Project>

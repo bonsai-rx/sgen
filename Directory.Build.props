@@ -2,6 +2,7 @@
 <Project>
   <PropertyGroup>
     <Authors>Bonsai</Authors>
+    <PackageId>Bonsai.Sgen</PackageId>
     <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <Copyright>Copyright © Bonsai Foundation CIC 2023</Copyright>
@@ -11,7 +12,6 @@
     <PackageProjectUrl>https://bonsai-rx.org/sgen</PackageProjectUrl>
     <RepositoryUrl>https://github.com/bonsai-rx/sgen.git</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <ToolCommandName>bonsai.sgen</ToolCommandName>
     <RepositoryType>git</RepositoryType>
     <VersionSuffix></VersionSuffix>
     <PackAsTool>true</PackAsTool>
