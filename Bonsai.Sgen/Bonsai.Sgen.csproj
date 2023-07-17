@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NJsonSchema.CodeGeneration" Version="10.9.0" />
+    <PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="10.9.0" />
+    <PackageReference Include="NJsonSchema.Yaml" Version="10.9.0" />
+  </ItemGroup>
+
+</Project>
