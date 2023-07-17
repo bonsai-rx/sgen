@@ -4,7 +4,9 @@
     <Authors>Bonsai</Authors>
     <PackageId>Bonsai.Sgen</PackageId>
     <PackageIcon>icon.png</PackageIcon>
+    <Description>A tool for automatically generating YML serialization classes from schema files.</Description>
     <ToolCommandName>bonsai.sgen</ToolCommandName>
+    <PackageTags>Bonsai Rx Sgen Schema Serializer Generators</PackageTags>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <Copyright>Copyright © Bonsai Foundation CIC 2023</Copyright>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -13,7 +15,7 @@
     <PackageProjectUrl>https://bonsai-rx.org/sgen</PackageProjectUrl>
     <RepositoryUrl>https://github.com/bonsai-rx/sgen.git</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <VersionSuffix>build230717</VersionSuffix>
+    <VersionSuffix>build230718</VersionSuffix>
     <IncludeSymbols>true</IncludeSymbols>
     <RepositoryType>git</RepositoryType>
     <PackAsTool>true</PackAsTool>
