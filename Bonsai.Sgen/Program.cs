@@ -38,7 +38,7 @@ namespace Bonsai.Sgen
                     ArrayType = "System.Collections.Generic.IList"
                 };
 
-                var generator = new CSharpGenerator(schema, settings);
+                var generator = new CSharpCodeDomGenerator(schema, settings);
                 var code = generator.GenerateFile();
                 File.WriteAllText(outputFilePath, code);
             }, schemaPath, generatorNamespace, outputPath);
