@@ -1,6 +1,8 @@
 ﻿using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.ComponentModel;
+using System.Reactive.Linq;
+using System.Text;
 using System.Xml.Serialization;
 using NJsonSchema.CodeGeneration;
 using NJsonSchema.CodeGeneration.CSharp.Models;
@@ -81,6 +83,48 @@ namespace Bonsai.Sgen
 
                 type.Members.Add(fieldDeclaration);
                 type.Members.Add(propertyDeclaration);
+            }
+
+            if (Model.GenerateJsonMethods)
+            {
+                var processMethod = new CodeMemberMethod
+                {
+                    Name = "Process",
+                    Attributes = MemberAttributes.Public | MemberAttributes.Final,
+                    ReturnType = new CodeTypeReference(typeof(IObservable<>))
+                    {
+                        TypeArguments = { new CodeTypeReference(Model.ClassName) }
+                    }
+                };
+                var propertyAssignments = new StringBuilder();
+                foreach (var property in Model.Properties)
+                {
+                    if (propertyAssignments.Length > 0)
+                    {
+                        propertyAssignments.AppendLine(",");
+                    }
+                    propertyAssignments.Append(
+                        $"                {property.PropertyName} = {property.FieldName}");
+                }
+                processMethod.Statements.Add(new CodeMethodReturnStatement(
+                    new CodeMethodInvokeExpression(
+                        new CodeMethodReferenceExpression(
+                            new CodeTypeReferenceExpression(typeof(Observable)),
+                            nameof(Observable.Defer)),
+                        new CodeSnippetExpression(
+                            @$"() => System.Reactive.Linq.Observable.Return(
+            new {Model.ClassName}
+            {{
+{propertyAssignments}
+            }}"))));
+                type.Members.Add(processMethod);
+                type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference(typeof(CombinatorAttribute))));
+                type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference(typeof(WorkflowElementCategoryAttribute)),
+                    new CodeAttributeArgument(new CodeFieldReferenceExpression(
+                        new CodeTypeReferenceExpression(typeof(ElementCategory)),
+                        nameof(ElementCategory.Source)))));
             }
 
             using var writer = new StringWriter();

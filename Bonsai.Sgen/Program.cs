@@ -31,7 +31,7 @@ namespace Bonsai.Sgen
                 {
                     Namespace = generatorNamespace,
                     GenerateDataAnnotations = false,
-                    GenerateJsonMethods = false,
+                    GenerateJsonMethods = true,
                     JsonLibrary = CSharpJsonLibrary.NewtonsoftJson,
                     ArrayBaseType = "System.Collections.Generic.IList",
                     ArrayType = "System.Collections.Generic.IList"
