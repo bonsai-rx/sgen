@@ -14,6 +14,7 @@
     <RepositoryUrl>https://github.com/bonsai-rx/sgen.git</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <VersionSuffix>build230717</VersionSuffix>
+    <IncludeSymbols>true</IncludeSymbols>
     <RepositoryType>git</RepositoryType>
     <PackAsTool>true</PackAsTool>
     <Features>strict</Features>
