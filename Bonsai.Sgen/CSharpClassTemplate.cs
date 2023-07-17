@@ -115,7 +115,7 @@ namespace Bonsai.Sgen
             new {Model.ClassName}
             {{
 {propertyAssignments}
-            }}"))));
+            }})"))));
                 type.Members.Add(processMethod);
                 type.CustomAttributes.Add(new CodeAttributeDeclaration(
                     new CodeTypeReference("Bonsai.CombinatorAttribute")));
