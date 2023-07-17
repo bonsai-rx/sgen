@@ -43,6 +43,8 @@ namespace Bonsai.Sgen
                 {
                     outputFilePath = $"{generatorNamespace}.Generated.cs";
                 }
+
+                Console.WriteLine($"Writing schema classes to {outputFilePath}...");
                 File.WriteAllText(outputFilePath, code);
             }, schemaPath, generatorNamespace, outputPath);
             await rootCommand.InvokeAsync(args);
