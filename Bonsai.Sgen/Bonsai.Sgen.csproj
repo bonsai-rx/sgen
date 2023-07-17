@@ -3,7 +3,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <AssemblyName>bonsai.sgen</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <VersionPrefix>0.1.0</VersionPrefix>
     <Nullable>enable</Nullable>
