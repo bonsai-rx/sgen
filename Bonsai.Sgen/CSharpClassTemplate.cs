@@ -69,6 +69,16 @@ namespace Bonsai.Sgen
                         new CodeTypeReference(typeof(XmlIgnoreAttribute))));
                 }
 
+                if (property.HasDescription)
+                {
+                    propertyDeclaration.Comments.Add(new CodeCommentStatement("<summary>", docComment: true));
+                    propertyDeclaration.Comments.Add(new CodeCommentStatement(property.Description, docComment: true));
+                    propertyDeclaration.Comments.Add(new CodeCommentStatement("</summary>", docComment: true));
+                    propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DescriptionAttribute)),
+                        new CodeAttributeArgument(new CodePrimitiveExpression(property.Description))));
+                }
+
                 type.Members.Add(fieldDeclaration);
                 type.Members.Add(propertyDeclaration);
             }
