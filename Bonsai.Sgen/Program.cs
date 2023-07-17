@@ -18,7 +18,6 @@ namespace Bonsai.Sgen
                 description: "Specifies the namespace to use for all generated serialization classes.");
             var outputPath = new Option<string>(
                 name: "--output",
-                getDefaultValue: () => "GeneratedClasses.cs",
                 description: "Specifies the name of the file containing the generated code.");
             
             var rootCommand = new RootCommand("Tool for automatically generating YML serialization classes from schema files.");
@@ -40,6 +39,10 @@ namespace Bonsai.Sgen
 
                 var generator = new CSharpCodeDomGenerator(schema, settings);
                 var code = generator.GenerateFile();
+                if (string.IsNullOrEmpty(outputFilePath))
+                {
+                    outputFilePath = $"{generatorNamespace}.Generated.cs";
+                }
                 File.WriteAllText(outputFilePath, code);
             }, schemaPath, generatorNamespace, outputPath);
             await rootCommand.InvokeAsync(args);
