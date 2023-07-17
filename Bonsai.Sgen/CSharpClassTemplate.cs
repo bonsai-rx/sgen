@@ -1,7 +1,6 @@
 ﻿using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.ComponentModel;
-using System.Reactive.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using NJsonSchema.CodeGeneration;
@@ -109,8 +108,8 @@ namespace Bonsai.Sgen
                 processMethod.Statements.Add(new CodeMethodReturnStatement(
                     new CodeMethodInvokeExpression(
                         new CodeMethodReferenceExpression(
-                            new CodeTypeReferenceExpression(typeof(Observable)),
-                            nameof(Observable.Defer)),
+                            new CodeTypeReferenceExpression("System.Reactive.Linq.Observable"),
+                            "Defer"),
                         new CodeSnippetExpression(
                             @$"() => System.Reactive.Linq.Observable.Return(
             new {Model.ClassName}
@@ -119,12 +118,12 @@ namespace Bonsai.Sgen
             }}"))));
                 type.Members.Add(processMethod);
                 type.CustomAttributes.Add(new CodeAttributeDeclaration(
-                    new CodeTypeReference(typeof(CombinatorAttribute))));
+                    new CodeTypeReference("Bonsai.CombinatorAttribute")));
                 type.CustomAttributes.Add(new CodeAttributeDeclaration(
-                    new CodeTypeReference(typeof(WorkflowElementCategoryAttribute)),
+                    new CodeTypeReference("Bonsai.WorkflowElementCategoryAttribute"),
                     new CodeAttributeArgument(new CodeFieldReferenceExpression(
-                        new CodeTypeReferenceExpression(typeof(ElementCategory)),
-                        nameof(ElementCategory.Source)))));
+                        new CodeTypeReferenceExpression("Bonsai.ElementCategory"),
+                        "Source"))));
             }
 
             using var writer = new StringWriter();
