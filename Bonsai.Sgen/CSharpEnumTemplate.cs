@@ -2,6 +2,8 @@
 using System.CodeDom.Compiler;
 using NJsonSchema.CodeGeneration;
 using NJsonSchema.CodeGeneration.CSharp.Models;
+using YamlDotNet.Serialization;
+using System.Runtime.Serialization;
 
 namespace Bonsai.Sgen
 {
@@ -45,6 +47,24 @@ namespace Bonsai.Sgen
             foreach (var enumValue in Model.Enums)
             {
                 var valueDeclaration = new CodeMemberField(type.Name, enumValue.Name);
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson) ||
+                    Settings.SerializerLibraries.HasFlag(SerializerLibraries.SystemTextJson))
+                {
+                    valueDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(EnumMemberAttribute)),
+                        new CodeAttributeArgument(
+                            nameof(EnumMemberAttribute.Value),
+                            new CodePrimitiveExpression(enumValue.Value))));
+                }
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+                {
+                    valueDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(YamlMemberAttribute)),
+                        new CodeAttributeArgument(
+                            nameof(YamlMemberAttribute.Alias),
+                            new CodePrimitiveExpression(enumValue.Value))));
+                }
+
                 valueDeclaration.InitExpression = new CodeSnippetExpression(enumValue.InternalValue);
                 type.Members.Add(valueDeclaration);
             }
