@@ -11,7 +11,7 @@ namespace Bonsai.Sgen
             var schemaPath = new Option<string>(
                 name: "--schema",
                 getDefaultValue: () => "schema.json",
-                description: "Generates YML serialization classes for data types in the specified schema file.");
+                description: "Generates serialization classes for data types in the specified schema file.");
             var generatorNamespace = new Option<string?>(
                 name: "--namespace",
                 getDefaultValue: () => "DataSchema",
@@ -19,20 +19,36 @@ namespace Bonsai.Sgen
             var outputPath = new Option<string>(
                 name: "--output",
                 description: "Specifies the name of the file containing the generated code.");
+            var serializerLibrary = new Option<SerializerLibraries>(
+                name: "--serializer",
+                description: "Specifies the serializer data annotations to include in the generated classes.",
+                parseArgument: result =>
+                {
+                    SerializerLibraries serializers = default;
+                    foreach (var token in result.Tokens)
+                    {
+                        serializers |= (SerializerLibraries)Enum.Parse(typeof(SerializerLibraries), token.Value);
+                    }
+                    return serializers;
+                }) { AllowMultipleArgumentsPerToken = true, Arity = ArgumentArity.OneOrMore };
+            serializerLibrary.FromAmong(typeof(SerializerLibraries).GetEnumNames());
+            serializerLibrary.SetDefaultValue(SerializerLibraries.YamlDotNet);
             
             var rootCommand = new RootCommand("Tool for automatically generating YML serialization classes from schema files.");
             rootCommand.AddOption(schemaPath);
             rootCommand.AddOption(generatorNamespace);
             rootCommand.AddOption(outputPath);
-            rootCommand.SetHandler(async (filePath, generatorNamespace, outputFilePath) =>
+            rootCommand.AddOption(serializerLibrary);
+            rootCommand.SetHandler(async (filePath, generatorNamespace, outputFilePath, serializerLibrary) =>
             {
                 var schema = await JsonSchema.FromFileAsync(filePath);
-                var settings = new CSharpGeneratorSettings
+                var settings = new CSharpCodeDomGeneratorSettings
                 {
                     Namespace = generatorNamespace,
                     GenerateDataAnnotations = false,
                     GenerateJsonMethods = true,
                     JsonLibrary = CSharpJsonLibrary.NewtonsoftJson,
+                    SerializerLibraries = serializerLibrary,
                     ArrayBaseType = "System.Collections.Generic.IList",
                     ArrayType = "System.Collections.Generic.IList"
                 };
@@ -46,7 +62,7 @@ namespace Bonsai.Sgen
 
                 Console.WriteLine($"Writing schema classes to {outputFilePath}...");
                 File.WriteAllText(outputFilePath, code);
-            }, schemaPath, generatorNamespace, outputPath);
+            }, schemaPath, generatorNamespace, outputPath, serializerLibrary);
             await rootCommand.InvokeAsync(args);
         }
     }

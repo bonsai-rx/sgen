@@ -2,19 +2,27 @@
 using System.CodeDom.Compiler;
 using System.ComponentModel;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Xml.Serialization;
+using Newtonsoft.Json;
 using NJsonSchema.CodeGeneration;
 using NJsonSchema.CodeGeneration.CSharp.Models;
+using YamlDotNet.Serialization;
 
 namespace Bonsai.Sgen
 {
     internal class CSharpClassTemplate : ITemplate
     {
-        public CSharpClassTemplate(ClassTemplateModel model, CodeDomProvider provider, CodeGeneratorOptions options)
+        public CSharpClassTemplate(
+            ClassTemplateModel model,
+            CodeDomProvider provider,
+            CodeGeneratorOptions options,
+            CSharpCodeDomGeneratorSettings settings)
         {
             Model = model;
             Provider = provider;
             Options = options;
+            Settings = settings;
         }
 
         public ClassTemplateModel Model { get; }
@@ -22,6 +30,8 @@ namespace Bonsai.Sgen
         public CodeDomProvider Provider { get; }
 
         public CodeGeneratorOptions Options { get; }
+
+        public CSharpCodeDomGeneratorSettings Settings { get; }
 
         public string Render()
         {
@@ -68,6 +78,27 @@ namespace Bonsai.Sgen
                 {
                     propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(XmlIgnoreAttribute))));
+                }
+
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+                {
+                    propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(JsonPropertyAttribute)),
+                        new CodeAttributeArgument(new CodePrimitiveExpression(property.Name))));
+                }
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.SystemTextJson))
+                {
+                    propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(JsonPropertyNameAttribute)),
+                        new CodeAttributeArgument(new CodePrimitiveExpression(property.Name))));
+                }
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+                {
+                    propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(YamlMemberAttribute)),
+                        new CodeAttributeArgument(
+                            nameof(YamlMemberAttribute.Alias),
+                            new CodePrimitiveExpression(property.Name))));
                 }
 
                 if (property.HasDescription)

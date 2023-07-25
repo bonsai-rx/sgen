@@ -7,11 +7,16 @@ namespace Bonsai.Sgen
 {
     internal class CSharpEnumTemplate : ITemplate
     {
-        public CSharpEnumTemplate(EnumTemplateModel model, CodeDomProvider provider, CodeGeneratorOptions options)
+        public CSharpEnumTemplate(
+            EnumTemplateModel model,
+            CodeDomProvider provider,
+            CodeGeneratorOptions options,
+            CSharpCodeDomGeneratorSettings settings)
         {
             Model = model;
             Provider = provider;
             Options = options;
+            Settings = settings;
         }
 
         public EnumTemplateModel Model { get; }
@@ -19,6 +24,8 @@ namespace Bonsai.Sgen
         public CodeDomProvider Provider { get; }
 
         public CodeGeneratorOptions Options { get; }
+
+        public CSharpCodeDomGeneratorSettings Settings { get; }
 
         public string Render()
         {
