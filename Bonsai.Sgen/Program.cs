@@ -16,6 +16,9 @@ namespace Bonsai.Sgen
                 name: "--namespace",
                 getDefaultValue: () => "DataSchema",
                 description: "Specifies the namespace to use for all generated serialization classes.");
+            var generatorTypeName = new Option<string?>(
+                name: "--root",
+                description: "Specifies the name of the class used to represent the schema root element.");
             var outputPath = new Option<string>(
                 name: "--output",
                 description: "Specifies the name of the file containing the generated code.");
@@ -37,11 +40,23 @@ namespace Bonsai.Sgen
             var rootCommand = new RootCommand("Tool for automatically generating YML serialization classes from schema files.");
             rootCommand.AddOption(schemaPath);
             rootCommand.AddOption(generatorNamespace);
+            rootCommand.AddOption(generatorTypeName);
             rootCommand.AddOption(outputPath);
             rootCommand.AddOption(serializerLibrary);
-            rootCommand.SetHandler(async (filePath, generatorNamespace, outputFilePath, serializerLibrary) =>
+            rootCommand.SetHandler(async (filePath, generatorNamespace, generatorTypeName, outputFilePath, serializerLibrary) =>
             {
                 var schema = await JsonSchema.FromFileAsync(filePath);
+                if (string.IsNullOrEmpty(generatorTypeName))
+                {
+                    if (!schema.HasTypeNameTitle)
+                    {
+                        Console.Error.WriteLine("No root name is specified and schema has no title that can be used as type name.");
+                        return;
+                    }
+
+                    generatorTypeName = schema.Title;
+                }
+
                 var settings = new CSharpCodeDomGeneratorSettings
                 {
                     Namespace = generatorNamespace,
@@ -54,7 +69,7 @@ namespace Bonsai.Sgen
                 };
 
                 var generator = new CSharpCodeDomGenerator(schema, settings);
-                var code = generator.GenerateFile();
+                var code = generator.GenerateFile(generatorTypeName);
                 if (string.IsNullOrEmpty(outputFilePath))
                 {
                     outputFilePath = $"{generatorNamespace}.Generated.cs";
@@ -62,7 +77,7 @@ namespace Bonsai.Sgen
 
                 Console.WriteLine($"Writing schema classes to {outputFilePath}...");
                 File.WriteAllText(outputFilePath, code);
-            }, schemaPath, generatorNamespace, outputPath, serializerLibrary);
+            }, schemaPath, generatorNamespace, generatorTypeName, outputPath, serializerLibrary);
             await rootCommand.InvokeAsync(args);
         }
     }
