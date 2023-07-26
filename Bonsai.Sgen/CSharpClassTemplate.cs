@@ -81,9 +81,18 @@ namespace Bonsai.Sgen
 
                 if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
                 {
-                    propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    var jsonProperty = new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(JsonPropertyAttribute)),
-                        new CodeAttributeArgument(new CodePrimitiveExpression(property.Name))));
+                        new CodeAttributeArgument(new CodePrimitiveExpression(property.Name)));
+                    if (property.IsRequired && Settings.RequiredPropertiesMustBeDefined)
+                    {
+                        jsonProperty.Arguments.Add(new CodeAttributeArgument(
+                            nameof(JsonPropertyAttribute.Required),
+                            new CodeFieldReferenceExpression(
+                                new CodeTypeReferenceExpression(typeof(Required)),
+                                nameof(Required.Always))));
+                    }
+                    propertyDeclaration.CustomAttributes.Add(jsonProperty);
                 }
                 if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
                 {
