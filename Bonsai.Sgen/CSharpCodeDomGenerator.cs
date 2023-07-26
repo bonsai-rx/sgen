@@ -60,5 +60,34 @@ namespace Bonsai.Sgen
             var template = new CSharpEnumTemplate(model, _provider, _options, Settings);
             return new CodeArtifact(typeName, CodeArtifactType.Enum, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
         }
+
+        private CodeArtifact GenerateSerializer(CSharpSerializerTemplate template)
+        {
+            return new CodeArtifact(template.ClassName, CodeArtifactType.Class, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
+        }
+
+        public override IEnumerable<CodeArtifact> GenerateTypes()
+        {
+            var types = base.GenerateTypes();
+            var extraTypes = new List<CodeArtifact>();
+            var schema = (JsonSchema)RootObject;
+            var classTypes = types.Where(type => type.Type == CodeArtifactType.Class);
+            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+            {
+                var serializer = new CSharpJsonSerializerTemplate(classTypes, _provider, _options, Settings);
+                var deserializer = new CSharpJsonDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
+                extraTypes.Add(GenerateSerializer(serializer));
+                extraTypes.Add(GenerateSerializer(deserializer));
+            }
+            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+            {
+                var serializer = new CSharpYamlSerializerTemplate(classTypes, _provider, _options, Settings);
+                var deserializer = new CSharpYamlDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
+                extraTypes.Add(GenerateSerializer(serializer));
+                extraTypes.Add(GenerateSerializer(deserializer));
+            }
+
+            return types.Concat(extraTypes);
+        }
     }
 }
