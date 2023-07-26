@@ -5,7 +5,6 @@ using System.Text;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 using NJsonSchema.CodeGeneration;
-using NJsonSchema.CodeGeneration.CSharp.Models;
 using YamlDotNet.Serialization;
 
 namespace Bonsai.Sgen
@@ -13,7 +12,7 @@ namespace Bonsai.Sgen
     internal class CSharpClassTemplate : ITemplate
     {
         public CSharpClassTemplate(
-            ClassTemplateModel model,
+            CSharpClassTemplateModel model,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
@@ -24,7 +23,7 @@ namespace Bonsai.Sgen
             Settings = settings;
         }
 
-        public ClassTemplateModel Model { get; }
+        public CSharpClassTemplateModel Model { get; }
 
         public CodeDomProvider Provider { get; }
 
@@ -47,6 +46,7 @@ namespace Bonsai.Sgen
 
             foreach (var property in Model.Properties)
             {
+                Model.Schema.ActualProperties.TryGetValue(property.Name, out var propertySchema);
                 var isPrimitive = PrimitiveTypes.TryGetValue(property.Type, out string? underlyingType);
                 var fieldDeclaration = new CodeMemberField(
                     isPrimitive ? underlyingType : property.Type,
@@ -54,6 +54,10 @@ namespace Bonsai.Sgen
                 if (property.HasDefaultValue)
                 {
                     fieldDeclaration.InitExpression = new CodeSnippetExpression(property.DefaultValue);
+                }
+                else if (propertySchema?.IsArray is true)
+                {
+                    fieldDeclaration.InitExpression = new CodeObjectCreateExpression(fieldDeclaration.Type);
                 }
 
                 var propertyDeclaration = new CodeMemberProperty

@@ -49,7 +49,7 @@ namespace Bonsai.Sgen
 
         private CodeArtifact GenerateClass(JsonSchema schema, string typeName)
         {
-            var model = new ClassTemplateModel(typeName, Settings, _resolver, schema, RootObject);
+            var model = new CSharpClassTemplateModel(typeName, Settings, _resolver, schema, RootObject);
             var template = new CSharpClassTemplate(model, _provider, _options, Settings);
             return new CodeArtifact(typeName, model.BaseClassName, CodeArtifactType.Class, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
         }

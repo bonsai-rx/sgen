@@ -49,8 +49,8 @@ namespace Bonsai.Sgen
                     GenerateJsonMethods = true,
                     JsonLibrary = CSharpJsonLibrary.NewtonsoftJson,
                     SerializerLibraries = serializerLibrary,
-                    ArrayBaseType = "System.Collections.Generic.IList",
-                    ArrayType = "System.Collections.Generic.IList"
+                    ArrayBaseType = "System.Collections.Generic.List",
+                    ArrayType = "System.Collections.Generic.List"
                 };
 
                 var generator = new CSharpCodeDomGenerator(schema, settings);
