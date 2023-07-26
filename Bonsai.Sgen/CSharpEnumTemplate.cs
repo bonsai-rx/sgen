@@ -47,8 +47,7 @@ namespace Bonsai.Sgen
             foreach (var enumValue in Model.Enums)
             {
                 var valueDeclaration = new CodeMemberField(type.Name, enumValue.Name);
-                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson) ||
-                    Settings.SerializerLibraries.HasFlag(SerializerLibraries.SystemTextJson))
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
                 {
                     valueDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(EnumMemberAttribute)),

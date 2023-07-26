@@ -2,7 +2,6 @@
 using System.CodeDom.Compiler;
 using System.ComponentModel;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 using NJsonSchema.CodeGeneration;
@@ -84,12 +83,6 @@ namespace Bonsai.Sgen
                 {
                     propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(JsonPropertyAttribute)),
-                        new CodeAttributeArgument(new CodePrimitiveExpression(property.Name))));
-                }
-                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.SystemTextJson))
-                {
-                    propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
-                        new CodeTypeReference(typeof(JsonPropertyNameAttribute)),
                         new CodeAttributeArgument(new CodePrimitiveExpression(property.Name))));
                 }
                 if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
