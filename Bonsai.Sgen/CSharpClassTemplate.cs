@@ -3,25 +3,33 @@ using System.CodeDom.Compiler;
 using System.ComponentModel;
 using System.Text;
 using System.Xml.Serialization;
+using Newtonsoft.Json;
 using NJsonSchema.CodeGeneration;
-using NJsonSchema.CodeGeneration.CSharp.Models;
+using YamlDotNet.Serialization;
 
 namespace Bonsai.Sgen
 {
     internal class CSharpClassTemplate : ITemplate
     {
-        public CSharpClassTemplate(ClassTemplateModel model, CodeDomProvider provider, CodeGeneratorOptions options)
+        public CSharpClassTemplate(
+            CSharpClassTemplateModel model,
+            CodeDomProvider provider,
+            CodeGeneratorOptions options,
+            CSharpCodeDomGeneratorSettings settings)
         {
             Model = model;
             Provider = provider;
             Options = options;
+            Settings = settings;
         }
 
-        public ClassTemplateModel Model { get; }
+        public CSharpClassTemplateModel Model { get; }
 
         public CodeDomProvider Provider { get; }
 
         public CodeGeneratorOptions Options { get; }
+
+        public CSharpCodeDomGeneratorSettings Settings { get; }
 
         public string Render()
         {
@@ -38,6 +46,7 @@ namespace Bonsai.Sgen
 
             foreach (var property in Model.Properties)
             {
+                Model.Schema.ActualProperties.TryGetValue(property.Name, out var propertySchema);
                 var isPrimitive = PrimitiveTypes.TryGetValue(property.Type, out string? underlyingType);
                 var fieldDeclaration = new CodeMemberField(
                     isPrimitive ? underlyingType : property.Type,
@@ -45,6 +54,10 @@ namespace Bonsai.Sgen
                 if (property.HasDefaultValue)
                 {
                     fieldDeclaration.InitExpression = new CodeSnippetExpression(property.DefaultValue);
+                }
+                else if (propertySchema?.IsArray is true)
+                {
+                    fieldDeclaration.InitExpression = new CodeObjectCreateExpression(fieldDeclaration.Type);
                 }
 
                 var propertyDeclaration = new CodeMemberProperty
@@ -68,6 +81,30 @@ namespace Bonsai.Sgen
                 {
                     propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(XmlIgnoreAttribute))));
+                }
+
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+                {
+                    var jsonProperty = new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(JsonPropertyAttribute)),
+                        new CodeAttributeArgument(new CodePrimitiveExpression(property.Name)));
+                    if (property.IsRequired && Settings.RequiredPropertiesMustBeDefined)
+                    {
+                        jsonProperty.Arguments.Add(new CodeAttributeArgument(
+                            nameof(JsonPropertyAttribute.Required),
+                            new CodeFieldReferenceExpression(
+                                new CodeTypeReferenceExpression(typeof(Required)),
+                                nameof(Required.Always))));
+                    }
+                    propertyDeclaration.CustomAttributes.Add(jsonProperty);
+                }
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+                {
+                    propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(YamlMemberAttribute)),
+                        new CodeAttributeArgument(
+                            nameof(YamlMemberAttribute.Alias),
+                            new CodePrimitiveExpression(property.Name))));
                 }
 
                 if (property.HasDescription)

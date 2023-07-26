@@ -2,16 +2,23 @@
 using System.CodeDom.Compiler;
 using NJsonSchema.CodeGeneration;
 using NJsonSchema.CodeGeneration.CSharp.Models;
+using YamlDotNet.Serialization;
+using System.Runtime.Serialization;
 
 namespace Bonsai.Sgen
 {
     internal class CSharpEnumTemplate : ITemplate
     {
-        public CSharpEnumTemplate(EnumTemplateModel model, CodeDomProvider provider, CodeGeneratorOptions options)
+        public CSharpEnumTemplate(
+            EnumTemplateModel model,
+            CodeDomProvider provider,
+            CodeGeneratorOptions options,
+            CSharpCodeDomGeneratorSettings settings)
         {
             Model = model;
             Provider = provider;
             Options = options;
+            Settings = settings;
         }
 
         public EnumTemplateModel Model { get; }
@@ -19,6 +26,8 @@ namespace Bonsai.Sgen
         public CodeDomProvider Provider { get; }
 
         public CodeGeneratorOptions Options { get; }
+
+        public CSharpCodeDomGeneratorSettings Settings { get; }
 
         public string Render()
         {
@@ -38,6 +47,23 @@ namespace Bonsai.Sgen
             foreach (var enumValue in Model.Enums)
             {
                 var valueDeclaration = new CodeMemberField(type.Name, enumValue.Name);
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+                {
+                    valueDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(EnumMemberAttribute)),
+                        new CodeAttributeArgument(
+                            nameof(EnumMemberAttribute.Value),
+                            new CodePrimitiveExpression(enumValue.Value))));
+                }
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+                {
+                    valueDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(YamlMemberAttribute)),
+                        new CodeAttributeArgument(
+                            nameof(YamlMemberAttribute.Alias),
+                            new CodePrimitiveExpression(enumValue.Value))));
+                }
+
                 valueDeclaration.InitExpression = new CodeSnippetExpression(enumValue.InternalValue);
                 type.Members.Add(valueDeclaration);
             }
