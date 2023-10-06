@@ -64,6 +64,7 @@ namespace Bonsai.Sgen
                     GenerateJsonMethods = true,
                     JsonLibrary = CSharpJsonLibrary.NewtonsoftJson,
                     SerializerLibraries = serializerLibrary,
+                    ArrayInstanceType = "System.Collections.Generic.List",
                     ArrayBaseType = "System.Collections.Generic.List",
                     ArrayType = "System.Collections.Generic.List"
                 };
