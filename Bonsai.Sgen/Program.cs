@@ -8,10 +8,10 @@ namespace Bonsai.Sgen
     {
         static async Task Main(string[] args)
         {
-            var schemaPath = new Option<string>(
+            var schemaPath = new Option<FileInfo>(
                 name: "--schema",
-                getDefaultValue: () => "schema.json",
-                description: "Generates serialization classes for data types in the specified schema file.");
+                description: "Generates serialization classes for data types in the specified schema file.")
+                { IsRequired = true };
             var generatorNamespace = new Option<string?>(
                 name: "--namespace",
                 getDefaultValue: () => "DataSchema",
@@ -45,7 +45,7 @@ namespace Bonsai.Sgen
             rootCommand.AddOption(serializerLibrary);
             rootCommand.SetHandler(async (filePath, generatorNamespace, generatorTypeName, outputFilePath, serializerLibrary) =>
             {
-                var schema = await JsonSchema.FromFileAsync(filePath);
+                var schema = await JsonSchema.FromFileAsync(filePath.FullName);
                 if (string.IsNullOrEmpty(generatorTypeName))
                 {
                     if (!schema.HasTypeNameTitle)
