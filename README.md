@@ -11,12 +11,16 @@ Tool for automatically generating YML serialization classes from schema files
     dotnet tool install --local Bonsai.Sgen --version 0.1.0
     ```
 
-3. Run the suggested commands in your terminal, in the root folder where you want to run the tool from:
-
-4. Run the tool:
+3. To view the tool help reference documentation, run:
 
     ```cmd
-    dotnet bonsai.sgen
+    dotnet bonsai.sgen --help
+    ```
+
+4. To generate serialization classes from a schema file:
+
+    ```cmd
+    dotnet bonsai.sgen --schema schema.json
     ```
 
 5. Copy the generated class file to your project `Extensions` folder.
