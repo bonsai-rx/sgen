@@ -60,13 +60,7 @@ namespace Bonsai.Sgen
                 var settings = new CSharpCodeDomGeneratorSettings
                 {
                     Namespace = generatorNamespace,
-                    GenerateDataAnnotations = false,
-                    GenerateJsonMethods = true,
-                    JsonLibrary = CSharpJsonLibrary.NewtonsoftJson,
-                    SerializerLibraries = serializerLibraries,
-                    ArrayInstanceType = "System.Collections.Generic.List",
-                    ArrayBaseType = "System.Collections.Generic.List",
-                    ArrayType = "System.Collections.Generic.List"
+                    SerializerLibraries = serializerLibraries
                 };
 
                 var generator = new CSharpCodeDomGenerator(schema, settings);
