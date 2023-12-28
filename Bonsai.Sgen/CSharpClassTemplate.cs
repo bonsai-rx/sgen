@@ -34,6 +34,11 @@ namespace Bonsai.Sgen
         public string Render()
         {
             var type = new CodeTypeDeclaration(Model.ClassName) { IsPartial = true };
+            if (Model.BaseClass != null)
+            {
+                type.BaseTypes.Add(Model.BaseClassName);
+            }
+
             if (Model.HasDescription)
             {
                 type.Comments.Add(new CodeCommentStatement("<summary>", docComment: true));
@@ -133,7 +138,7 @@ namespace Bonsai.Sgen
                     }
                 };
                 var propertyAssignments = new StringBuilder();
-                foreach (var property in Model.Properties)
+                foreach (var property in Model.AllProperties)
                 {
                     if (propertyAssignments.Length > 0)
                     {
