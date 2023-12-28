@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NJsonSchema;
+using NJsonSchema.Generation;
 
 namespace Bonsai.Sgen.Tests
 {
@@ -26,9 +27,10 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public void GenerateIntegerEnum_SerializerAnnotationsUseIntegerValues()
         {
-            var schema = JsonSchema.FromType<Foo>();
+            var schema = JsonSchema.FromType<Foo>(new JsonSchemaGeneratorSettings { GenerateEnumMappingDescription = true });
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("/// 0 = A"));
             Assert.IsTrue(code.Contains("EnumMemberAttribute(Value=\"0\")"));
             Assert.IsTrue(code.Contains("YamlMemberAttribute(Alias=\"0\")"));
         }
