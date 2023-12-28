@@ -2,7 +2,6 @@
 <Project>
   <PropertyGroup>
     <Authors>Bonsai</Authors>
-    <PackageId>Bonsai.Sgen</PackageId>
     <PackageIcon>icon.png</PackageIcon>
     <Description>A tool for automatically generating YML serialization classes from schema files.</Description>
     <ToolCommandName>bonsai.sgen</ToolCommandName>
@@ -11,7 +10,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Copyright>Copyright © Bonsai Foundation CIC 2023</Copyright>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <PackageOutputPath>..\bin\$(Configuration)</PackageOutputPath>
     <PackageProjectUrl>https://bonsai-rx.org/sgen</PackageProjectUrl>
     <RepositoryUrl>https://github.com/bonsai-rx/sgen.git</RepositoryUrl>
@@ -23,7 +22,7 @@
     <Features>strict</Features>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <Content Include="..\LICENSE" PackagePath="/" />
     <Content Include="..\icon.png" PackagePath="/" />
     <Content Include="..\README.md" PackagePath="/" />
