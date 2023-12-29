@@ -34,6 +34,7 @@ namespace Bonsai.Sgen
         public string Render()
         {
             var type = new CodeTypeDeclaration(Model.ClassName) { IsPartial = true };
+            if (Model.IsAbstract) type.TypeAttributes |= System.Reflection.TypeAttributes.Abstract;
             if (Model.BaseClass != null)
             {
                 type.BaseTypes.Add(Model.BaseClassName);
@@ -126,7 +127,7 @@ namespace Bonsai.Sgen
                 type.Members.Add(propertyDeclaration);
             }
 
-            if (Model.GenerateJsonMethods)
+            if (Model.GenerateJsonMethods && !Model.IsAbstract)
             {
                 var processMethod = new CodeMemberMethod
                 {
