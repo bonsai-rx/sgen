@@ -5,6 +5,7 @@ using System.Text;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 using NJsonSchema.CodeGeneration;
+using NJsonSchema.Converters;
 using YamlDotNet.Serialization;
 
 namespace Bonsai.Sgen
@@ -35,6 +36,24 @@ namespace Bonsai.Sgen
         {
             var type = new CodeTypeDeclaration(Model.ClassName) { IsPartial = true };
             if (Model.IsAbstract) type.TypeAttributes |= System.Reflection.TypeAttributes.Abstract;
+            if (Model.HasDiscriminator)
+            {
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+                {
+                    type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(JsonConverter)),
+                        new CodeAttributeArgument(new CodeTypeOfExpression(nameof(JsonInheritanceConverter))),
+                        new CodeAttributeArgument(new CodePrimitiveExpression(Model.Discriminator))));
+                    foreach (var derivedModel in Model.DerivedClasses)
+                    {
+                        type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                            new CodeTypeReference(nameof(JsonInheritanceAttribute)),
+                            new CodeAttributeArgument(new CodePrimitiveExpression(derivedModel.Discriminator)),
+                            new CodeAttributeArgument(new CodeTypeOfExpression(derivedModel.ClassName))));
+                    }
+                }
+            }
+
             if (Model.HasDescription)
             {
                 type.Comments.Add(new CodeCommentStatement("<summary>", docComment: true));

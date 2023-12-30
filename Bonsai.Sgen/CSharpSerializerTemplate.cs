@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Xml.Serialization;
 using NJsonSchema;
 using NJsonSchema.CodeGeneration;
+using NJsonSchema.Converters;
 
 namespace Bonsai.Sgen
 {
@@ -15,7 +16,9 @@ namespace Bonsai.Sgen
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
         {
-            ModelTypes = modelTypes;
+            ModelTypes = modelTypes.ExceptBy(
+                new[] { nameof(JsonInheritanceAttribute), nameof(JsonInheritanceConverter) },
+                r => r.TypeName);
             Provider = provider;
             Options = options;
             Settings = settings;
