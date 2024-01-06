@@ -3,37 +3,29 @@ using System.CodeDom.Compiler;
 using System.ComponentModel;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
-using NJsonSchema.CodeGeneration;
 using NJsonSchema.Converters;
 using YamlDotNet.Serialization;
 
 namespace Bonsai.Sgen
 {
-    internal class CSharpClassTemplate : ITemplate
+    internal class CSharpClassTemplate : CSharpCodeDomTemplate
     {
         public CSharpClassTemplate(
             CSharpClassTemplateModel model,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
+            : base(provider, options, settings)
         {
             Model = model;
-            Provider = provider;
-            Options = options;
-            Settings = settings;
         }
 
         public CSharpClassTemplateModel Model { get; }
 
-        public CodeDomProvider Provider { get; }
+        public override string TypeName => Model.ClassName;
 
-        public CodeGeneratorOptions Options { get; }
-
-        public CSharpCodeDomGeneratorSettings Settings { get; }
-
-        public string Render()
+        public override void BuildType(CodeTypeDeclaration type)
         {
-            var type = new CodeTypeDeclaration(Model.ClassName) { IsPartial = true };
             var jsonSerializer = Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson);
             var yamlSerializer = Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet);
             if (Model.IsAbstract) type.TypeAttributes |= System.Reflection.TypeAttributes.Abstract;
@@ -187,10 +179,6 @@ namespace Bonsai.Sgen
                         new CodeTypeReferenceExpression("Bonsai.ElementCategory"),
                         "Source"))));
             }
-
-            using var writer = new StringWriter();
-            Provider.GenerateCodeFromType(type, writer, Options);
-            return writer.ToString();
         }
 
         static readonly Dictionary<string, string> PrimitiveTypes = new()
