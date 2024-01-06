@@ -34,6 +34,7 @@ namespace Bonsai.Sgen
         public string Render()
         {
             var type = new CodeTypeDeclaration(Model.ClassName) { IsPartial = true };
+            if (Model.IsAbstract) type.TypeAttributes |= System.Reflection.TypeAttributes.Abstract;
             if (Model.HasDescription)
             {
                 type.Comments.Add(new CodeCommentStatement("<summary>", docComment: true));
@@ -121,7 +122,25 @@ namespace Bonsai.Sgen
                 type.Members.Add(propertyDeclaration);
             }
 
-            if (Model.GenerateJsonMethods)
+            var defaultConstructor = new CodeConstructor { Attributes = Model.IsAbstract ? MemberAttributes.Family : MemberAttributes.Public };
+            var copyConstructor = new CodeConstructor { Attributes = MemberAttributes.Family };
+            var copyParameter = new CodeParameterDeclarationExpression(Model.ClassName, "other");
+            copyConstructor.Parameters.Add(copyParameter);
+            if (Model.BaseClass != null)
+            {
+                type.BaseTypes.Add(Model.BaseClassName);
+                copyConstructor.BaseConstructorArgs.Add(new CodeVariableReferenceExpression(copyParameter.Name));
+            }
+            foreach (var property in Model.Properties)
+            {
+                copyConstructor.Statements.Add(new CodeAssignStatement(
+                    new CodeVariableReferenceExpression(property.FieldName),
+                    new CodeFieldReferenceExpression(new CodeVariableReferenceExpression(copyParameter.Name), property.FieldName)));
+            }
+            type.Members.Add(defaultConstructor);
+            type.Members.Add(copyConstructor);
+
+            if (Model.GenerateJsonMethods && !Model.IsAbstract)
             {
                 var processMethod = new CodeMemberMethod
                 {
@@ -132,27 +151,13 @@ namespace Bonsai.Sgen
                         TypeArguments = { new CodeTypeReference(Model.ClassName) }
                     }
                 };
-                var propertyAssignments = new StringBuilder();
-                foreach (var property in Model.Properties)
-                {
-                    if (propertyAssignments.Length > 0)
-                    {
-                        propertyAssignments.AppendLine(",");
-                    }
-                    propertyAssignments.Append(
-                        $"                {property.PropertyName} = {property.FieldName}");
-                }
                 processMethod.Statements.Add(new CodeMethodReturnStatement(
                     new CodeMethodInvokeExpression(
                         new CodeMethodReferenceExpression(
                             new CodeTypeReferenceExpression("System.Reactive.Linq.Observable"),
                             "Defer"),
                         new CodeSnippetExpression(
-                            @$"() => System.Reactive.Linq.Observable.Return(
-            new {Model.ClassName}
-            {{
-{propertyAssignments}
-            }})"))));
+                            @$"() => System.Reactive.Linq.Observable.Return(new {Model.ClassName}(this))"))));
                 type.Members.Add(processMethod);
                 type.CustomAttributes.Add(new CodeAttributeDeclaration(
                     new CodeTypeReference("Bonsai.CombinatorAttribute")));
