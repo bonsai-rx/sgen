@@ -31,12 +31,22 @@ namespace Bonsai.Sgen
             if (Model.IsAbstract) type.TypeAttributes |= System.Reflection.TypeAttributes.Abstract;
             if (Model.HasDiscriminator)
             {
-                if (jsonSerializer)
+                if (jsonSerializer || yamlSerializer)
                 {
-                    type.CustomAttributes.Add(new CodeAttributeDeclaration(
-                        new CodeTypeReference(typeof(JsonConverter)),
-                        new CodeAttributeArgument(new CodeTypeOfExpression(nameof(JsonInheritanceConverter))),
-                        new CodeAttributeArgument(new CodePrimitiveExpression(Model.Discriminator))));
+                    if (jsonSerializer)
+                    {
+                        type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                            new CodeTypeReference(typeof(JsonConverter)),
+                            new CodeAttributeArgument(new CodeTypeOfExpression(nameof(JsonInheritanceConverter))),
+                            new CodeAttributeArgument(new CodePrimitiveExpression(Model.Discriminator))));
+                    }
+                    if (yamlSerializer)
+                    {
+                        type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                            new CodeTypeReference("YamlDiscriminator"),
+                            new CodeAttributeArgument(new CodePrimitiveExpression(Model.Discriminator))));
+                    }
+
                     foreach (var derivedModel in Model.DerivedClasses)
                     {
                         type.CustomAttributes.Add(new CodeAttributeDeclaration(

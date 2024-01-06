@@ -96,8 +96,16 @@ namespace Bonsai.Sgen
             }
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
             {
-                var serializer = new CSharpYamlSerializerTemplate(classTypes, _provider, _options, Settings);
-                var deserializer = new CSharpYamlDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
+                var discriminatorTypes = classTypes.Where(modelType => modelType.Code.Contains("YamlDiscriminator")).ToList();
+                if (discriminatorTypes.Count > 0)
+                {
+                    var discriminator = new CSharpYamlDiscriminatorTemplate(_provider, _options, Settings);
+                    var typeInspector = new CSharpYamlDiscriminatorTypeInspectorTemplate(_provider, _options, Settings);
+                    extraTypes.Add(GenerateClass(discriminator));
+                    extraTypes.Add(GenerateClass(typeInspector));
+                }
+                var serializer = new CSharpYamlSerializerTemplate(classTypes, discriminatorTypes, _provider, _options, Settings);
+                var deserializer = new CSharpYamlDeserializerTemplate(schema, classTypes, discriminatorTypes, _provider, _options, Settings);
                 extraTypes.Add(GenerateClass(serializer));
                 extraTypes.Add(GenerateClass(deserializer));
             }
