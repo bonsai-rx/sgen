@@ -72,6 +72,7 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"));
+            Assert.IsTrue(code.Contains("[YamlDiscriminator(\"discriminator\")]"));
             CompilerTestHelper.CompileFromSource(code);
         }
     }
