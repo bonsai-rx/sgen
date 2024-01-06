@@ -66,6 +66,17 @@ namespace Bonsai.Sgen
             return new CodeArtifact(template.ClassName, CodeArtifactType.Class, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
         }
 
+        private CodeArtifact ReplaceInitOnlyProperties(CodeArtifact modelType)
+        {
+            if (modelType.TypeName == nameof(NJsonSchema.Converters.JsonInheritanceAttribute))
+            {
+                var code = modelType.Code.Replace("{ get; }", "{ get; private set; }");
+                modelType = new CodeArtifact(modelType.TypeName, modelType.Type, modelType.Language, modelType.Category, code);
+            }
+
+            return modelType;
+        }
+
         public override IEnumerable<CodeArtifact> GenerateTypes()
         {
             var types = base.GenerateTypes();
@@ -87,7 +98,7 @@ namespace Bonsai.Sgen
                 extraTypes.Add(GenerateSerializer(deserializer));
             }
 
-            return types.Concat(extraTypes);
+            return types.Select(ReplaceInitOnlyProperties).Concat(extraTypes);
         }
     }
 }

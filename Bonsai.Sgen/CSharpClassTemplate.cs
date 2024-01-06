@@ -1,10 +1,10 @@
 ﻿using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.ComponentModel;
-using System.Text;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 using NJsonSchema.CodeGeneration;
+using NJsonSchema.Converters;
 using YamlDotNet.Serialization;
 
 namespace Bonsai.Sgen
@@ -34,7 +34,27 @@ namespace Bonsai.Sgen
         public string Render()
         {
             var type = new CodeTypeDeclaration(Model.ClassName) { IsPartial = true };
+            var jsonSerializer = Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson);
+            var yamlSerializer = Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet);
             if (Model.IsAbstract) type.TypeAttributes |= System.Reflection.TypeAttributes.Abstract;
+            if (Model.HasDiscriminator)
+            {
+                if (jsonSerializer)
+                {
+                    type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(JsonConverter)),
+                        new CodeAttributeArgument(new CodeTypeOfExpression(nameof(JsonInheritanceConverter))),
+                        new CodeAttributeArgument(new CodePrimitiveExpression(Model.Discriminator))));
+                    foreach (var derivedModel in Model.DerivedClasses)
+                    {
+                        type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                            new CodeTypeReference(nameof(JsonInheritanceAttribute)),
+                            new CodeAttributeArgument(new CodePrimitiveExpression(derivedModel.Discriminator)),
+                            new CodeAttributeArgument(new CodeTypeOfExpression(derivedModel.ClassName))));
+                    }
+                }
+            }
+
             if (Model.HasDescription)
             {
                 type.Comments.Add(new CodeCommentStatement("<summary>", docComment: true));
@@ -84,7 +104,7 @@ namespace Bonsai.Sgen
                         new CodeTypeReference(typeof(XmlIgnoreAttribute))));
                 }
 
-                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+                if (jsonSerializer)
                 {
                     var jsonProperty = new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(JsonPropertyAttribute)),
@@ -99,7 +119,7 @@ namespace Bonsai.Sgen
                     }
                     propertyDeclaration.CustomAttributes.Add(jsonProperty);
                 }
-                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+                if (yamlSerializer)
                 {
                     propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(YamlMemberAttribute)),
