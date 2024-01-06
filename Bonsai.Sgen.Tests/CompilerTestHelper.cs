@@ -12,7 +12,8 @@ namespace Bonsai.Sgen.Tests
     {
         public static void CompileFromSource(string code)
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code);
+            var options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp5);
+            var syntaxTree = CSharpSyntaxTree.ParseText(code, options);
             var serializerDependencies = new[]
             {
                 typeof(YamlDotNet.Core.Parser).Assembly.Location,
