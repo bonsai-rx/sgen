@@ -1,37 +1,31 @@
 ﻿using System.CodeDom;
 using System.CodeDom.Compiler;
-using NJsonSchema.CodeGeneration;
 using NJsonSchema.CodeGeneration.CSharp.Models;
 using YamlDotNet.Serialization;
 using System.Runtime.Serialization;
 
 namespace Bonsai.Sgen
 {
-    internal class CSharpEnumTemplate : ITemplate
+    internal class CSharpEnumTemplate : CSharpCodeDomTemplate
     {
         public CSharpEnumTemplate(
             EnumTemplateModel model,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
+            : base(provider, options, settings)
         {
             Model = model;
-            Provider = provider;
-            Options = options;
-            Settings = settings;
         }
 
         public EnumTemplateModel Model { get; }
 
-        public CodeDomProvider Provider { get; }
+        public override string TypeName => Model.Name;
 
-        public CodeGeneratorOptions Options { get; }
-
-        public CSharpCodeDomGeneratorSettings Settings { get; }
-
-        public string Render()
+        public override void BuildType(CodeTypeDeclaration type)
         {
-            var type = new CodeTypeDeclaration(Model.Name) { IsEnum = true };
+            type.IsPartial = false;
+            type.IsEnum = true;
             if (Model.HasDescription)
             {
                 type.Comments.Add(new CodeCommentStatement("<summary>", docComment: true));
@@ -67,10 +61,6 @@ namespace Bonsai.Sgen
                 valueDeclaration.InitExpression = new CodeSnippetExpression(enumValue.InternalValue);
                 type.Members.Add(valueDeclaration);
             }
-
-            using var writer = new StringWriter();
-            Provider.GenerateCodeFromType(type, writer, Options);
-            return writer.ToString();
         }
     }
 }

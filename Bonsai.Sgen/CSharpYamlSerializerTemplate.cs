@@ -16,12 +16,13 @@ namespace Bonsai.Sgen
         {
         }
 
-        public override string ClassName => "SerializeToYaml";
+        public override string TypeName => "SerializeToYaml";
 
         public override string Description => "Serializes a sequence of data model objects into YAML strings.";
 
-        public override void RenderType(CodeTypeDeclaration type)
+        public override void BuildType(CodeTypeDeclaration type)
         {
+            base.BuildType(type);
             type.CustomAttributes.Add(new CodeAttributeDeclaration(
                 new CodeTypeReference("Bonsai.CombinatorAttribute")));
             type.CustomAttributes.Add(new CodeAttributeDeclaration(
@@ -61,13 +62,13 @@ namespace Bonsai.Sgen
         {
         }
 
-        public override string ClassName => "DeserializeFromYaml";
+        public override string TypeName => "DeserializeFromYaml";
 
         public override string Description => "Deserializes a sequence of YAML strings into data model objects.";
 
-        public override void RenderType(CodeTypeDeclaration type)
+        public override void BuildType(CodeTypeDeclaration type)
         {
-            base.RenderType(type);
+            base.BuildType(type);
             type.Members.Add(new CodeSnippetTypeMember(
 @"    private static System.IObservable<T> Process<T>(System.IObservable<string> source)
     {

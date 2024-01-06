@@ -4,38 +4,27 @@ using System.ComponentModel;
 using System.Xml.Serialization;
 using NJsonSchema;
 using NJsonSchema.CodeGeneration;
-using NJsonSchema.Converters;
 
 namespace Bonsai.Sgen
 {
-    internal abstract class CSharpSerializerTemplate : ITemplate
+    internal abstract class CSharpSerializerTemplate : CSharpCodeDomTemplate
     {
         public CSharpSerializerTemplate(
             IEnumerable<CodeArtifact> modelTypes,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
+            : base(provider, options, settings)
         {
-            ModelTypes = modelTypes.ExceptBy(
-                new[] { nameof(JsonInheritanceAttribute), nameof(JsonInheritanceConverter) },
-                r => r.TypeName);
-            Provider = provider;
-            Options = options;
-            Settings = settings;
+            ModelTypes = modelTypes;
         }
 
         public IEnumerable<CodeArtifact> ModelTypes { get; }
 
-        public CodeDomProvider Provider { get; }
+        public abstract string Description { get; }
 
-        public CodeGeneratorOptions Options { get; }
-
-        public CSharpCodeDomGeneratorSettings Settings { get; }
-
-        public string Render()
+        public override void BuildType(CodeTypeDeclaration type)
         {
-            var type = new CodeTypeDeclaration(ClassName) { IsPartial = true };
-            RenderType(type);
             var description = Description;
             if (!string.IsNullOrEmpty(description))
             {
@@ -46,17 +35,7 @@ namespace Bonsai.Sgen
                 new CodeTypeReference(typeof(DescriptionAttribute)),
                     new CodeAttributeArgument(new CodePrimitiveExpression(description))));
             }
-
-            using var writer = new StringWriter();
-            Provider.GenerateCodeFromType(type, writer, Options);
-            return writer.ToString();
         }
-
-        public abstract string ClassName { get; }
-
-        public abstract string Description { get; }
-
-        public abstract void RenderType(CodeTypeDeclaration type);
     }
 
     internal abstract class CSharpDeserializerTemplate : CSharpSerializerTemplate
@@ -74,8 +53,9 @@ namespace Bonsai.Sgen
             _schema = schema ?? throw new ArgumentNullException(nameof(schema));
         }
 
-        public override void RenderType(CodeTypeDeclaration type)
+        public override void BuildType(CodeTypeDeclaration type)
         {
+            base.BuildType(type);
             type.BaseTypes.Add(new CodeTypeReference("Bonsai.Expressions.SingleArgumentExpressionBuilder"));
             type.CustomAttributes.Add(new CodeAttributeDeclaration(
                 new CodeTypeReference(typeof(DefaultPropertyAttribute)),
@@ -96,7 +76,7 @@ namespace Bonsai.Sgen
             }
 
             type.Members.Add(new CodeSnippetTypeMember(
-@$"    public {ClassName}()
+@$"    public {TypeName}()
     {{
         Type = new Bonsai.Expressions.TypeMapping<{_schema.Title}>();
     }}
@@ -108,7 +88,7 @@ namespace Bonsai.Sgen
         var typeMapping = (Bonsai.Expressions.TypeMapping)Type;
         var returnType = typeMapping.GetType().GetGenericArguments()[0];
         return System.Linq.Expressions.Expression.Call(
-            typeof({ClassName}),
+            typeof({TypeName}),
             ""Process"",
             new System.Type[] {{ returnType }},
             System.Linq.Enumerable.Single(arguments));

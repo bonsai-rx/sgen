@@ -4,6 +4,7 @@ using NJsonSchema;
 using NJsonSchema.CodeGeneration;
 using NJsonSchema.CodeGeneration.CSharp;
 using NJsonSchema.CodeGeneration.CSharp.Models;
+using NJsonSchema.Converters;
 
 namespace Bonsai.Sgen
 {
@@ -54,6 +55,11 @@ namespace Bonsai.Sgen
             return new CodeArtifact(typeName, model.BaseClassName, CodeArtifactType.Class, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
         }
 
+        private CodeArtifact GenerateClass(CSharpCodeDomTemplate template)
+        {
+            return new CodeArtifact(template.TypeName, CodeArtifactType.Class, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
+        }
+
         private CodeArtifact GenerateEnum(JsonSchema schema, string typeName)
         {
             var model = new EnumTemplateModel(typeName, schema, Settings);
@@ -61,14 +67,9 @@ namespace Bonsai.Sgen
             return new CodeArtifact(typeName, CodeArtifactType.Enum, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
         }
 
-        private CodeArtifact GenerateSerializer(CSharpSerializerTemplate template)
-        {
-            return new CodeArtifact(template.ClassName, CodeArtifactType.Class, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
-        }
-
         private CodeArtifact ReplaceInitOnlyProperties(CodeArtifact modelType)
         {
-            if (modelType.TypeName == nameof(NJsonSchema.Converters.JsonInheritanceAttribute))
+            if (modelType.TypeName == nameof(JsonInheritanceAttribute))
             {
                 var code = modelType.Code.Replace("{ get; }", "{ get; private set; }");
                 modelType = new CodeArtifact(modelType.TypeName, modelType.Type, modelType.Language, modelType.Category, code);
@@ -82,20 +83,23 @@ namespace Bonsai.Sgen
             var types = base.GenerateTypes();
             var extraTypes = new List<CodeArtifact>();
             var schema = (JsonSchema)RootObject;
-            var classTypes = types.Where(type => type.Type == CodeArtifactType.Class);
+            var classTypes = types
+                .Where(type => type.Type == CodeArtifactType.Class)
+                .ExceptBy(new[] { nameof(JsonInheritanceAttribute), nameof(JsonInheritanceConverter) }, r => r.TypeName)
+                .ToList();
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
             {
                 var serializer = new CSharpJsonSerializerTemplate(classTypes, _provider, _options, Settings);
                 var deserializer = new CSharpJsonDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
-                extraTypes.Add(GenerateSerializer(serializer));
-                extraTypes.Add(GenerateSerializer(deserializer));
+                extraTypes.Add(GenerateClass(serializer));
+                extraTypes.Add(GenerateClass(deserializer));
             }
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
             {
                 var serializer = new CSharpYamlSerializerTemplate(classTypes, _provider, _options, Settings);
                 var deserializer = new CSharpYamlDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
-                extraTypes.Add(GenerateSerializer(serializer));
-                extraTypes.Add(GenerateSerializer(deserializer));
+                extraTypes.Add(GenerateClass(serializer));
+                extraTypes.Add(GenerateClass(deserializer));
             }
 
             return types.Select(ReplaceInitOnlyProperties).Concat(extraTypes);
