@@ -3,6 +3,8 @@ using System.CodeDom.Compiler;
 using NJsonSchema.CodeGeneration.CSharp.Models;
 using YamlDotNet.Serialization;
 using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Bonsai.Sgen
 {
@@ -31,6 +33,13 @@ namespace Bonsai.Sgen
                 type.Comments.Add(new CodeCommentStatement("<summary>", docComment: true));
                 type.Comments.Add(new CodeCommentStatement(Model.Description, docComment: true));
                 type.Comments.Add(new CodeCommentStatement("</summary>", docComment: true));
+            }
+
+            if (Model.IsStringEnum && Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+            {
+                type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference(typeof(JsonConverter)),
+                    new CodeAttributeArgument(new CodeTypeOfExpression(typeof(StringEnumConverter)))));
             }
 
             if (Model.IsEnumAsBitFlags)
