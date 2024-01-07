@@ -1,6 +1,7 @@
 ﻿using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.ComponentModel;
+using System.Text;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
 using NJsonSchema.Converters;
@@ -67,8 +68,10 @@ namespace Bonsai.Sgen
                     new CodeAttributeArgument(new CodePrimitiveExpression(Model.Description))));
             }
 
+            var propertyCount = 0;
             foreach (var property in Model.Properties)
             {
+                propertyCount++;
                 Model.Schema.ActualProperties.TryGetValue(property.Name, out var propertySchema);
                 var isPrimitive = PrimitiveTypes.TryGetValue(property.Type, out string? underlyingType);
                 var fieldDeclaration = new CodeMemberField(
@@ -215,6 +218,72 @@ namespace Bonsai.Sgen
                     new CodeAttributeArgument(new CodeFieldReferenceExpression(
                         new CodeTypeReferenceExpression("Bonsai.ElementCategory"),
                         "Source"))));
+            }
+
+            const string PrintMembersMethodName = "PrintMembers";
+            const string AppendMethodName = nameof(StringBuilder.Append);
+            var stringBuilderParameter = new CodeParameterDeclarationExpression(typeof(StringBuilder), "stringBuilder");
+            var stringBuilderVariable = new CodeVariableReferenceExpression(stringBuilderParameter.Name);
+            var printMembersMethod = new CodeMemberMethod
+            {
+                Name = PrintMembersMethodName,
+                Attributes = Model.BaseClass != null
+                    ? MemberAttributes.Family | MemberAttributes.Override
+                    : MemberAttributes.Family,
+                Parameters = { stringBuilderParameter },
+                ReturnType = new CodeTypeReference(typeof(bool))
+            };
+            if (Model.BaseClass != null)
+            {
+                printMembersMethod.Statements.Add(new CodeConditionStatement(
+                    new CodeMethodInvokeExpression(new CodeBaseReferenceExpression(), PrintMembersMethodName, stringBuilderVariable),
+                    new CodeExpressionStatement(
+                        new CodeMethodInvokeExpression(stringBuilderVariable, AppendMethodName, new CodePrimitiveExpression(", ")))));
+            }
+
+            var propertyIndex = 0;
+            foreach (var property in Model.Properties)
+            {
+                printMembersMethod.Statements.Add(new CodeMethodInvokeExpression(
+                    stringBuilderVariable,
+                    AppendMethodName,
+                    new CodeSnippetExpression(
+                        $"\"{property.Name} = \" + {property.FieldName}" +
+                        (++propertyIndex < propertyCount ? " + \", \"" : string.Empty))));
+            }
+            printMembersMethod.Statements.Add(new CodeMethodReturnStatement(new CodePrimitiveExpression(propertyCount > 0)));
+
+            type.Members.Add(printMembersMethod);
+            if (Model.BaseClass == null)
+            {
+                var toStringMethod = new CodeMemberMethod
+                {
+                    Name = nameof(ToString),
+                    Attributes = MemberAttributes.Public | MemberAttributes.Override,
+                    ReturnType = new CodeTypeReference(typeof(string)),
+                    Statements =
+                    {
+                        new CodeVariableDeclarationStatement(
+                            stringBuilderParameter.Type,
+                            stringBuilderParameter.Name,
+                            new CodeObjectCreateExpression(stringBuilderParameter.Type)),
+                        new CodeMethodInvokeExpression(
+                            stringBuilderVariable,
+                            AppendMethodName,
+                            new CodePropertyReferenceExpression(
+                                new CodeMethodInvokeExpression(null, nameof(GetType)),
+                                nameof(Type.Name))),
+                        new CodeMethodInvokeExpression(stringBuilderVariable, AppendMethodName, new CodePrimitiveExpression(" { ")),
+                        new CodeConditionStatement(
+                            new CodeMethodInvokeExpression(null, printMembersMethod.Name, stringBuilderVariable),
+                            new CodeExpressionStatement(
+                                new CodeMethodInvokeExpression(stringBuilderVariable, AppendMethodName, new CodePrimitiveExpression(" ")))),
+                        new CodeMethodInvokeExpression(stringBuilderVariable, AppendMethodName, new CodePrimitiveExpression("}")),
+                        new CodeMethodReturnStatement(
+                            new CodeMethodInvokeExpression(stringBuilderVariable, nameof(ToString)))
+                    }
+                };
+                type.Members.Add(toStringMethod);
             }
         }
 
