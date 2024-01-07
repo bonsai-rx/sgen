@@ -49,6 +49,14 @@ namespace Bonsai.Sgen.Tests
           }
         ]
       },
+      ""EmptyDerivedType"": {
+        ""type"": ""object"",
+        ""allOf"": [
+          {
+            ""$ref"": ""#/definitions/BaseType""
+          }
+        ]
+      },
       ""BaseType"": {
         ""type"": ""object""
       }

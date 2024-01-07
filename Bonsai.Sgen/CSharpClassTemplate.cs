@@ -233,25 +233,33 @@ namespace Bonsai.Sgen
                 Parameters = { stringBuilderParameter },
                 ReturnType = new CodeTypeReference(typeof(bool))
             };
-            if (Model.BaseClass != null)
+            if (Model.BaseClass != null && propertyCount == 0)
             {
-                printMembersMethod.Statements.Add(new CodeConditionStatement(
-                    new CodeMethodInvokeExpression(new CodeBaseReferenceExpression(), PrintMembersMethodName, stringBuilderVariable),
-                    new CodeExpressionStatement(
-                        new CodeMethodInvokeExpression(stringBuilderVariable, AppendMethodName, new CodePrimitiveExpression(", ")))));
+                printMembersMethod.Statements.Add(new CodeMethodReturnStatement(
+                    new CodeMethodInvokeExpression(new CodeBaseReferenceExpression(), PrintMembersMethodName, stringBuilderVariable)));
             }
+            else
+            {
+                if (Model.BaseClass != null)
+                {
+                    printMembersMethod.Statements.Add(new CodeConditionStatement(
+                        new CodeMethodInvokeExpression(new CodeBaseReferenceExpression(), PrintMembersMethodName, stringBuilderVariable),
+                        new CodeExpressionStatement(
+                            new CodeMethodInvokeExpression(stringBuilderVariable, AppendMethodName, new CodePrimitiveExpression(", ")))));
+                }
 
-            var propertyIndex = 0;
-            foreach (var property in Model.Properties)
-            {
-                printMembersMethod.Statements.Add(new CodeMethodInvokeExpression(
-                    stringBuilderVariable,
-                    AppendMethodName,
-                    new CodeSnippetExpression(
-                        $"\"{property.Name} = \" + {property.FieldName}" +
-                        (++propertyIndex < propertyCount ? " + \", \"" : string.Empty))));
+                var propertyIndex = 0;
+                foreach (var property in Model.Properties)
+                {
+                    printMembersMethod.Statements.Add(new CodeMethodInvokeExpression(
+                        stringBuilderVariable,
+                        AppendMethodName,
+                        new CodeSnippetExpression(
+                            $"\"{property.Name} = \" + {property.FieldName}" +
+                            (++propertyIndex < propertyCount ? " + \", \"" : string.Empty))));
+                }
+                printMembersMethod.Statements.Add(new CodeMethodReturnStatement(new CodePrimitiveExpression(propertyCount > 0)));
             }
-            printMembersMethod.Statements.Add(new CodeMethodReturnStatement(new CodePrimitiveExpression(propertyCount > 0)));
 
             type.Members.Add(printMembersMethod);
             if (Model.BaseClass == null)
