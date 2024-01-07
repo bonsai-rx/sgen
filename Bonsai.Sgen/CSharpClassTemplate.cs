@@ -180,7 +180,34 @@ namespace Bonsai.Sgen
                             "Defer"),
                         new CodeSnippetExpression(
                             @$"() => System.Reactive.Linq.Observable.Return(new {Model.ClassName}(this))"))));
+
+                var genericTypeParameter = new CodeTypeParameter("TSource");
+                var genericSourceParameter = new CodeParameterDeclarationExpression(new CodeTypeReference(typeof(IObservable<>))
+                {
+                    TypeArguments = { new CodeTypeReference(genericTypeParameter) }
+                }, "source");
+                var genericProcessMethod = new CodeMemberMethod
+                {
+                    Name = "Process",
+                    Attributes = MemberAttributes.Public | MemberAttributes.Final,
+                    TypeParameters = { genericTypeParameter },
+                    Parameters = { genericSourceParameter },
+                    ReturnType = new CodeTypeReference(typeof(IObservable<>))
+                    {
+                        TypeArguments = { new CodeTypeReference(Model.ClassName) }
+                    }
+                };
+                genericProcessMethod.Statements.Add(new CodeMethodReturnStatement(
+                    new CodeMethodInvokeExpression(
+                        new CodeMethodReferenceExpression(
+                            new CodeTypeReferenceExpression("System.Reactive.Linq.Observable"),
+                            "Select"),
+                        new CodeVariableReferenceExpression(genericSourceParameter.Name),
+                        new CodeSnippetExpression(
+                            @$"_ => new {Model.ClassName}(this)"))));
+
                 type.Members.Add(processMethod);
+                type.Members.Add(genericProcessMethod);
                 type.CustomAttributes.Add(new CodeAttributeDeclaration(
                     new CodeTypeReference("Bonsai.CombinatorAttribute")));
                 type.CustomAttributes.Add(new CodeAttributeDeclaration(
