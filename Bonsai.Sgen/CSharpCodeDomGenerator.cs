@@ -87,6 +87,11 @@ namespace Bonsai.Sgen
                 .Where(type => type.Type == CodeArtifactType.Class)
                 .ExceptBy(new[] { nameof(JsonInheritanceAttribute), nameof(JsonInheritanceConverter) }, r => r.TypeName)
                 .ToList();
+            foreach (var type in classTypes.Where(type => type.BaseTypeName != null))
+            {
+                var matchTemplate = new CSharpTypeMatchTemplate(type, _provider, _options, Settings);
+                extraTypes.Add(GenerateClass(matchTemplate));
+            }
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
             {
                 var serializer = new CSharpJsonSerializerTemplate(classTypes, _provider, _options, Settings);
