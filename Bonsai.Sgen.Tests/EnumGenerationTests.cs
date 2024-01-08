@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NJsonSchema;
@@ -43,6 +44,38 @@ namespace Bonsai.Sgen.Tests
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("EnumMemberAttribute(Value=\"A\")"));
             Assert.IsTrue(code.Contains("YamlMemberAttribute(Alias=\"A\")"));
+        }
+
+        [TestMethod]
+        public async Task GenerateStringEnum_StringEnumTypeDefinitionWithStringEnumConverter()
+        {
+            var schema = await JsonSchema.FromJsonAsync(@"
+{
+    ""$schema"": ""http://json-schema.org/draft-04/schema#"",
+    ""type"": ""object"",
+    ""title"": ""Container"",
+    ""additionalProperties"": false,
+    ""properties"": {
+      ""Enum"": {
+         ""$ref"": ""#/definitions/StringEnum""
+      }
+    },
+    ""definitions"": {
+      ""StringEnum"": {
+         ""enum"": [
+            ""This is a string A"",
+            ""This is a string B""
+         ],
+         ""title"": ""StringEnum"",
+         ""type"": ""string""
+      }
+    }
+  }
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("StringEnumConverter"));
+            CompilerTestHelper.CompileFromSource(code);
         }
     }
 }
