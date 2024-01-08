@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NJsonSchema.CodeGeneration" Version="10.9.0" />
     <PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="10.9.0" />
     <PackageReference Include="NJsonSchema.Yaml" Version="10.9.0" />
