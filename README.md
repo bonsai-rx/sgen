@@ -1,14 +1,15 @@
-# sgen
-Tool for automatically generating YML serialization classes from schema files
+# Serializer Generator Tool
+
+Tool for automatically generating YAML / JSON serialization classes and constructor operators from schema files.
 
 ## Getting Started
 
-1. Navigate to the [Bonsai.Sgen toolbox NuGet package](https://www.nuget.org/packages/Bonsai.Sgen/)
-2. Click `NET CLI (Local)` and copy the two suggested commands. E.g.:
+1. Navigate to the [Bonsai.Sgen NuGet tool package](https://www.nuget.org/packages/Bonsai.Sgen/)
+2. Click `.NET CLI (Local)` and copy the two suggested commands. E.g.:
 
     ```cmd
     dotnet new tool-manifest # if you are setting up this repo
-    dotnet tool install --local Bonsai.Sgen --version 0.1.0
+    dotnet tool install --local Bonsai.Sgen --version 0.2.0
     ```
 
 3. To view the tool help reference documentation, run:
@@ -17,25 +18,31 @@ Tool for automatically generating YML serialization classes from schema files
     dotnet bonsai.sgen --help
     ```
 
-4. To generate serialization classes from a schema file:
+4. To generate YAML serialization classes from a schema file:
 
     ```cmd
-    dotnet bonsai.sgen --schema schema.json
+    dotnet bonsai.sgen --schema schema.json --serializer YamlDotNet
     ```
 
-5. Copy the generated class file to your project `Extensions` folder.
+5. To generate JSON serialization classes from a schema file:
 
-6. Add the necessary package references to your `Extensions.csproj` file. For instance:
+    ```cmd
+    dotnet bonsai.sgen --schema schema.json --serializer NewtonsoftJson
+    ```
+
+6. Copy the generated class file to your project `Extensions` folder.
+
+7. Add the necessary package references to your `Extensions.csproj` file. For example:
 
     ```xml
     <ItemGroup>
         <PackageReference Include="Bonsai.Core" Version="2.8.0" />
-        <PackageReference Include="YamlDotNet" Version="12.0.2" />
+        <PackageReference Include="YamlDotNet" Version="13.7.1" />
     </ItemGroup>
     </Project>
     ```
 
-7. To restore the tool at any point, run:
+8. To restore the tool at any point, run:
 
     ```cmd
     dotnet tool restore
