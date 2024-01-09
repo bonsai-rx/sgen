@@ -87,7 +87,8 @@ namespace Bonsai.Sgen
                               let classType = type as CSharpClassCodeArtifact
                               where classType != null
                               select classType).ToList();
-            foreach (var type in classTypes.Where(type => type.BaseTypeName != null))
+            var discriminatorTypes = classTypes.Where(modelType => modelType.Model.HasDiscriminator).ToList();
+            foreach (var type in discriminatorTypes)
             {
                 var matchTemplate = new CSharpTypeMatchTemplate(type, _provider, _options, Settings);
                 extraTypes.Add(GenerateClass(matchTemplate));
@@ -101,7 +102,6 @@ namespace Bonsai.Sgen
             }
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
             {
-                var discriminatorTypes = classTypes.Where(modelType => modelType.Model.HasDiscriminator).ToList();
                 if (discriminatorTypes.Count > 0)
                 {
                     var discriminator = new CSharpYamlDiscriminatorTemplate(_provider, _options, Settings);
