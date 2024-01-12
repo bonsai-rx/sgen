@@ -52,7 +52,7 @@ namespace Bonsai.Sgen
         {
             var model = new CSharpClassTemplateModel(typeName, Settings, _resolver, schema, RootObject);
             var template = new CSharpClassTemplate(model, _provider, _options, Settings);
-            return new CodeArtifact(typeName, model.BaseClassName, CodeArtifactType.Class, CodeArtifactLanguage.CSharp, CodeArtifactCategory.Contract, template);
+            return new CSharpClassCodeArtifact(model, template);
         }
 
         private CodeArtifact GenerateClass(CSharpCodeDomTemplate template)
@@ -83,10 +83,16 @@ namespace Bonsai.Sgen
             var types = base.GenerateTypes();
             var extraTypes = new List<CodeArtifact>();
             var schema = (JsonSchema)RootObject;
-            var classTypes = types
-                .Where(type => type.Type == CodeArtifactType.Class)
-                .ExceptBy(new[] { nameof(JsonInheritanceAttribute), nameof(JsonInheritanceConverter) }, r => r.TypeName)
-                .ToList();
+            var classTypes = (from type in types
+                              let classType = type as CSharpClassCodeArtifact
+                              where classType != null
+                              select classType).ToList();
+            var discriminatorTypes = classTypes.Where(modelType => modelType.Model.HasDiscriminator).ToList();
+            foreach (var type in discriminatorTypes)
+            {
+                var matchTemplate = new CSharpTypeMatchTemplate(type, _provider, _options, Settings);
+                extraTypes.Add(GenerateClass(matchTemplate));
+            }
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
             {
                 var serializer = new CSharpJsonSerializerTemplate(classTypes, _provider, _options, Settings);
@@ -96,7 +102,6 @@ namespace Bonsai.Sgen
             }
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
             {
-                var discriminatorTypes = classTypes.Where(modelType => modelType.Code.Contains("YamlDiscriminator")).ToList();
                 if (discriminatorTypes.Count > 0)
                 {
                     var discriminator = new CSharpYamlDiscriminatorTemplate(_provider, _options, Settings);
