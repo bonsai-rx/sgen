@@ -92,19 +92,7 @@ namespace Bonsai.Sgen.Tests
     ""properties"": {
       ""Animals"": {
         ""type"": ""array"",
-        ""items"": {
-          ""oneOf"": [
-            {
-              ""$ref"": ""#/definitions/Dog""
-            },
-            {
-              ""$ref"": ""#/definitions/Cat""
-            },
-            {
-              ""type"": ""null""
-            }
-          ]
-        }
+        ""items"": { ""$ref"": ""#/definitions/AnimalTypes"" }
       }
     },
     ""definitions"": {
@@ -168,6 +156,19 @@ namespace Bonsai.Sgen.Tests
             ""type"": ""string""
           }
         }
+      },
+      ""AnimalTypes"": {
+          ""oneOf"": [
+            {
+              ""$ref"": ""#/definitions/Dog""
+            },
+            {
+              ""$ref"": ""#/definitions/Cat""
+            },
+            {
+              ""type"": ""null""
+            }
+          ]
       }
     }
   }

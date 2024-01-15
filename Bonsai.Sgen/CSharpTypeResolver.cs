@@ -20,7 +20,7 @@ namespace Bonsai.Sgen
         public override JsonSchema RemoveNullability(JsonSchema schema)
         {
             JsonSchema? selectedSchema = null;
-            foreach (JsonSchema o in schema.OneOf)
+            foreach (JsonSchema o in schema.ActualSchema.OneOf)
             {
                 if (o.IsNullable(SchemaType.JsonSchema))
                 {
@@ -33,7 +33,7 @@ namespace Bonsai.Sgen
                 }
                 else
                 {
-                    return ResolveBaseTypeSchema(schema);
+                    return ResolveBaseTypeSchema(schema.ActualSchema);
                 }
             }
 
