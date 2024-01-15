@@ -90,18 +90,21 @@ namespace Bonsai.Sgen.Tests
     ""type"": ""object"",
     ""title"": ""Container"",
     ""properties"": {
-      ""Animal"": {
-        ""oneOf"": [
-          {
-            ""$ref"": ""#/definitions/Dog""
-          },
-          {
-            ""$ref"": ""#/definitions/Cat""
-          },
-          {
-            ""type"": ""null""
-          }
-        ]
+      ""Animals"": {
+        ""type"": ""array"",
+        ""items"": {
+          ""oneOf"": [
+            {
+              ""$ref"": ""#/definitions/Dog""
+            },
+            {
+              ""$ref"": ""#/definitions/Cat""
+            },
+            {
+              ""type"": ""null""
+            }
+          ]
+        }
       }
     },
     ""definitions"": {
@@ -173,7 +176,7 @@ namespace Bonsai.Sgen.Tests
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
             Assert.IsTrue(!code.Contains("public enum DogKind"), "Discriminator property is repeated in derived types.");
-            Assert.IsTrue(code.Contains("public Animal Animal"), "Container property type does not match base type.");
+            Assert.IsTrue(code.Contains("List<Animal> Animals"), "Container array element type does not match base type.");
             Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"));
             Assert.IsTrue(code.Contains("[YamlDiscriminator(\"kind\")]"));
             CompilerTestHelper.CompileFromSource(code);
