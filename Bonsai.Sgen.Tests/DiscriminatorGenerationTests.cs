@@ -100,7 +100,6 @@ namespace Bonsai.Sgen.Tests
         ""type"": ""object"",
         ""properties"": {
           ""kind"": {
-            ""type"": ""string"",
             ""enum"": [ ""Dog"" ]
           },
           ""Bar"": {
@@ -121,7 +120,6 @@ namespace Bonsai.Sgen.Tests
         ""type"": ""object"",
         ""properties"": {
           ""kind"": {
-            ""type"": ""string"",
             ""enum"": [ ""Cat"" ]
           },
           ""Baz"": {
