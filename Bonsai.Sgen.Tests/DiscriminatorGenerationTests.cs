@@ -8,7 +8,7 @@ namespace Bonsai.Sgen.Tests
     public class DiscriminatorGenerationTests
     {
         [TestMethod]
-        public async Task GenerateDiscriminatorSchema_SerializerAnnotationsDeclareKnownTypes()
+        public async Task GenerateFromAnyOfDiscriminatorSchema_SerializerAnnotationsDeclareKnownTypes()
         {
             var schema = await JsonSchema.FromJsonAsync(@"
 {
@@ -48,7 +48,12 @@ namespace Bonsai.Sgen.Tests
       },
       ""Animal"": {
         ""type"": ""object"",
-        ""discriminator"": ""discriminator"",
+        ""discriminator"": {
+          ""propertyName"": ""discriminator"",
+          ""mapping"": {
+              ""DogType"": ""#/definitions/Dog""
+          }
+        },
         ""x-abstract"": true,
         ""additionalProperties"": false,
         ""required"": [
@@ -71,7 +76,7 @@ namespace Bonsai.Sgen.Tests
 ");
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
-            Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"));
+            Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"DogType\", typeof(Dog))]"));
             Assert.IsTrue(code.Contains("[YamlDiscriminator(\"discriminator\")]"));
             CompilerTestHelper.CompileFromSource(code);
         }
