@@ -5,7 +5,7 @@
     <PackageId>Bonsai.Sgen</PackageId>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
