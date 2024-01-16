@@ -4,7 +4,7 @@ using NJsonSchema.Visitors;
 
 namespace Bonsai.Sgen
 {
-    public static class JsonSchemaExtensions
+    internal static class JsonSchemaExtensions
     {
         public static JsonSchema WithUniqueDiscriminatorProperties(this JsonSchema schema)
         {
