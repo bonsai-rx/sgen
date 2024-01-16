@@ -1,7 +1,7 @@
 ﻿namespace Bonsai.Sgen
 {
     [Flags]
-    internal enum SerializerLibraries
+    public enum SerializerLibraries
     {
         None = 0x0,
         NewtonsoftJson = 0x1,
