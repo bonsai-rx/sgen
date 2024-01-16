@@ -82,6 +82,24 @@ namespace Bonsai.Sgen
         {
             var types = base.GenerateTypes();
             var extraTypes = new List<CodeArtifact>();
+
+            if (!Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson) &&
+                types.Any(r => r.Code.Contains(nameof(JsonInheritanceAttribute))))
+            {
+                if (Settings.ExcludedTypeNames?.Contains(nameof(JsonInheritanceAttribute)) != true)
+                {
+                    var model = new JsonInheritanceConverterTemplateModel(Settings);
+                    var template = Settings.TemplateFactory.CreateTemplate("CSharp", nameof(JsonInheritanceAttribute), model);
+                    var artifact = new CodeArtifact(
+                        nameof(JsonInheritanceAttribute),
+                        CodeArtifactType.Class,
+                        CodeArtifactLanguage.CSharp,
+                        CodeArtifactCategory.Utility,
+                        template);
+                    extraTypes.Add(ReplaceInitOnlyProperties(artifact));
+                }
+            }
+
             var schema = (JsonSchema)RootObject;
             var classTypes = (from type in types
                               let classType = type as CSharpClassCodeArtifact
