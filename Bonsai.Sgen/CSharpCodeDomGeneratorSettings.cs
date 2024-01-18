@@ -8,6 +8,9 @@ namespace Bonsai.Sgen
         {
             GenerateDataAnnotations = false;
             GenerateJsonMethods = true;
+            TypeNameGenerator = new CSharpTypeNameGenerator();
+            EnumNameGenerator = new CSharpEnumNameGenerator();
+            PropertyNameGenerator = new CSharpPropertyNameGenerator();
             JsonLibrary = CSharpJsonLibrary.NewtonsoftJson;
             ArrayInstanceType = "System.Collections.Generic.List";
             ArrayBaseType = "System.Collections.Generic.List";
