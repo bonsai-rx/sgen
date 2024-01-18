@@ -7,6 +7,22 @@ namespace Bonsai.Sgen.Tests
     [TestClass]
     public class DiscriminatorGenerationTests
     {
+        static void AssertDiscriminatorAttribute(string code, SerializerLibraries serializerLibraries, string discriminatorName)
+        {
+            if (serializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+            {
+                Assert.IsTrue(
+                    code.Contains($"[Newtonsoft.Json.JsonConverter(typeof(JsonInheritanceConverter), \"{discriminatorName}\")]"),
+                    message: "Missing JSON discriminator attribute.");
+            }
+            if (serializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+            {
+                Assert.IsTrue(
+                    code.Contains($"[YamlDiscriminator(\"{discriminatorName}\")]"),
+                    message: "Missing YAML discriminator attribute.");
+            }
+        }
+
         [TestMethod]
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
@@ -80,18 +96,7 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"DogType\", typeof(Dog))]"));
-            if (serializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
-            {
-                Assert.IsTrue(
-                    code.Contains("[Newtonsoft.Json.JsonConverter(typeof(JsonInheritanceConverter), \"discriminator\")]"),
-                    message: "Missing JSON discriminator attribute.");
-            }
-            if (serializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
-            {
-                Assert.IsTrue(
-                    code.Contains("[YamlDiscriminator(\"discriminator\")]"),
-                    message: "Missing YAML discriminator attribute.");
-            }
+            AssertDiscriminatorAttribute(code, serializerLibraries, "discriminator");
             CompilerTestHelper.CompileFromSource(code);
         }
 
@@ -194,18 +199,7 @@ namespace Bonsai.Sgen.Tests
             Assert.IsTrue(!code.Contains("public enum DogKind"), "Discriminator property is repeated in derived types.");
             Assert.IsTrue(code.Contains("List<Animal> Animals"), "Container array element type does not match base type.");
             Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"));
-            if (serializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
-            {
-                Assert.IsTrue(
-                    code.Contains("[Newtonsoft.Json.JsonConverter(typeof(JsonInheritanceConverter), \"kind\")]"),
-                    message: "Missing JSON discriminator attribute.");
-            }
-            if (serializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
-            {
-                Assert.IsTrue(
-                    code.Contains("[YamlDiscriminator(\"kind\")]"),
-                    message: "Missing YAML discriminator attribute.");
-            }
+            AssertDiscriminatorAttribute(code, serializerLibraries, "kind");
             CompilerTestHelper.CompileFromSource(code);
         }
     }
