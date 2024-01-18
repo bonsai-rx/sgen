@@ -31,10 +31,12 @@ namespace Bonsai.Sgen.Tests
         ""type"": ""object"",
         ""properties"": {
           ""bar"": {
-            ""type"": [
-              ""null"",
-              ""string""
-            ]
+            ""enum"": [
+               ""This is a string A"",
+               ""This is a string B""
+            ],
+            ""title"": ""StringEnum"",
+            ""type"": ""string""
           }
         }
       }
@@ -49,7 +51,8 @@ namespace Bonsai.Sgen.Tests
             var schema = await CreateTestSchema();
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
-            Assert.IsTrue(code.Contains("public ThingContainer BaseType"), "Incorrect casing for property name.");
+            Assert.IsTrue(code.Contains("public ThingContainer BaseType"), "Incorrect casing for property type or name.");
+            Assert.IsTrue(code.Contains("ThisIsAStringA = 0,"), "Incorrect casing for enum name.");
             CompilerTestHelper.CompileFromSource(code);
         }
     }
