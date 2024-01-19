@@ -285,6 +285,75 @@ namespace Bonsai.Sgen.Tests
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
+        public async Task GenerateFromOneOfDiscriminatorRefSchemaProperty_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
+        {
+            var schema = await JsonSchema.FromJsonAsync(@"
+{
+  ""$schema"": ""http://json-schema.org/draft-04/schema#"",
+  ""type"": ""object"",
+  ""title"": ""Container"",
+  ""properties"": {
+    ""Animal"": {
+      ""$ref"": ""#/definitions/Animal""
+    }
+  },
+  ""definitions"": {
+    ""Animal"": {
+      ""x-abstract"": true,
+      ""discriminator"": {
+        ""propertyName"": ""kind"",
+        ""mapping"": {
+          ""Dog"": ""#/definitions/Dog"",
+          ""Cat"": ""#/definitions/Cat""
+        }
+      },
+      ""oneOf"": [
+        {
+          ""$ref"": ""#/definitions/Dog""
+        },
+        {
+          ""$ref"": ""#/definitions/Cat""
+        },
+        {
+          ""type"": ""null""
+        }
+      ]
+    },
+    ""Dog"": {
+      ""type"": ""object"",
+      ""properties"": {
+        ""kind"": {
+          ""enum"": [ ""Dog"" ]
+        }
+      },
+      ""required"": [ ""kind"" ]
+    },
+    ""Cat"": {
+      ""type"": ""object"",
+      ""properties"": {
+        ""kind"": {
+          ""enum"": [ ""Cat"" ]
+        }
+      },
+      ""required"": [ ""kind"" ]
+    }
+  }
+}
+");
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
+            Assert.IsTrue(!code.Contains("public enum DogKind"), "Discriminator property is repeated in derived types.");
+            Assert.IsTrue(code.Contains("Animal Animal"), "Container element type does not match base type.");
+            Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"));
+            AssertDiscriminatorAttribute(code, serializerLibraries, "kind");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.YamlDotNet)]
+        [DataRow(SerializerLibraries.NewtonsoftJson)]
+        [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
         public async Task GenerateFromArrayItemDiscriminator_EnsureFallbackDiscriminatorBaseTypeName(SerializerLibraries serializerLibraries)
         {
             var schema = await JsonSchema.FromJsonAsync(@"
