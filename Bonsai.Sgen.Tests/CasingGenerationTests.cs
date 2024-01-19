@@ -34,7 +34,8 @@ namespace Bonsai.Sgen.Tests
             ""enum"": [
                ""This is a string A"",
                ""This is a string B"",
-               ""snake_case_with_3_numbers""
+               ""snake_case_with_3_numbers"",
+               ""hyphen-case-with-3-numbers""
             ],
             ""title"": ""StringEnum"",
             ""type"": ""string""
@@ -47,7 +48,7 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
-        public async Task GenerateFromSnakeCase_GeneratePascalCaseNames()
+        public async Task GenerateFromSnakeAndHyphenCase_GeneratePascalCaseNames()
         {
             var schema = await CreateTestSchema();
             var generator = TestHelper.CreateGenerator(schema);
@@ -55,6 +56,7 @@ namespace Bonsai.Sgen.Tests
             Assert.IsTrue(code.Contains("public ThingContainer BaseType"), "Incorrect casing for property type or name.");
             Assert.IsTrue(code.Contains("ThisIsAStringA = 0"), "Incorrect casing for enum name.");
             Assert.IsTrue(code.Contains("SnakeCaseWith3Numbers = 2"), "Incorrect casing for enum name.");
+            Assert.IsTrue(code.Contains("HyphenCaseWith3Numbers = 3"), "Incorrect casing for enum name.");
             CompilerTestHelper.CompileFromSource(code);
         }
     }
