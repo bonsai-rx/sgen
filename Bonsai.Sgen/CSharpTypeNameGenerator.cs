@@ -1,5 +1,4 @@
 ﻿using NJsonSchema;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace Bonsai.Sgen
 {
@@ -8,7 +7,7 @@ namespace Bonsai.Sgen
         protected override string Generate(JsonSchema schema, string typeNameHint)
         {
             var defaultName = base.Generate(schema, typeNameHint);
-            return PascalCaseNamingConvention.Instance.Apply(defaultName);
+            return CSharpNamingConvention.Instance.Apply(defaultName);
         }
     }
 }
