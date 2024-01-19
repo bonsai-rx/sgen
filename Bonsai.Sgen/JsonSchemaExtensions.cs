@@ -26,14 +26,19 @@ namespace Bonsai.Sgen
             {
                 if (schema.DiscriminatorObject != null)
                 {
-                    if (schema is JsonSchemaProperty schemaProperty)
+                    if (schema is JsonSchemaProperty || schema.ParentSchema?.Item == schema)
                     {
+                        if (string.IsNullOrEmpty(typeNameHint))
+                        {
+                            typeNameHint = "Anonymous";
+                        }
+
                         if (!RootObject.Definitions.ContainsKey(typeNameHint))
                         {
                             var discriminatorSchema = new JsonSchema();
-                            discriminatorSchema.DiscriminatorObject = schemaProperty.DiscriminatorObject;
-                            discriminatorSchema.IsAbstract = schemaProperty.IsAbstract;
-                            foreach (var derivedSchema in schemaProperty.OneOf)
+                            discriminatorSchema.DiscriminatorObject = schema.DiscriminatorObject;
+                            discriminatorSchema.IsAbstract = schema.IsAbstract;
+                            foreach (var derivedSchema in schema.OneOf)
                             {
                                 if (derivedSchema.IsNullable(SchemaType.JsonSchema))
                                 {
@@ -45,8 +50,8 @@ namespace Bonsai.Sgen
                             RootObject.Definitions.Add(typeNameHint, discriminatorSchema);
                         }
 
-                        schemaProperty.DiscriminatorObject = null;
-                        schemaProperty.IsAbstract = false;
+                        schema.DiscriminatorObject = null;
+                        schema.IsAbstract = false;
                         return schema;
                     }
 
