@@ -15,9 +15,12 @@ namespace Bonsai.Sgen
 
         class DiscriminatorSchemaVisitor : JsonSchemaVisitorBase
         {
+            readonly Dictionary<JsonSchema, string> reverseTypeNameLookup = new();
+
             public DiscriminatorSchemaVisitor(JsonSchema rootObject)
             {
                 RootObject = rootObject;
+                VisitDefinitions(rootObject);
             }
 
             public JsonSchema RootObject { get; }
@@ -35,14 +38,15 @@ namespace Bonsai.Sgen
                 }
             }
 
-            protected override JsonSchema VisitSchema(JsonSchema schema, string path, string typeNameHint)
+            protected override JsonSchema VisitSchema(JsonSchema schema, string path, string? typeNameHint)
             {
                 var actualSchema = schema.ActualSchema;
                 if (actualSchema.DiscriminatorObject != null)
                 {
                     if (schema is JsonSchemaProperty || schema.ParentSchema?.Item == schema)
                     {
-                        if (string.IsNullOrEmpty(typeNameHint))
+                        if (string.IsNullOrEmpty(typeNameHint) &&
+                            !reverseTypeNameLookup.TryGetValue(actualSchema, out typeNameHint))
                         {
                             typeNameHint = "Anonymous";
                         }
@@ -82,6 +86,57 @@ namespace Bonsai.Sgen
                 }
 
                 return schema;
+            }
+
+            private void VisitDefinitions(JsonSchema schema)
+            {
+                if (schema == null ||
+                    schema.Reference != null)
+                {
+                    return;
+                }
+
+                VisitDefinitions(schema.Item);
+                VisitDefinitions(schema.AdditionalItemsSchema);
+                VisitDefinitions(schema.AdditionalPropertiesSchema);
+                VisitDefinitions(schema.Items);
+                VisitDefinitions(schema.AllOf);
+                VisitDefinitions(schema.AnyOf);
+                VisitDefinitions(schema.OneOf);
+                VisitDefinitions(schema.Not);
+                VisitDefinitions(schema.DictionaryKey);
+                VisitDefinitions(schema.Properties);
+                VisitDefinitions(schema.PatternProperties);
+                if (schema.Definitions.Count > 0)
+                {
+                    foreach (var definition in schema.Definitions)
+                    {
+                        reverseTypeNameLookup[definition.Value] = definition.Key;
+                        VisitDefinitions(definition.Value);
+                    }
+                }
+            }
+
+            private void VisitDefinitions(ICollection<JsonSchema> collection)
+            {
+                if (collection.Count > 0)
+                {
+                    foreach (var schema in collection)
+                    {
+                        VisitDefinitions(schema);
+                    }
+                }
+            }
+
+            private void VisitDefinitions(IDictionary<string, JsonSchemaProperty> dictionary)
+            {
+                if (dictionary.Count > 0)
+                {
+                    foreach (var schema in dictionary.Values)
+                    {
+                        VisitDefinitions(schema);
+                    }
+                }
             }
         }
     }
