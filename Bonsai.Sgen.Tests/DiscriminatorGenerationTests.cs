@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NJsonSchema;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Bonsai.Sgen.Tests
@@ -27,7 +28,7 @@ namespace Bonsai.Sgen.Tests
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
-        public async Task GenerateFromAnyOfDiscriminatorSchema_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
+        public async Task GenerateFromAllOfDiscriminatorSchema_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
         {
             var schema = await JsonSchema.FromJsonAsync(@"
 {
@@ -104,95 +105,19 @@ namespace Bonsai.Sgen.Tests
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
-        public async Task GenerateFromOneOfDiscriminatorSchema_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
+        public void GenerateFromOneOfDiscriminatorSchema_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
-{
-    ""$schema"": ""http://json-schema.org/draft-04/schema#"",
-    ""type"": ""object"",
-    ""title"": ""Container"",
-    ""properties"": {
-      ""Animals"": {
-        ""type"": ""array"",
-        ""items"": { ""$ref"": ""#/definitions/AnimalTypes"" }
-      }
-    },
-    ""definitions"": {
-      ""Dog"": {
-        ""type"": ""object"",
-        ""properties"": {
-          ""kind"": {
-            ""enum"": [ ""Dog"" ]
-          },
-          ""Bar"": {
-            ""type"": [
-              ""null"",
-              ""string""
-            ]
-          }
-        },
-        ""required"": [ ""kind"", ""Bar"" ],
-        ""allOf"": [
-          {
-            ""$ref"": ""#/definitions/Animal""
-          }
-        ]
-      },
-      ""Cat"": {
-        ""type"": ""object"",
-        ""properties"": {
-          ""kind"": {
-            ""enum"": [ ""Cat"" ]
-          },
-          ""Baz"": {
-            ""type"": [
-              ""null"",
-              ""string""
-            ]
-          }
-        },
-        ""required"": [ ""kind"", ""Baz"" ],
-        ""allOf"": [
-          {
-            ""$ref"": ""#/definitions/Animal""
-          }
-        ]
-      },
-      ""Animal"": {
-        ""type"": ""object"",
-        ""discriminator"": ""kind"",
-        ""x-abstract"": true,
-        ""required"": [
-          ""kind""
-        ],
-        ""properties"": {
-          ""Foo"": {
-            ""type"": [
-              ""null"",
-              ""string""
-            ]
-          },
-          ""kind"": {
-            ""type"": ""string""
-          }
-        }
-      },
-      ""AnimalTypes"": {
-          ""oneOf"": [
+            var discriminator = SchemaTestHelper.CreateDiscriminatorSchema("kind");
+            var derivedSchemas = SchemaTestHelper.CreateDerivedSchemas("kind", baseSchema: discriminator, "Dog", "Cat");
+            var oneOfSchema = SchemaTestHelper.CreateOneOfSchema(derivedSchemas.Select(x => x.Value), optional: true);
+            var schema = SchemaTestHelper.CreateContainerSchema(derivedSchemas.Append(new("Animal", discriminator)));
+            schema.Definitions.Add("AnimalTypes", oneOfSchema);
+            schema.Properties.Add("Animals", new()
             {
-              ""$ref"": ""#/definitions/Dog""
-            },
-            {
-              ""$ref"": ""#/definitions/Cat""
-            },
-            {
-              ""type"": ""null""
-            }
-          ]
-      }
-    }
-  }
-");
+                Type = JsonObjectType.Array,
+                Item = oneOfSchema
+            });
+
             var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
@@ -207,70 +132,13 @@ namespace Bonsai.Sgen.Tests
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
-        public async Task GenerateFromOneOfDiscriminatorSchemaProperty_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
+        public void GenerateFromOneOfDiscriminatorSchemaProperty_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
-{
-  ""$schema"": ""http://json-schema.org/draft-04/schema#"",
-  ""type"": ""object"",
-  ""title"": ""Container"",
-  ""properties"": {
-    ""Animal"": {
-      ""x-abstract"": true,
-      ""discriminator"": {
-        ""propertyName"": ""kind"",
-        ""mapping"": {
-          ""Dog"": ""#/definitions/Dog"",
-          ""Cat"": ""#/definitions/Cat""
-        }
-      },
-      ""oneOf"": [
-        {
-          ""$ref"": ""#/definitions/Dog""
-        },
-        {
-          ""$ref"": ""#/definitions/Cat""
-        },
-        {
-          ""type"": ""null""
-        }
-      ]
-    }
-  },
-  ""definitions"": {
-    ""Dog"": {
-      ""type"": ""object"",
-      ""properties"": {
-        ""kind"": {
-          ""enum"": [ ""Dog"" ]
-        },
-        ""Bar"": {
-          ""type"": [
-            ""null"",
-            ""string""
-          ]
-        }
-      },
-      ""required"": [ ""kind"", ""Bar"" ]
-    },
-    ""Cat"": {
-      ""type"": ""object"",
-      ""properties"": {
-        ""kind"": {
-          ""enum"": [ ""Cat"" ]
-        },
-        ""Baz"": {
-          ""type"": [
-            ""null"",
-            ""string""
-          ]
-        }
-      },
-      ""required"": [ ""kind"", ""Baz"" ]
-    }
-  }
-}
-");
+            var derivedSchemas = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog", "Cat");
+            var discriminator = SchemaTestHelper.CreateDiscriminatorSchema<JsonSchemaProperty>("kind", derivedSchemas);
+            var schema = SchemaTestHelper.CreateContainerSchema(derivedSchemas);
+            schema.Properties.Add("Animal", discriminator);
+
             var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
@@ -285,61 +153,13 @@ namespace Bonsai.Sgen.Tests
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
-        public async Task GenerateFromOneOfDiscriminatorRefSchemaProperty_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
+        public void GenerateFromOneOfDiscriminatorRefSchemaProperty_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
-{
-  ""$schema"": ""http://json-schema.org/draft-04/schema#"",
-  ""type"": ""object"",
-  ""title"": ""Container"",
-  ""properties"": {
-    ""Animal"": {
-      ""$ref"": ""#/definitions/Animal""
-    }
-  },
-  ""definitions"": {
-    ""Animal"": {
-      ""x-abstract"": true,
-      ""discriminator"": {
-        ""propertyName"": ""kind"",
-        ""mapping"": {
-          ""Dog"": ""#/definitions/Dog"",
-          ""Cat"": ""#/definitions/Cat""
-        }
-      },
-      ""oneOf"": [
-        {
-          ""$ref"": ""#/definitions/Dog""
-        },
-        {
-          ""$ref"": ""#/definitions/Cat""
-        },
-        {
-          ""type"": ""null""
-        }
-      ]
-    },
-    ""Dog"": {
-      ""type"": ""object"",
-      ""properties"": {
-        ""kind"": {
-          ""enum"": [ ""Dog"" ]
-        }
-      },
-      ""required"": [ ""kind"" ]
-    },
-    ""Cat"": {
-      ""type"": ""object"",
-      ""properties"": {
-        ""kind"": {
-          ""enum"": [ ""Cat"" ]
-        }
-      },
-      ""required"": [ ""kind"" ]
-    }
-  }
-}
-");
+            var derivedSchemas = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog", "Cat");
+            var discriminator = SchemaTestHelper.CreateDiscriminatorSchema("kind", derivedSchemas);
+            var schema = SchemaTestHelper.CreateContainerSchema(derivedSchemas.Prepend(new("Animal", discriminator)));
+            schema.Properties.Add("Animal", new JsonSchemaProperty { Reference = discriminator });
+
             var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
@@ -354,61 +174,17 @@ namespace Bonsai.Sgen.Tests
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
-        public async Task GenerateFromArrayItemDiscriminator_EnsureFallbackDiscriminatorBaseTypeName(SerializerLibraries serializerLibraries)
+        public void GenerateFromArrayItemDiscriminator_EnsureFallbackDiscriminatorBaseTypeName(SerializerLibraries serializerLibraries)
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
-{
-  ""$schema"": ""http://json-schema.org/draft-04/schema#"",
-  ""type"": ""object"",
-  ""title"": ""Container"",
-  ""properties"": {
-    ""Animals"": {
-      ""type"": ""array"",
-      ""items"": {
-        ""x-abstract"": true,
-        ""discriminator"": {
-          ""propertyName"": ""kind"",
-          ""mapping"": {
-              ""Dog"": ""#/definitions/Dog"",
-              ""Cat"": ""#/definitions/Cat""
-          }
-        },
-        ""oneOf"": [
-          {
-            ""$ref"": ""#/definitions/Dog""
-          },
-          {
-            ""$ref"": ""#/definitions/Cat""
-          },
-          {
-            ""type"": ""null""
-          }
-        ]
-      }
-    }
-  },
-  ""definitions"": {
-    ""Dog"": {
-      ""type"": ""object"",
-      ""properties"": {
-        ""kind"": {
-          ""enum"": [ ""Dog"" ]
-        }
-      },
-      ""required"": [ ""kind"" ]
-    },
-    ""Cat"": {
-      ""type"": ""object"",
-      ""properties"": {
-        ""kind"": {
-          ""enum"": [ ""Cat"" ]
-        }
-      },
-      ""required"": [ ""kind"" ]
-    }
-  }
-}
-");
+            var derivedSchemas = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog", "Cat");
+            var discriminator = SchemaTestHelper.CreateDiscriminatorSchema("kind", derivedSchemas);
+            var schema = SchemaTestHelper.CreateContainerSchema(derivedSchemas);
+            schema.Properties.Add("Animals", new()
+            {
+                Type = JsonObjectType.Array,
+                Item = discriminator
+            });
+
             var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("class Dog : Anonymous"), "Derived types do not inherit from base type.");
@@ -423,62 +199,17 @@ namespace Bonsai.Sgen.Tests
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
-        public async Task GenerateFromArrayItemDiscriminatorRef_EnsureFallbackDiscriminatorBaseTypeName(SerializerLibraries serializerLibraries)
+        public void GenerateFromArrayItemDiscriminatorRef_EnsureFallbackDiscriminatorBaseTypeName(SerializerLibraries serializerLibraries)
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
-{
-  ""$schema"": ""http://json-schema.org/draft-04/schema#"",
-  ""type"": ""object"",
-  ""title"": ""Container"",
-  ""properties"": {
-    ""Animals"": {
-      ""type"": ""array"",
-      ""items"": { ""$ref"": ""#/definitions/Animal"" }
-    }
-  },
-  ""definitions"": {
-    ""Animal"": {
-        ""x-abstract"": true,
-        ""discriminator"": {
-          ""propertyName"": ""kind"",
-          ""mapping"": {
-              ""Dog"": ""#/definitions/Dog"",
-              ""Cat"": ""#/definitions/Cat""
-          }
-        },
-        ""oneOf"": [
-          {
-            ""$ref"": ""#/definitions/Dog""
-          },
-          {
-            ""$ref"": ""#/definitions/Cat""
-          },
-          {
-            ""type"": ""null""
-          }
-        ]
-    },
-    ""Dog"": {
-      ""type"": ""object"",
-      ""properties"": {
-        ""kind"": {
-          ""enum"": [ ""Dog"" ]
-        }
-      },
-      ""required"": [ ""kind"" ]
-    },
-    ""Cat"": {
-      ""type"": ""object"",
-      ""properties"": {
-        ""kind"": {
-          ""enum"": [ ""Cat"" ]
-        }
-      },
-      ""required"": [ ""kind"" ]
-    }
-  }
-}
-");
+            var derivedSchemas = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog", "Cat");
+            var discriminator = SchemaTestHelper.CreateDiscriminatorSchema("kind", derivedSchemas);
+            var schema = SchemaTestHelper.CreateContainerSchema(derivedSchemas.Prepend(new("Animal", discriminator)));
+            schema.Properties.Add("Animals", new()
+            {
+                Type = JsonObjectType.Array,
+                Item = new() { Reference = discriminator }
+            });
+
             var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
