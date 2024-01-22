@@ -37,6 +37,33 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        public async Task GenerateIntegerEnumWithRawLiterals_EnumTypeUseValidIdentifiers()
+        {
+            var schema = await JsonSchema.FromJsonAsync(@"
+{
+    ""$schema"": ""http://json-schema.org/draft-04/schema#"",
+    ""type"": ""object"",
+    ""title"": ""Container"",
+    ""additionalProperties"": false,
+    ""properties"": {
+      ""Enum"": {
+         ""$ref"": ""#/definitions/IntEnum""
+      }
+    },
+    ""definitions"": {
+      ""IntEnum"": {
+         ""enum"": [ 0, 1, 2 ],
+         ""type"": ""integer""
+      }
+    }
+  }
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
         public void GenerateStringEnum_SerializerAnnotationsUseStringValues()
         {
             var schema = JsonSchema.FromType<Foo>();
