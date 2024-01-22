@@ -13,7 +13,9 @@ namespace Bonsai.Sgen
 
         public string Apply(string value)
         {
-            return PascalCaseNamingConvention.Instance.Apply(value).Replace("_", string.Empty);
+            var result = PascalCaseNamingConvention.Instance.Apply(value);
+            var prefix = result.StartsWith('_') ? "_" : string.Empty;
+            return prefix + result.Replace("_", string.Empty);
         }
     }
 }
