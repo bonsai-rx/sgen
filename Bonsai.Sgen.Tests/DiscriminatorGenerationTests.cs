@@ -215,7 +215,7 @@ namespace Bonsai.Sgen.Tests
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
             Assert.IsTrue(!code.Contains("public enum DogKind"), "Discriminator property is repeated in derived types.");
-            Assert.IsTrue(code.Contains("List<Animal> Animal"), "Container element type does not match base type.");
+            Assert.IsTrue(code.Contains("List<Animal> Animals"), "Container element type does not match base type.");
             Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"));
             AssertDiscriminatorAttribute(code, serializerLibraries, "kind");
             CompilerTestHelper.CompileFromSource(code);
