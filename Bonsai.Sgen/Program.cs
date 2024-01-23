@@ -63,7 +63,7 @@ namespace Bonsai.Sgen
                     SerializerLibraries = serializerLibraries
                 };
 
-                schema = schema.WithUniqueDiscriminatorProperties();
+                schema = schema.WithResolvedDiscriminatorInheritance();
                 var generator = new CSharpCodeDomGenerator(schema, settings);
                 var code = generator.GenerateFile(generatorTypeName);
                 if (string.IsNullOrEmpty(outputFilePath))
