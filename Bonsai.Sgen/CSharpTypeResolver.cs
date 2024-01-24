@@ -12,11 +12,6 @@ namespace Bonsai.Sgen
         {
         }
 
-        public CSharpTypeResolver(CSharpGeneratorSettings settings, JsonSchema exceptionSchema)
-            : base(settings, exceptionSchema)
-        {
-        }
-
         public override JsonSchema RemoveNullability(JsonSchema schema)
         {
             JsonSchema? selectedSchema = null;

@@ -105,7 +105,7 @@ namespace Bonsai.Sgen
                               let classType = type as CSharpClassCodeArtifact
                               where classType != null
                               select classType).ToList();
-            var discriminatorTypes = classTypes.Where(modelType => modelType.Model.HasDiscriminator).ToList();
+            var discriminatorTypes = classTypes.Where(modelType => modelType.Model.Schema.DiscriminatorObject != null).ToList();
             foreach (var type in discriminatorTypes)
             {
                 var matchTemplate = new CSharpTypeMatchTemplate(type, _provider, _options, Settings);

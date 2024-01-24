@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
+using NJsonSchema;
 using NJsonSchema.Converters;
 using YamlDotNet.Serialization;
 
@@ -30,7 +31,7 @@ namespace Bonsai.Sgen
             var jsonSerializer = Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson);
             var yamlSerializer = Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet);
             if (Model.IsAbstract) type.TypeAttributes |= System.Reflection.TypeAttributes.Abstract;
-            if (Model.HasDiscriminator)
+            if (Model.Schema.DiscriminatorObject is OpenApiDiscriminator discriminator)
             {
                 if (jsonSerializer || yamlSerializer)
                 {
@@ -39,13 +40,13 @@ namespace Bonsai.Sgen
                         type.CustomAttributes.Add(new CodeAttributeDeclaration(
                             new CodeTypeReference(typeof(JsonConverter)),
                             new CodeAttributeArgument(new CodeTypeOfExpression(nameof(JsonInheritanceConverter))),
-                            new CodeAttributeArgument(new CodePrimitiveExpression(Model.Discriminator))));
+                            new CodeAttributeArgument(new CodePrimitiveExpression(discriminator.PropertyName))));
                     }
                     if (yamlSerializer)
                     {
                         type.CustomAttributes.Add(new CodeAttributeDeclaration(
                             new CodeTypeReference("YamlDiscriminator"),
-                            new CodeAttributeArgument(new CodePrimitiveExpression(Model.Discriminator))));
+                            new CodeAttributeArgument(new CodePrimitiveExpression(discriminator.PropertyName))));
                     }
 
                     foreach (var derivedModel in Model.DerivedClasses)

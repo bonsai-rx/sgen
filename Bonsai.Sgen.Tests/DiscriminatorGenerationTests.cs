@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NJsonSchema;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -214,9 +215,48 @@ namespace Bonsai.Sgen.Tests
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
             Assert.IsTrue(!code.Contains("public enum DogKind"), "Discriminator property is repeated in derived types.");
-            Assert.IsTrue(code.Contains("List<Animal> Animal"), "Container element type does not match base type.");
+            Assert.IsTrue(code.Contains("List<Animal> Animals"), "Container element type does not match base type.");
             Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"));
             AssertDiscriminatorAttribute(code, serializerLibraries, "kind");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.YamlDotNet)]
+        [DataRow(SerializerLibraries.NewtonsoftJson)]
+        [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
+        public void GenerateFromSubDiscriminatorSchemas_InheritanceHierarchyIsPreserved(SerializerLibraries serializerLibraries)
+        {
+            var subTypeSchemas = SchemaTestHelper.CreateDerivedSchemas("fur", "long", "short");
+            var subDiscriminator = SchemaTestHelper.CreateDiscriminatorSchema("fur", subTypeSchemas);
+            var derivedSchemas = SchemaTestHelper.CreateDerivedSchemas("type", "cat", "dog");
+            derivedSchemas[0].Value.DiscriminatorObject = subDiscriminator.DiscriminatorObject;
+            foreach (var subSchema in subDiscriminator.OneOf)
+            {
+                derivedSchemas[0].Value.OneOf.Add(subSchema);
+            }
+            var discriminator = SchemaTestHelper.CreateDiscriminatorSchema("type", derivedSchemas);
+            var schema = SchemaTestHelper.CreateContainerSchema(new Dictionary<string, JsonSchema>
+            {
+                { "LongFurCat", subTypeSchemas[0].Value },
+                { "Cat", derivedSchemas[0].Value },
+                { "Dog", derivedSchemas[1].Value },
+                { "Animal", discriminator },
+                { "ShortFurCat", subTypeSchemas[1].Value }
+            });
+            schema.Properties.Add("Animals", new()
+            {
+                Type = JsonObjectType.Array,
+                Item = new() { Reference = discriminator }
+            });
+
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("class Cat : Animal"), "Derived types do not inherit from base type.");
+            Assert.IsTrue(!code.Contains("public enum LongFurCatFur"), "Discriminator property is repeated in derived types.");
+            Assert.IsTrue(code.Contains("List<Animal> Animals"), "Container element type does not match base type.");
+            Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"dog\", typeof(Dog))]"));
+            AssertDiscriminatorAttribute(code, serializerLibraries, "type");
             CompilerTestHelper.CompileFromSource(code);
         }
     }

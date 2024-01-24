@@ -1,21 +1,22 @@
 ﻿using NJsonSchema;
-using NJsonSchema.CodeGeneration;
 using NJsonSchema.Visitors;
 
 namespace Bonsai.Sgen
 {
     internal static class JsonSchemaExtensions
     {
-        public static JsonSchema WithUniqueDiscriminatorProperties(this JsonSchema schema)
+        public static JsonSchema WithResolvedDiscriminatorInheritance(this JsonSchema schema)
         {
-            var visitor = new DiscriminatorSchemaVisitor(schema);
-            visitor.Visit(schema);
+            var discriminatorVisitor = new DiscriminatorSchemaVisitor(schema);
+            var derivedDiscriminatorVisitor = new DerivedDiscriminatorSchemaVisitor();
+            discriminatorVisitor.Visit(schema);
+            derivedDiscriminatorVisitor.Visit(schema);
             return schema;
         }
 
         class DiscriminatorSchemaVisitor : JsonSchemaVisitorBase
         {
-            readonly Dictionary<JsonSchema, string> reverseTypeNameLookup = new();
+            readonly Dictionary<JsonSchema, string> definitionTypeNameLookup = new();
 
             public DiscriminatorSchemaVisitor(JsonSchema rootObject)
             {
@@ -34,7 +35,11 @@ namespace Bonsai.Sgen
                         continue;
                     }
 
-                    derivedSchema.ActualSchema.AllOf.Add(new JsonSchema { Reference = baseSchema });
+                    var actualSchema = derivedSchema.ActualSchema;
+                    if (!actualSchema.AllOf.Any(schema => schema.Reference == baseSchema))
+                    {
+                        actualSchema.AllOf.Add(new JsonSchema { Reference = baseSchema });
+                    }
                 }
             }
 
@@ -43,15 +48,16 @@ namespace Bonsai.Sgen
                 var actualSchema = schema.ActualSchema;
                 if (actualSchema.DiscriminatorObject != null)
                 {
-                    if (schema is JsonSchemaProperty || schema.ParentSchema?.Item == schema)
+                    var isDefinition = definitionTypeNameLookup.TryGetValue(actualSchema, out _);
+                    if (schema is JsonSchemaProperty || schema.ParentSchema?.Item == schema || isDefinition)
                     {
-                        if (string.IsNullOrEmpty(typeNameHint) &&
-                            !reverseTypeNameLookup.TryGetValue(actualSchema, out typeNameHint))
+                        var discriminatorSchema = isDefinition ? actualSchema : null;
+                        if (string.IsNullOrEmpty(typeNameHint))
                         {
                             typeNameHint = "Anonymous";
                         }
 
-                        if (!RootObject.Definitions.TryGetValue(typeNameHint, out JsonSchema? discriminatorSchema))
+                        if (discriminatorSchema == null && !RootObject.Definitions.TryGetValue(typeNameHint, out discriminatorSchema))
                         {
                             discriminatorSchema = new JsonSchema();
                             discriminatorSchema.DiscriminatorObject = actualSchema.DiscriminatorObject;
@@ -64,23 +70,13 @@ namespace Bonsai.Sgen
                             if (discriminatorSchema.OneOf.Count > 0)
                             {
                                 ResolveOneOfInheritance(discriminatorSchema, discriminatorSchema);
-                                discriminatorSchema.OneOf.Clear();
                             }
                         }
 
-                        schema.DiscriminatorObject = null;
-                        schema.IsAbstract = false;
-                        return schema;
-                    }
-
-                    foreach (var derivedSchema in schema.GetDerivedSchemas(RootObject).Keys)
-                    {
-                        foreach (var property in derivedSchema.Properties.Keys.ToList())
+                        if (!isDefinition)
                         {
-                            if (property == schema.Discriminator)
-                            {
-                                derivedSchema.Properties.Remove(property);
-                            }
+                            actualSchema.DiscriminatorObject = null;
+                            actualSchema.IsAbstract = false;
                         }
                     }
                 }
@@ -111,7 +107,7 @@ namespace Bonsai.Sgen
                 {
                     foreach (var definition in schema.Definitions)
                     {
-                        reverseTypeNameLookup[definition.Value] = definition.Key;
+                        definitionTypeNameLookup[definition.Value] = definition.Key;
                         VisitDefinitions(definition.Value);
                     }
                 }
@@ -137,6 +133,23 @@ namespace Bonsai.Sgen
                         VisitDefinitions(schema);
                     }
                 }
+            }
+        }
+
+        class DerivedDiscriminatorSchemaVisitor : JsonSchemaVisitorBase
+        {
+            protected override JsonSchema VisitSchema(JsonSchema schema, string path, string typeNameHint)
+            {
+                foreach (var baseSchema in schema.AllInheritedSchemas)
+                {
+                    var discriminatorSchema = baseSchema.DiscriminatorObject;
+                    if (discriminatorSchema != null)
+                    {
+                        schema.Properties.Remove(discriminatorSchema.PropertyName);
+                    }
+                }
+
+                return schema;
             }
         }
     }
