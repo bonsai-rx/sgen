@@ -8,12 +8,13 @@ namespace Bonsai.Sgen.Tests
             JsonSchema schema,
             SerializerLibraries serializerLibraries = SerializerLibraries.YamlDotNet | SerializerLibraries.NewtonsoftJson)
         {
-            schema = schema.WithResolvedDiscriminatorInheritance();
             var settings = new CSharpCodeDomGeneratorSettings
             {
                 Namespace = nameof(TestHelper),
                 SerializerLibraries = serializerLibraries
             };
+            schema = schema.WithCompatibleDefinitions(settings.TypeNameGenerator)
+                           .WithResolvedDiscriminatorInheritance();
 
             return new CSharpCodeDomGenerator(schema, settings);
         }
