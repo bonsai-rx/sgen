@@ -41,7 +41,7 @@ namespace Bonsai.Sgen.Tests
       ""Animal"": {
         ""oneOf"": [
           {
-            ""$ref"": ""#/definitions/Animal""
+            ""$ref"": ""#/$defs/Animal""
           },
           {
             ""type"": ""null""
@@ -49,7 +49,7 @@ namespace Bonsai.Sgen.Tests
         ]
       }
     },
-    ""definitions"": {
+    ""$defs"": {
       ""Dog"": {
         ""type"": ""object"",
         ""additionalProperties"": false,
@@ -63,7 +63,7 @@ namespace Bonsai.Sgen.Tests
         },
         ""allOf"": [
           {
-            ""$ref"": ""#/definitions/Animal""
+            ""$ref"": ""#/$defs/Animal""
           }
         ]
       },
@@ -72,7 +72,7 @@ namespace Bonsai.Sgen.Tests
         ""discriminator"": {
           ""propertyName"": ""discriminator"",
           ""mapping"": {
-              ""DogType"": ""#/definitions/Dog""
+              ""DogType"": ""#/$defs/Dog""
           }
         },
         ""x-abstract"": true,
