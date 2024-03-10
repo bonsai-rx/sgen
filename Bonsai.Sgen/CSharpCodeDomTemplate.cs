@@ -47,7 +47,9 @@ namespace Bonsai.Sgen
             {
                 serializerLibraries.Add(GetVersionString(YamlDotNetAssemblyName));
             }
-            return $"{GeneratorAssemblyName.Version} ({string.Join(", ", serializerLibraries)})";
+            return serializerLibraries.Count > 0
+                ? $"{GeneratorAssemblyName.Version} ({string.Join(", ", serializerLibraries)})"
+                : GeneratorAssemblyName.Version!.ToString();
         }
 
         public string Render()
