@@ -134,7 +134,9 @@ namespace Bonsai.Sgen
             }
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.PythonNet))
             {
+                var codec = new CSharpPythonCodecTemplate(classTypes, _provider, _options, Settings);
                 var deserializer = new CSharpPythonDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
+                extraTypes.Add(GenerateClass(codec));
                 extraTypes.Add(GenerateClass(deserializer));
             }
 
