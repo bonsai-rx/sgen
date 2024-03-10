@@ -132,6 +132,11 @@ namespace Bonsai.Sgen
                 extraTypes.Add(GenerateClass(serializer));
                 extraTypes.Add(GenerateClass(deserializer));
             }
+            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.PythonNet))
+            {
+                var deserializer = new CSharpPythonDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
+                extraTypes.Add(GenerateClass(deserializer));
+            }
 
             return types.Select(ReplaceInitOnlyProperties).Concat(extraTypes);
         }
