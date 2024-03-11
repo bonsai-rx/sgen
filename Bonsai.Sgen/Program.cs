@@ -1,6 +1,5 @@
 ﻿using System.CommandLine;
 using NJsonSchema;
-using NJsonSchema.CodeGeneration.CSharp;
 
 namespace Bonsai.Sgen
 {
@@ -11,7 +10,7 @@ namespace Bonsai.Sgen
             var schemaPath = new Option<FileInfo>(
                 name: "--schema",
                 description: "Generates serialization classes for data types in the specified schema file.")
-                { IsRequired = true };
+                { IsRequired = !Console.IsInputRedirected };
             var generatorNamespace = new Option<string?>(
                 name: "--namespace",
                 getDefaultValue: () => "DataSchema",
@@ -45,7 +44,17 @@ namespace Bonsai.Sgen
             rootCommand.AddOption(serializerLibraries);
             rootCommand.SetHandler(async (filePath, generatorNamespace, generatorTypeName, outputFilePath, serializerLibraries) =>
             {
-                var schema = await JsonSchema.FromFileAsync(filePath.FullName);
+                JsonSchema schema;
+                if (Console.IsInputRedirected)
+                {
+                    using var stream = Console.OpenStandardInput();
+                    schema = await JsonSchema.FromJsonAsync(stream);
+                }
+                else
+                {
+                    schema = await JsonSchema.FromFileAsync(filePath.FullName);
+                }
+
                 if (string.IsNullOrEmpty(generatorTypeName))
                 {
                     if (!schema.HasTypeNameTitle)
