@@ -9,7 +9,8 @@ namespace Bonsai.Sgen
         {
             var schemaPath = new Option<FileInfo>(
                 name: "--schema",
-                description: "Generates serialization classes for data types in the specified schema file.")
+                description: "Specifies the URL or path to the JSON schema describing the data types " +
+                             "for which to generate serialization classes.")
                 { IsRequired = !Console.IsInputRedirected };
             var generatorNamespace = new Option<string?>(
                 name: "--namespace",
@@ -42,7 +43,7 @@ namespace Bonsai.Sgen
             rootCommand.AddOption(generatorTypeName);
             rootCommand.AddOption(outputPath);
             rootCommand.AddOption(serializerLibraries);
-            rootCommand.SetHandler(async (filePath, generatorNamespace, generatorTypeName, outputFilePath, serializerLibraries) =>
+            rootCommand.SetHandler(async (schemaPath, generatorNamespace, generatorTypeName, outputFilePath, serializerLibraries) =>
             {
                 JsonSchema schema;
                 if (Console.IsInputRedirected)
@@ -52,7 +53,9 @@ namespace Bonsai.Sgen
                 }
                 else
                 {
-                    schema = await JsonSchema.FromFileAsync(filePath.FullName);
+                    schema = Uri.IsWellFormedUriString(schemaPath.FullName, UriKind.Absolute)
+                        ? await JsonSchema.FromUrlAsync(schemaPath.FullName)
+                        : await JsonSchema.FromFileAsync(schemaPath.FullName);
                 }
 
                 if (string.IsNullOrEmpty(generatorTypeName))
