@@ -47,7 +47,9 @@ namespace Bonsai.Sgen
             {
                 serializerLibraries.Add(GetVersionString(YamlDotNetAssemblyName));
             }
-            return $"{GeneratorAssemblyName.Version} ({string.Join(", ", serializerLibraries)})";
+            return serializerLibraries.Count > 0
+                ? $"{GeneratorAssemblyName.Version} ({string.Join(", ", serializerLibraries)})"
+                : GeneratorAssemblyName.Version!.ToString();
         }
 
         public string Render()
@@ -63,5 +65,27 @@ namespace Bonsai.Sgen
             Provider.GenerateCodeFromType(type, writer, Options);
             return writer.ToString();
         }
+
+        protected static readonly Dictionary<string, string> PrimitiveTypes = new()
+        {
+            { "bool",    "System.Boolean" },
+            { "byte",    "System.Byte" },
+            { "sbyte",   "System.SByte" },
+            { "char",    "System.Char" },
+            { "decimal", "System.Decimal" },
+            { "double",  "System.Double" },
+            { "float",   "System.Single" },
+            { "int",     "System.Int32" },
+            { "uint",    "System.UInt32" },
+            { "nint",    "System.IntPtr" },
+            { "nuint",   "System.UIntPtr" },
+            { "long",    "System.Int64" },
+            { "ulong",   "System.UInt64" },
+            { "short",   "System.Int16" },
+            { "ushort",  "System.UInt16" },
+
+            { "object",  "System.Object" },
+            { "string",  "System.String" }
+        };
     }
 }
