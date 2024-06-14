@@ -9,7 +9,7 @@ Tool for automatically generating YAML / JSON serialization classes and construc
 
     ```cmd
     dotnet new tool-manifest # if you are setting up this repo
-    dotnet tool install --local Bonsai.Sgen --version 0.2.0
+    dotnet tool install --local Bonsai.Sgen
     ```
 
 3. To view the tool help reference documentation, run:
