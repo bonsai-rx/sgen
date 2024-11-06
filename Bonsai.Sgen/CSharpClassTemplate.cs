@@ -121,7 +121,7 @@ namespace Bonsai.Sgen
                             nameof(JsonPropertyAttribute.Required),
                             new CodeFieldReferenceExpression(
                                 new CodeTypeReferenceExpression(typeof(Required)),
-                                nameof(Required.Always))));
+                                property.IsNullable ? nameof(Required.AllowNull) : nameof(Required.Always))));
                     }
                     propertyDeclaration.CustomAttributes.Add(jsonProperty);
                 }
