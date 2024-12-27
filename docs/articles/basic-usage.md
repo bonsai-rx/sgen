@@ -184,3 +184,15 @@ For reference types, the generated code will not render a nullable type since re
 ![Nullable pet](~/workflows/person-and-pets-enum-nullable.bonsai)
 :::
 
+## Required fields
+
+`json-schema` supports the [`required`](https://json-schema.org/learn/getting-started-step-by-step#define-required-properties) keyword to specify which fields are required. By default, all fields are optional. This can be useful to enforce the presence of certain fields in the object at deserialization time. However, `Bonsai.Sgen` will not generate any code to enforce this requirement during object construction, only at deserialization. It is up to the user to ensure that the object is correctly populated before using it.
+
+> [!Note]
+> Some confusion maybe arise about the distinction between `null` and `required`. This is all the more confusing since different languages and libraries may refer to these concepts differently. For the sake of this tool (and honestly in general) the following definitions are used:
+
+> - `nullable` means that the field can be `null` or type `T`
+> - `required` means that the field must be present in the object at deserialization time
+> - An object can be `nullable` and `required` at the same time. This means it MUST be defined in the object, but it can be defined as `null`.
+> - An object can be `not required` and `nullable`. This does NOT mean that the object is, by default, `null`. It means that the object should have a default value, which can in theory be `null`.
+> - An object can be `not required` and `not nullable`. This means that the object must have a default value, which cannot be `null`.
