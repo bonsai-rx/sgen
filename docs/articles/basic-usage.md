@@ -44,7 +44,7 @@ Finally, if one considers the `json-schema` as the "source of truth" for the dat
 
 The previous example shows how a single record can be modelled. In practice, projects often require modelling different types of objects. This is where `Bonsai.Sgen` shines, as it allows you to generate multiple objects from a single schema file:
 
-[person_and_dog](~/workflows/person_and_dog.json)
+[person_and_dog](~/workflows/person-and-dog.json)
 
 ```json
 {
@@ -107,7 +107,7 @@ The previous example highlights the simplicity of generating Bonsai code for sim
 `Bonsai.Sgen` also supports the generation of enums using the `enum` type in the `json-schema`:
 
 We can replace the `Pet` object in the previous example with an [`enum`](https://json-schema.org/understanding-json-schema/reference/enum):
-[Pet as Enum](~/workflows/person_and_pet_enum.json).
+[Pet as Enum](~/workflows/person-and-pet-enum.json).
 
 ```json
 (...)
