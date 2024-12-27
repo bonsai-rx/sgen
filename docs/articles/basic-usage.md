@@ -162,3 +162,25 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 :::workflow
 ![Person and Pets](~/workflows/person-and-pets-enum.bonsai)
 :::
+
+## Nullable types
+
+`json-schema` supports the `null` type, which can be used to represent nullable types. The standard is a bit loose in this regard, but `Bonsai.Sgen` will generate a nullable-T if the json-schema represents it using the `oneOf` keyword:
+
+```json
+    "pet": {
+      "oneOf": [
+        {"$ref": "#/definitions/Pet"},
+        {"type": "null"}
+      ]
+    }
+```
+
+For value types, the generated code will render a [Nullable value type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types) type. This type will expose two properties: `HasValue` and `Value`, that can be used to test and manipulate the type, respectively.
+
+For reference types, the generated code will not render a nullable type since reference types are already nullable in C#. A consumer can test for `null` to determine if the value is present by simply using an `ExpressionTransform` operator with `it == null`.:
+
+:::workflow
+![Nullable pet](~/workflows/person-and-pets-enum-nullable.bonsai)
+:::
+
