@@ -1,5 +1,5 @@
 ---
-uid: getting-started
+uid: why-bonsai-sgen
 ---
 
 ## Why should I care?
