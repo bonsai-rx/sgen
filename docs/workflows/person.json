@@ -1,0 +1,19 @@
+{
+  "title": "Person",
+  "type": "object",
+  "properties": {
+    "Age": {
+      "type": "integer"
+    },
+    "FirstName": {
+      "type": "string"
+    },
+    "LastName": {
+      "type": "string"
+    },
+    "DOB": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
