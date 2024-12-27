@@ -107,6 +107,7 @@ The previous example highlights the simplicity of generating Bonsai code for sim
 `Bonsai.Sgen` also supports the generation of enums using the `enum` type in the `json-schema`:
 
 We can replace the `Pet` object in the previous example with an [`enum`](https://json-schema.org/understanding-json-schema/reference/enum):
+
 [Pet as Enum](~/workflows/person-and-pet-enum.json).
 
 ```json
@@ -125,6 +126,12 @@ We can replace the `Pet` object in the previous example with an [`enum`](https:/
   }
 ```
 
+In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us/dotnet/api/system.enum?view=net-9.0) types:
+
+:::workflow
+![Person and Pets](~/workflows/person-and-pet-enum.bonsai)
+:::
+
 > [!TIP]
 > In certain cases, it may be useful to use `x-enum-names` to specify the rendered names of the enum values.
 >
@@ -138,3 +145,20 @@ We can replace the `Pet` object in the previous example with an [`enum`](https:/
 >   }
 > }
 > ```
+
+## Lists
+
+`Bonsai.Sgen` also supports the generation of lists using the `array` type in the `json-schema`:
+
+```json
+    "pets": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/Pet"}
+    }
+```
+
+`json-schema` `array`s will be rendered as [`List<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1?view=net-9.0) in the generated code and can be manipulated (and created) as such.
+
+:::workflow
+![Person and Pets](~/workflows/person-and-pets-enum.bonsai)
+:::
