@@ -127,7 +127,6 @@ We can replace the `Pet` object in the previous example with an [`enum`](https:/
 
 > [!TIP]
 > In certain cases, it may be useful to use `x-enum-names` to specify the rendered names of the enum values.
-> Example:
 >
 > ```json
 > {
