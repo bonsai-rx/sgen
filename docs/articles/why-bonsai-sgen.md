@@ -78,24 +78,38 @@ First, we need to define the schema of the object in a JSON file:
 
 ```json
 {
-    "name": "Person",
-    "fields": [
-        {
-            "name": "Age",
-            "type": "int",
-        },
-        {
-            "name": "FirstName",
-            "type": "string",
-        },
-        {
-            "name": "LastName",
-            "type": "string",
-        },
-        {
-            "name": "DOB",
-            "type": "datetime",
-        }
-    ]
+  "title": "Person",
+  "type": "object",
+  "properties": {
+    "Age": {
+      "type": "integer"
+    },
+    "FirstName": {
+      "type": "string"
+    },
+    "LastName": {
+      "type": "string"
+    },
+    "DOB": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
 }
 ```
+
+Second, we need to run the `Bonsai.Sgen` tool to generate the Bonsai code:
+
+```cmd
+dotnet bonsai.sgen --schema docs/workflows/person.json --output docs/workflows/Extensions/PersonSgen.cs
+```
+
+Finally, we can use the generated code in our Bonsai workflow:
+
+:::workflow
+![Person as BonsaiSgen](~/workflows/person-example-bonsai-sgen.bonsai)
+:::
+
+As you can probably tell, the `Bonsai.Sgen` approach is much more concise and less error-prone than the previous ones. It allows you to focus on the data structure itself and not on the boilerplate code required to create it in Bonsai. Moreover, as we will see later, the tool also automatically generates serialization and deserialization boilerplate code for the object, which can be very useful when working with external data sources.
+
+Finally, if one considers the `json-schema` as the "source of truth" for the data structure representation, it is possible to generate multiple representations of the object in different languages, ensuring interoperability. This can be very useful when working in a multi-language environment (e.g. running experiment in Bonsai and analysis in Python) and when sharing data structures across different projects.
