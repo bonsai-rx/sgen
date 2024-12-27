@@ -1,1 +1,5 @@
-- href: ../index.md
+- name: Getting Started
+  href: ../index.md
+- href: data-definition.md
+- href: basic-usage.md
+- href: advanced-usage.md

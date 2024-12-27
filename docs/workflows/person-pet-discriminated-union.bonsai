@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WorkflowBuilder Version="2.8.5"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xmlns:p1="clr-namespace:PersonAndDiscriminatedPets;assembly=Extensions"
+                 xmlns:rx="clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core"
+                 xmlns="https://bonsai-rx.org/2018/workflow">
+  <Workflow>
+    <Nodes>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="p1:PersonAndPet" />
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>Pet</Selector>
+      </Expression>
+      <Expression xsi:type="p1:MatchPet">
+        <p1:Type xsi:type="TypeMapping" TypeArguments="p1:Dog" />
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>CanBark</Selector>
+      </Expression>
+      <Expression xsi:type="p1:MatchPet">
+        <p1:Type xsi:type="TypeMapping" TypeArguments="p1:Cat" />
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>CanMeow</Selector>
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="p1:Cat">
+          <p1:Age>0</p1:Age>
+          <p1:CanMeow>true</p1:CanMeow>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="p1:MatchPet" />
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="p1:Dog">
+          <p1:CanBark>true</p1:CanBark>
+          <p1:Age>0</p1:Age>
+        </Combinator>
+      </Expression>
+      <Expression xsi:type="p1:MatchPet" />
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="rx:Merge" />
+      </Expression>
+      <Expression xsi:type="p1:MatchPet">
+        <p1:Type xsi:type="TypeMapping" TypeArguments="p1:Dog" />
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>CanBark</Selector>
+      </Expression>
+      <Expression xsi:type="p1:MatchPet">
+        <p1:Type xsi:type="TypeMapping" TypeArguments="p1:Cat" />
+      </Expression>
+      <Expression xsi:type="MemberSelector">
+        <Selector>CanMeow</Selector>
+      </Expression>
+    </Nodes>
+    <Edges>
+      <Edge From="0" To="1" Label="Source1" />
+      <Edge From="1" To="2" Label="Source1" />
+      <Edge From="1" To="4" Label="Source1" />
+      <Edge From="2" To="3" Label="Source1" />
+      <Edge From="4" To="5" Label="Source1" />
+      <Edge From="6" To="7" Label="Source1" />
+      <Edge From="7" To="10" Label="Source1" />
+      <Edge From="8" To="9" Label="Source1" />
+      <Edge From="9" To="10" Label="Source2" />
+      <Edge From="10" To="11" Label="Source1" />
+      <Edge From="10" To="13" Label="Source1" />
+      <Edge From="11" To="12" Label="Source1" />
+      <Edge From="13" To="14" Label="Source1" />
+    </Edges>
+  </Workflow>
+</WorkflowBuilder>
