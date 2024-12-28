@@ -71,3 +71,36 @@ As you can see below, we still get a `Pet` type. Better than `object` but still 
 
 > [!Important]
 > In is general advisable to use references in the `oneOf` syntax. Not only does this decision make your `json-schema` significantly smaller, it will also help `Bonsai.Sgen` generate the correct class hierarchy if multiple unions are present in the schema. If you use inline objects, `Bonsai.Sgen` will likely have to generate a new root class for each union, which can lead to a lot of duplicated code and a more complex object hierarchy.
+
+
+
+## Extending generated code with `partial` classes
+
+Since `Bonsai.Sgen` will generate proper `class` for each object in the schema, it is possible to use these types to create custom operators and methods using the `Scriping Extensions` feature of `Bonsai`. However, sometimes we may want to extend the features of the generated classes directly...
+
+For those that inspected the general `C#` code, you will notice that all classes are marked as [`partial`](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/partial-classes-and-methods). This is a feature of `C#` that allows a class to be split. This was a deliberate design choice to allow users to extend the generated code. However, because it is usually always a bad idea to modify generated code directly (e.g. we may want to regenerate it in the future), `partial` classes allows modification to be made in a separate file.
+
+Suppose we want to sum `Cats`, we can overload the operator with a small method in a separate file::
+
+```csharp
+namespace PersonAndDiscriminatedPets
+{
+    partial class Cat{
+        public static Cat operator +(Cat c1, Cat c2)
+        {
+            return new Cat
+            {
+            CanMeow = c1.CanMeow || c2.CanMeow,
+            Age = c1.Age + c2.Age
+            };
+        }
+    }
+}
+```
+
+In `Bonsai`, we can now use the `Add` operator to sum `Cats`:
+
+
+:::workflow
+![Discriminated Unions](~/workflows/sum-cats.bonsai)
+:::
