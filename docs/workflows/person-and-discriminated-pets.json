@@ -1,0 +1,84 @@
+{
+  "definitions": {
+    "Cat": {
+      "properties": {
+        "pet_type": {
+          "const": "cat",
+          "default": "cat",
+          "title": "Pet Type",
+          "type": "string"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer"
+        },
+        "can_meow": {
+          "default": true,
+          "title": "Can Meow",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "age"
+      ],
+      "title": "Cat",
+      "type": "object"
+    },
+    "Dog": {
+      "properties": {
+        "pet_type": {
+          "const": "dog",
+          "default": "dog",
+          "title": "Pet Type",
+          "type": "string"
+        },
+        "age": {
+          "title": "Age",
+          "type": "integer"
+        },
+        "can_bark": {
+          "default": true,
+          "title": "Can Bark",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "age"
+      ],
+      "title": "Dog",
+      "type": "object"
+    },
+    "Pet": {
+      "discriminator": {
+        "mapping": {
+          "cat": "#/definitions/Cat",
+          "dog": "#/definitions/Dog"
+        },
+        "propertyName": "pet_type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/definitions/Dog"
+        },
+        {
+          "$ref": "#/definitions/Cat"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "pet": {
+      "$ref": "#/definitions/Pet"
+    }
+  },
+  "required": [
+    "owner",
+    "pet"
+  ],
+  "title": "PersonAndPet",
+  "type": "object"
+}
