@@ -104,3 +104,8 @@ In `Bonsai`, we can now use the `Add` operator to sum `Cats`:
 :::workflow
 ![Discriminated Unions](~/workflows/sum-cats.bonsai)
 :::
+
+
+## Other supported tags
+
+- `x-abstract`: This tag is used to mark a class as abstract. An abstract class will not be generated as an operator in Bonsai. This may be useful for root classes of unions that may never need to be manipulated in Bonsai.
