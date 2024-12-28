@@ -4,7 +4,7 @@ uid: intro
 
 ## What is Bonsai.Sgen?
 
-`Bonsai.Sgen` is a code generator tool for the [Bonsai programming language](https://bonsai-rx.org/). It leverages [`json-schema`](https://json-schema.org/) as a standard to represent [record-like](https://en.wikipedia.org/wiki/Record_(computer_science)) structures, and automatically generates Bonsai-compatible isomorphic operators to create and manipulate these objects.
+`Bonsai.Sgen` is a code generator tool for the [Bonsai programming language](https://bonsai-rx.org/). It leverages [`json-schema`](https://json-schema.org/) as a standard to represent [record-like](https://en.wikipedia.org/wiki/Record_(computer_science)) structures, and automatically generates Bonsai-compatible isomorphic operators to create and manipulate these objects. It builds on top of the [`NJsonSchema` library](https://github.com/RicoSuter/NJsonSchema) by providing further customization of the generated code as well as bonsai-specific features.
 
 ## Getting started
 

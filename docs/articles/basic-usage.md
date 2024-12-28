@@ -196,3 +196,26 @@ For reference types, the generated code will not render a nullable type since re
 > - An object can be `nullable` and `required` at the same time. This means it MUST be defined in the object, but it can be defined as `null`.
 > - An object can be `not required` and `nullable`. This does NOT mean that the object is, by default, `null`. It means that the object should have a default value, which can in theory be `null`.
 > - An object can be `not required` and `not nullable`. This means that the object must have a default value, which cannot be `null`.
+
+
+## Serialization and Deserialization
+
+One of the biggest perks of using json-schema to represent our objects is the guaranteed that all records are (de)serializable. This means that we can go from a text-based format (great specification and logging) to a `C#` type seamlessly, and vice-versa. `Bonsai.Sgen` will optionally generate (de)serialization operators for all objects in the schema if the `--serializer` property is not `None`. Currently, two formats are supported out of the box: `Json` (via [`NewtonsoftJson`](https://github.com/JamesNK/Newtonsoft.Json))  and `yaml` (via [`YamlDotNet`](https://github.com/aaubry/YamlDotNet)).
+
+The two operations are afforded via the `SerializeToYaml` (or `SerializeToJson`) and `DeserializeFromYaml` (or `DeserializeFromJson`) operators, respectively. 
+
+`SerializeToYaml` will take a `T` object (known to the namespace) and return a `string` representation of the object.
+`DeserializeFromYaml` will take a `string` and return a `T` object. If validation fails, the operator will throw an exception.
+
+:::workflow
+![(de)serialization](~/workflows/serialization-example.bonsai)
+:::
+
+> [!Tip]
+> Remember to add the necessary package references to your `Extensions.csproj` file depending on the serializer you want to use!
+> ```xml
+> <ItemGroup>
+>   <PackageReference Include="Bonsai.Core" Version="2.8.0" />
+>   <PackageReference Include="YamlDotNet" Version="13.7.1" />
+></ItemGroup>
+> ```
