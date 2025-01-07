@@ -58,8 +58,8 @@
       "template"
     ],
     "globalMetadata": {
-      "_appName": "Bonsai - SGEN",
-      "_appTitle": "Bonsai.SGEN",
+      "_appName": "Bonsai - Sgen",
+      "_appTitle": "Bonsai.Sgen",
       "_appFooter": "&copy; 2025 Bonsai Foundation CIC and Contributors. Made with <a href=\"https://dotnet.github.io/docfx\">docfx</a>",
       "_enableSearch": true,
       "pdf": false
