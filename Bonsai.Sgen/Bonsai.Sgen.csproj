@@ -1,6 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Description>A tool for automatically generating YML serialization classes from schema files.</Description>
+    <ToolCommandName>bonsai.sgen</ToolCommandName>
+    <PackageTags>Bonsai Rx Sgen Schema Serializer Generators</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageOutputPath>..\bin\$(Configuration)</PackageOutputPath>
+    <RepositoryUrl>https://github.com/bonsai-rx/sgen.git</RepositoryUrl>
+    <VersionSuffix></VersionSuffix>
+    <IncludeSymbols>true</IncludeSymbols>
+    <RepositoryType>git</RepositoryType>
+    <PackAsTool>true</PackAsTool>
     <OutputType>Exe</OutputType>
     <PackageId>Bonsai.Sgen</PackageId>
     <TargetFramework>net6.0</TargetFramework>
