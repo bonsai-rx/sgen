@@ -5,7 +5,6 @@
     <Features>strict</Features>
   </PropertyGroup>
 
-  <Import Project="Bonsai.props" />
   <Import Project="Package.props" />
   <Import Project="Version.props" />
 </Project>
