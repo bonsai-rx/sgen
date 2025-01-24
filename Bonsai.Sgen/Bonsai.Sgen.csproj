@@ -5,10 +5,7 @@
     <ToolCommandName>bonsai.sgen</ToolCommandName>
     <PackageTags>Bonsai Rx Sgen Schema Serializer Generators</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <RepositoryUrl>https://github.com/bonsai-rx/sgen.git</RepositoryUrl>
-    <VersionSuffix></VersionSuffix>
     <IncludeSymbols>true</IncludeSymbols>
-    <RepositoryType>git</RepositoryType>
     <PackAsTool>true</PackAsTool>
     <OutputType>Exe</OutputType>
     <PackageId>Bonsai.Sgen</PackageId>
