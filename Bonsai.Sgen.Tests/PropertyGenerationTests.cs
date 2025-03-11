@@ -37,7 +37,7 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
-        public async Task GenerateFromPropertyDefault_EnsureFieldInitializer()
+        public async Task GenerateFromSimplePropertyDefault_EnsureDefaultInitializer()
         {
             var schema = await JsonSchema.FromJsonAsync(@"
 {
@@ -55,6 +55,28 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("private string _name = \"default_name\""), "Missing field initializer.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        public async Task GenerateFromArrayProperty_EnsureDefaultInitializer()
+        {
+            var schema = await JsonSchema.FromJsonAsync(@"
+{
+    ""$schema"": ""http://json-schema.org/draft-04/schema#"",
+    ""type"": ""object"",
+    ""title"": ""Container"",
+    ""properties"": {
+      ""items"": {
+        ""type"": ""array"",
+        ""items"": { ""type"": ""string"" }
+      }
+    }
+}
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("_items = new System.Collections.Generic.List<string>();"), "Missing field initializer.");
             CompilerTestHelper.CompileFromSource(code);
         }
     }
