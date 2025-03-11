@@ -54,7 +54,7 @@ namespace Bonsai.Sgen.Tests
 ");
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
-            Assert.IsTrue(code.Contains("private string _name = \"default_name\""), "Missing field initializer.");
+            Assert.IsTrue(code.Contains("_name = \"default_name\""), "Missing field initializer.");
             CompilerTestHelper.CompileFromSource(code);
         }
 

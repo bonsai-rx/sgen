@@ -70,6 +70,7 @@ namespace Bonsai.Sgen
             }
 
             var propertyCount = 0;
+            var defaultConstructor = new CodeConstructor { Attributes = Model.IsAbstract ? MemberAttributes.Family : MemberAttributes.Public };
             foreach (var property in Model.Properties)
             {
                 propertyCount++;
@@ -80,11 +81,15 @@ namespace Bonsai.Sgen
                     property.FieldName);
                 if (property.HasDefaultValue)
                 {
-                    fieldDeclaration.InitExpression = new CodeSnippetExpression(property.DefaultValue);
+                    defaultConstructor.Statements.Add(new CodeAssignStatement(
+                        new CodeVariableReferenceExpression(property.FieldName),
+                        new CodeSnippetExpression(property.DefaultValue)));
                 }
                 else if (propertySchema?.IsArray is true)
                 {
-                    fieldDeclaration.InitExpression = new CodeObjectCreateExpression(fieldDeclaration.Type);
+                    defaultConstructor.Statements.Add(new CodeAssignStatement(
+                        new CodeVariableReferenceExpression(property.FieldName),
+                        new CodeObjectCreateExpression(fieldDeclaration.Type)));
                 }
 
                 var propertyDeclaration = new CodeMemberProperty
@@ -148,7 +153,6 @@ namespace Bonsai.Sgen
                 type.Members.Add(propertyDeclaration);
             }
 
-            var defaultConstructor = new CodeConstructor { Attributes = Model.IsAbstract ? MemberAttributes.Family : MemberAttributes.Public };
             var copyConstructor = new CodeConstructor { Attributes = MemberAttributes.Family };
             var copyParameter = new CodeParameterDeclarationExpression(Model.ClassName, "other");
             copyConstructor.Parameters.Add(copyParameter);
