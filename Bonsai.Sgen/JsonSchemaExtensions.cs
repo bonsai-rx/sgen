@@ -1,10 +1,23 @@
-﻿using NJsonSchema;
+﻿using System.Collections;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using NJsonSchema;
+using NJsonSchema.References;
 using NJsonSchema.Visitors;
 
 namespace Bonsai.Sgen
 {
     internal static class JsonSchemaExtensions
     {
+        public static JsonSchema WithCompatibleDefinitions(this JsonSchema schema, ITypeNameGenerator typeNameGenerator)
+        {
+            var schemaAppender = new JsonSchemaAppender(schema, typeNameGenerator);
+            var referenceResolver = new JsonReferenceResolver(schemaAppender);
+            var definitionVisitor = new DefinitionSchemaVisitor(schema, referenceResolver);
+            definitionVisitor.Visit(schema);
+            return schema;
+        }
+
         public static JsonSchema WithResolvedDiscriminatorInheritance(this JsonSchema schema)
         {
             var discriminatorVisitor = new DiscriminatorSchemaVisitor(schema);
@@ -146,6 +159,62 @@ namespace Bonsai.Sgen
                     if (discriminatorSchema != null)
                     {
                         schema.Properties.Remove(discriminatorSchema.PropertyName);
+                    }
+                }
+
+                return schema;
+            }
+        }
+
+        class DefinitionSchemaVisitor : JsonSchemaVisitorBase
+        {
+            const string DefsExtension = "$defs";
+
+            public DefinitionSchemaVisitor(object rootObject, JsonReferenceResolver referenceResolver)
+            {
+                RootObject = rootObject;
+                ReferenceResolver = referenceResolver;
+                ContractResolver = new DefaultContractResolver();
+            }
+
+            public object RootObject { get; }
+
+            public JsonReferenceResolver ReferenceResolver { get; }
+
+            public IContractResolver ContractResolver { get; }
+
+            protected override IJsonReference VisitJsonReference(IJsonReference reference, string path, string typeNameHint)
+            {
+                if (reference.ReferencePath != null && reference.Reference == null)
+                {
+                    reference.Reference = ReferenceResolver.ResolveReferenceAsync(
+                        RootObject,
+                        reference.ReferencePath,
+                        reference.GetType(),
+                        ContractResolver).Result;
+                }
+
+                return base.VisitJsonReference(reference, path, typeNameHint);
+            }
+
+            protected override JsonSchema VisitSchema(JsonSchema schema, string path, string typeNameHint)
+            {
+                if (schema.ExtensionData?.TryGetValue(DefsExtension, out var defs) == true &&
+                    defs is IDictionary<string, object> definitions)
+                {
+                    foreach (var entry in definitions)
+                    {
+                        JsonSchema definition;
+                        if (entry.Value is IDictionary dictionary)
+                        {
+                            var settings = new JsonSerializerSettings { ContractResolver = ContractResolver };
+                            var json = JsonConvert.SerializeObject(dictionary, settings);
+                            definition = JsonConvert.DeserializeObject<JsonSchema>(json, settings) ??
+                                throw new InvalidOperationException(
+                                    $"Unable to resolve definition {entry.Key} within JSON path '{path}'.");
+                        }
+                        else definition = (JsonSchema)entry.Value;
+                        schema.Definitions.Add(entry.Key, definition);
                     }
                 }
 
