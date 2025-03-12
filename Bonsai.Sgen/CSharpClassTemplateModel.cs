@@ -15,8 +15,11 @@ namespace Bonsai.Sgen
             : base(typeName, settings, resolver, schema, rootObject)
         {
             Schema = schema;
+            Resolver = resolver;
         }
 
         public JsonSchema Schema { get; }
+
+        public CSharpTypeResolver Resolver { get; }
     }
 }

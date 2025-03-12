@@ -4,7 +4,9 @@ using System.ComponentModel;
 using System.Text;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NJsonSchema;
+using NJsonSchema.CodeGeneration.CSharp.Models;
 using NJsonSchema.Converters;
 using YamlDotNet.Serialization;
 
@@ -71,10 +73,11 @@ namespace Bonsai.Sgen
 
             var propertyCount = 0;
             var defaultConstructor = new CodeConstructor { Attributes = Model.IsAbstract ? MemberAttributes.Family : MemberAttributes.Public };
+            var modelSchemaProperties = Model.Schema.ActualProperties;
             foreach (var property in Model.Properties)
             {
                 propertyCount++;
-                Model.Schema.ActualProperties.TryGetValue(property.Name, out var propertySchema);
+                modelSchemaProperties.TryGetValue(property.Name, out var propertySchema);
                 var isPrimitive = PrimitiveTypes.TryGetValue(property.Type, out string? underlyingType);
                 var fieldDeclaration = new CodeMemberField(
                     isPrimitive ? underlyingType : property.Type,
@@ -84,6 +87,16 @@ namespace Bonsai.Sgen
                     defaultConstructor.Statements.Add(new CodeAssignStatement(
                         new CodeVariableReferenceExpression(property.FieldName),
                         new CodeSnippetExpression(property.DefaultValue)));
+                }
+                else if (propertySchema?.Default is JObject jsonObject)
+                {
+                    var targetObject = new CodeVariableReferenceExpression(property.FieldName);
+                    BuildDefaultPropertyInitializer(
+                        defaultConstructor,
+                        targetObject,
+                        fieldDeclaration.Type,
+                        propertySchema,
+                        jsonObject);
                 }
                 else if (propertySchema?.IsArray is true)
                 {
@@ -297,6 +310,59 @@ namespace Bonsai.Sgen
                     }
                 };
                 type.Members.Add(toStringMethod);
+            }
+        }
+
+        private void BuildDefaultPropertyInitializer(
+            CodeConstructor defaultConstructor,
+            CodeExpression targetObject,
+            CodeTypeReference targetType,
+            JsonSchemaProperty propertySchema,
+            JObject jsonObject)
+        {
+            defaultConstructor.Statements.Add(new CodeAssignStatement(
+                targetObject,
+                new CodeObjectCreateExpression(targetType)));
+
+            var innerSchemaProperties = propertySchema.ActualProperties;
+            foreach (var jsonProperty in jsonObject.Properties())
+            {
+                if (!innerSchemaProperties.TryGetValue(
+                    jsonProperty.Name,
+                    out JsonSchemaProperty? defaultPropertySchema))
+                    continue;
+
+                var defaultProperty = new PropertyModel(Model, defaultPropertySchema, Model.Resolver, Settings);
+                if (jsonProperty.Value is JObject nestedObject)
+                {
+                    var nestedTarget = new CodePropertyReferenceExpression(targetObject, defaultProperty.PropertyName);
+                    BuildDefaultPropertyInitializer(
+                        defaultConstructor,
+                        nestedTarget,
+                        new CodeTypeReference(defaultProperty.Type),
+                        defaultPropertySchema,
+                        nestedObject);
+                }
+
+                if (jsonProperty.Value is not JValue jsonValue)
+                    continue;
+
+                var schemaDefault = defaultPropertySchema.Default;
+                try
+                {
+                    defaultPropertySchema.Default = jsonValue.Value;
+                    var defaultValue = Settings.ValueGenerator.GetDefaultValue(
+                        defaultPropertySchema,
+                        defaultProperty.IsNullable,
+                        defaultProperty.Type,
+                        defaultProperty.Name,
+                        Settings.GenerateDefaultValues,
+                        Model.Resolver);
+                    defaultConstructor.Statements.Add(new CodeAssignStatement(
+                        new CodePropertyReferenceExpression(targetObject, defaultProperty.PropertyName),
+                        new CodeSnippetExpression(defaultValue)));
+                }
+                finally { defaultPropertySchema.Default = schemaDefault; }
             }
         }
 
