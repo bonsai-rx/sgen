@@ -80,6 +80,9 @@ namespace Bonsai.Sgen
 
         public override IEnumerable<CodeArtifact> GenerateTypes()
         {
+            if (RootObject is JsonSchema jsonSchema)
+                _resolver.RegisterSchemaDefinitions(jsonSchema.Definitions);
+
             var types = base.GenerateTypes();
             var extraTypes = new List<CodeArtifact>();
 
