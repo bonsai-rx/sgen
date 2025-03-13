@@ -37,6 +37,9 @@ namespace Bonsai.Sgen
 
         protected override CodeArtifact GenerateType(JsonSchema schema, string typeNameHint)
         {
+            if (schema.TryGetExternalTypeName(out var _))
+                return new CodeArtifact(typeNameHint, default, default, default, string.Empty);
+
             var typeName = _resolver.GetOrGenerateTypeName(schema, typeNameHint);
             if (schema.IsEnumeration)
             {
@@ -80,6 +83,9 @@ namespace Bonsai.Sgen
 
         public override IEnumerable<CodeArtifact> GenerateTypes()
         {
+            if (RootObject is JsonSchema jsonSchema)
+                _resolver.RegisterSchemaDefinitions(jsonSchema.Definitions);
+
             var types = base.GenerateTypes();
             var extraTypes = new List<CodeArtifact>();
 
@@ -111,14 +117,14 @@ namespace Bonsai.Sgen
                 var matchTemplate = new CSharpTypeMatchTemplate(type, _provider, _options, Settings);
                 extraTypes.Add(GenerateClass(matchTemplate));
             }
-            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson) && classTypes.Count > 0)
             {
                 var serializer = new CSharpJsonSerializerTemplate(classTypes, _provider, _options, Settings);
                 var deserializer = new CSharpJsonDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
                 extraTypes.Add(GenerateClass(serializer));
                 extraTypes.Add(GenerateClass(deserializer));
             }
-            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet) && classTypes.Count > 0)
             {
                 if (discriminatorTypes.Count > 0)
                 {
@@ -133,7 +139,10 @@ namespace Bonsai.Sgen
                 extraTypes.Add(GenerateClass(deserializer));
             }
 
-            return types.Select(ReplaceInitOnlyProperties).Concat(extraTypes);
+            return types
+                .Where(type => type.Type != CodeArtifactType.Undefined)
+                .Select(ReplaceInitOnlyProperties)
+                .Concat(extraTypes);
         }
     }
 }

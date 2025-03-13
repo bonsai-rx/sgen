@@ -9,6 +9,21 @@ namespace Bonsai.Sgen
 {
     internal static class JsonSchemaExtensions
     {
+        public const string TypeNameAnnotation = "x-sgen-typename";
+
+        public static bool TryGetExternalTypeName(this JsonSchema schema, out string typeName)
+        {
+            if (schema.ExtensionData?.TryGetValue(TypeNameAnnotation, out object? value) is true &&
+                value is string annotationValue)
+            {
+                typeName = annotationValue;
+                return true;
+            }
+
+            typeName = string.Empty;
+            return false;
+        }
+
         public static JsonSchema WithCompatibleDefinitions(this JsonSchema schema, ITypeNameGenerator typeNameGenerator)
         {
             var schemaAppender = new JsonSchemaAppender(schema, typeNameGenerator);

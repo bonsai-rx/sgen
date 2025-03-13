@@ -75,10 +75,14 @@ namespace Bonsai.Sgen
                             new CodeTypeReference(modelType.TypeName))))));
             }
 
+            var defaultType = _schema.Title;
+            if (string.IsNullOrEmpty(defaultType))
+                defaultType = ModelTypes.FirstOrDefault()?.TypeName;
+
             type.Members.Add(new CodeSnippetTypeMember(
 @$"    public {TypeName}()
     {{
-        Type = new Bonsai.Expressions.TypeMapping<{_schema.Title}>();
+        Type = new Bonsai.Expressions.TypeMapping<{defaultType}>();
     }}
 
     public Bonsai.Expressions.TypeMapping Type {{ get; set; }}

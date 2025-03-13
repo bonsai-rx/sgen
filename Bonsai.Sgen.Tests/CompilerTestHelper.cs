@@ -10,10 +10,10 @@ namespace Bonsai.Sgen.Tests
 {
     internal static class CompilerTestHelper
     {
-        public static void CompileFromSource(string code)
+        public static void CompileFromSource(params string[] code)
         {
             var options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp5);
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, options);
+            var syntaxTrees = Array.ConvertAll(code, text => CSharpSyntaxTree.ParseText(text, options));
             var serializerDependencies = new[]
             {
                 typeof(YamlDotNet.Core.Parser).Assembly.Location,
@@ -26,7 +26,7 @@ namespace Bonsai.Sgen.Tests
 
             var compilation = CSharpCompilation.Create(
                 nameof(CompilerTestHelper),
-                syntaxTrees: new[] { syntaxTree },
+                syntaxTrees: syntaxTrees,
                 references: assemblyReferences,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
             using var memoryStream = new MemoryStream();
