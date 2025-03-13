@@ -1,5 +1,2 @@
-.vs
-bin
-obj
-*.user
-*.suo
+.vs/
+/artifacts/

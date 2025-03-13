@@ -7,10 +7,18 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bonsai.Sgen", "src\Bonsai.S
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C2B91AD3-A136-4833-897F-123A6B3578DD}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bonsai.Sgen.Tests", "src\Bonsai.Sgen.Tests\Bonsai.Sgen.Tests.csproj", "{DF485243-376F-4632-A637-D489B799F59A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{8F113225-6141-412D-8F6F-8669775C796F}"
+	ProjectSection(SolutionItems) = preProject
+		build\Common.props = build\Common.props
+		build\Package.props = build\Package.props
+		build\Version.props = build\Version.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

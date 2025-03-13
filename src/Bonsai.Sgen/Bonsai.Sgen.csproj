@@ -3,11 +3,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <PackageId>Bonsai.Sgen</PackageId>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <VersionPrefix>0.4.0</VersionPrefix>
-    <VersionSuffix></VersionSuffix>
-    <Nullable>enable</Nullable>
+    <ToolCommandName>bonsai.sgen</ToolCommandName>
+    <Description>A tool for automatically generating YML serialization classes from schema files.</Description>
+    <PackageTags>Bonsai Rx Sgen Schema Serializer Generators</PackageTags>
+    <PackAsTool>true</PackAsTool>
   </PropertyGroup>
 
   <ItemGroup>
