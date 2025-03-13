@@ -37,6 +37,9 @@ namespace Bonsai.Sgen
 
         protected override CodeArtifact GenerateType(JsonSchema schema, string typeNameHint)
         {
+            if (schema.TryGetExternalTypeName(out var _))
+                return new CodeArtifact(typeNameHint, default, default, default, string.Empty);
+
             var typeName = _resolver.GetOrGenerateTypeName(schema, typeNameHint);
             if (schema.IsEnumeration)
             {
@@ -136,7 +139,10 @@ namespace Bonsai.Sgen
                 extraTypes.Add(GenerateClass(deserializer));
             }
 
-            return types.Select(ReplaceInitOnlyProperties).Concat(extraTypes);
+            return types
+                .Where(type => type.Type != CodeArtifactType.Undefined)
+                .Select(ReplaceInitOnlyProperties)
+                .Concat(extraTypes);
         }
     }
 }
