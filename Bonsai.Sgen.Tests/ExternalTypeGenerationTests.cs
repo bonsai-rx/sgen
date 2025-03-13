@@ -78,6 +78,49 @@ schema => new TestJsonReferenceResolver(
 
             var generatorB = TestHelper.CreateGenerator(schemaB, schemaNamespace: $"{nameof(TestHelper)}.Derived");
             var codeB = generatorB.GenerateFile();
+            Assert.IsTrue(codeB.Contains("public TestHelper.Base.CommonType Bar"), "Incorrect type declaration.");
+            CompilerTestHelper.CompileFromSource(codeA, codeB);
+        }
+
+        [TestMethod]
+        public async Task GenerateWithExternalBaseTypeReference_OmitExternalTypeDefinition()
+        {
+            var schemaA = await CreateCommonDefinitions();
+            var generatorA = TestHelper.CreateGenerator(schemaA, schemaNamespace: $"{nameof(TestHelper)}.Base");
+            var codeA = generatorA.GenerateFile();
+
+            var schemaB = await JsonSchema.FromJsonAsync(@"
+{
+    ""$schema"": ""http://json-schema.org/draft-04/schema#"",
+    ""definitions"": {
+      ""DerivedType"": {
+        ""type"": ""object"",
+        ""properties"": {
+          ""Baz"": {
+            ""type"": [
+              ""null"",
+              ""integer""
+            ]
+          }
+        },
+        ""allOf"": [
+          {
+            ""$ref"": ""https://schemaA/definitions/CommonType""
+          }
+        ]
+      }
+    }
+  }
+",
+documentPath: "",
+schema => new TestJsonReferenceResolver(
+    new JsonSchemaAppender(schema, new DefaultTypeNameGenerator()),
+    schemaA,
+    generatorA.Settings.Namespace));
+
+            var generatorB = TestHelper.CreateGenerator(schemaB, schemaNamespace: $"{nameof(TestHelper)}.Derived");
+            var codeB = generatorB.GenerateFile();
+            Assert.IsTrue(codeB.Contains("class DerivedType : TestHelper.Base.CommonType"), "Incorrect type declaration.");
             CompilerTestHelper.CompileFromSource(codeA, codeB);
         }
     }
