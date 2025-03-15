@@ -17,5 +17,10 @@ namespace Bonsai.Sgen
             var prefix = result.StartsWith('_') ? "_" : string.Empty;
             return prefix + result.Replace("_", string.Empty);
         }
+
+        public string Reverse(string value)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

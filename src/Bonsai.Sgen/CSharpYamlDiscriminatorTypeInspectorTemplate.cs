@@ -19,7 +19,7 @@ namespace Bonsai.Sgen
         public override void BuildType(CodeTypeDeclaration type)
         {
             type.IsPartial = false;
-            type.BaseTypes.Add(typeof(TypeInspectorSkeleton));
+            type.BaseTypes.Add(typeof(ReflectionTypeInspector));
             type.Members.Add(new CodeSnippetTypeMember(
 @$"    readonly YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor;
 
@@ -64,6 +64,11 @@ namespace Bonsai.Sgen
 
         public string Name {{ get; private set; }}
 
+        public bool Required
+        {{
+            get {{ return true; }}
+        }}
+
         public bool CanWrite
         {{
             get {{ return true; }}
@@ -75,6 +80,16 @@ namespace Bonsai.Sgen
         }}
 
         public System.Type TypeOverride {{ get; set; }}
+
+        public System.Type ConverterType
+        {{
+            get {{ return null; }}
+        }}
+
+        public bool AllowNulls
+        {{
+            get {{ return false; }}
+        }}
 
         public int Order {{ get; set; }}
 
