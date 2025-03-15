@@ -1,6 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NJsonSchema;
-using System.Threading.Tasks;
 
 namespace Bonsai.Sgen.Tests
 {
