@@ -78,7 +78,7 @@ namespace Bonsai.Sgen.Tests
             return CreateDerivedSchemas(propertyName, baseSchema: null, keys);
         }
 
-        public static KeyValuePair<string, JsonSchema>[] CreateDerivedSchemas(string propertyName, JsonSchema baseSchema, params string[] keys)
+        public static KeyValuePair<string, JsonSchema>[] CreateDerivedSchemas(string propertyName, JsonSchema? baseSchema, params string[] keys)
         {
             return Array.ConvertAll(keys, key =>
             {
