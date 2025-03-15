@@ -1,0 +1,38 @@
+{
+  "title": "PersonAndPet",
+  "definitions": {
+    "Person": {
+      "title": "Person",
+      "type": "object",
+      "properties": {
+        "Age": {
+          "type": "integer"
+        },
+        "FirstName": {
+          "type": "string"
+        },
+        "LastName": {
+          "type": "string"
+        },
+        "DOB": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Pet": {
+      "title": "Pet",
+      "type": "string",
+      "enum": ["Dog", "Cat", "Fish", "Bird", "Reptile"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "owner": {
+      "$ref": "#/definitions/Person"
+    },
+    "pet": {
+      "$ref": "#/definitions/Pet"
+    }
+  }
+}
