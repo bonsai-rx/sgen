@@ -22,7 +22,7 @@ namespace Bonsai.Sgen.Tests
                 typeof(Combinator).Assembly.Location
             };
             var assemblyReferences = serializerDependencies.Select(path => MetadataReference.CreateFromFile(path)).ToList();
-            assemblyReferences.AddRange(Net60.References.All);
+            assemblyReferences.AddRange(Net80.References.All);
 
             var compilation = CSharpCompilation.Create(
                 nameof(CompilerTestHelper),

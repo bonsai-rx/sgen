@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- Semantic version prefix -->
-    <VersionPrefix>0.4.0</VersionPrefix>
+    <VersionPrefix>0.5.0</VersionPrefix>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ContinuousIntegrationBuild)' != 'true'">
