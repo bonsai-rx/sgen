@@ -38,6 +38,9 @@
         "attributes",
         "customcontainers"
       ]
-    }
+    },
+    "xref": [
+      "https://bonsai-rx.org/docs/xrefmap.yml"
+    ]
   }
 }
