@@ -36,10 +36,9 @@ Tool for automatically generating YAML / JSON serialization classes and construc
 
     ```xml
     <ItemGroup>
-        <PackageReference Include="Bonsai.Core" Version="2.8.0" />
-        <PackageReference Include="YamlDotNet" Version="13.7.1" />
+      <PackageReference Include="Bonsai.Core" Version="2.8.5" />
+      <PackageReference Include="YamlDotNet" Version="13.7.1" />
     </ItemGroup>
-    </Project>
     ```
 
 8. To restore the tool at any point, run:
