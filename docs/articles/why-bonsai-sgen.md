@@ -1,10 +1,6 @@
----
-uid: why-bonsai-sgen
----
+# Why Bonsai Sgen?
 
-## Why should I care?
-
-`Bonsai.Sgen` attempts to solve the problem of writing boilerplate code to create represent data structures in Bonsai. Let's try to convince you by looking at a simple example.
+`Bonsai.Sgen` attempts to solve the problem of writing boilerplate code to model domain-specific data in Bonsai. Let's try to convince you by looking at a simple example.
 
 Let's we have a simple record-like object that represents a ´Person´:
 
@@ -19,7 +15,7 @@ Let's we have a simple record-like object that represents a ´Person´:
 
 If we want to represent this object in Bonsai, we have a few alternatives:
 
-1. Using a `DynamicClass` object:
+1. Using an [`ExpressionTransform`](xref:Bonsai.Scripting.Expressions.ExpressionTransform) with a [Data Object Initializer](https://bonsai-rx.org/docs/api/Bonsai.Scripting.Expressions.ExpressionTransform.html#data-object-initializers):
 
 :::workflow
 ![Person as DynamicClass](~/workflows/person-example-dynamic-class.bonsai)

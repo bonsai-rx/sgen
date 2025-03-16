@@ -1,7 +1,4 @@
----
-uid: advanced-usage
----
-
+# Advanced Usage
 
 ## Unions
 
