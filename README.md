@@ -1,6 +1,6 @@
 # Serializer Generator Tool
 
-Tool for automatically generating YAML / JSON serialization classes and constructor operators from schema files.
+`Bonsai.Sgen` is a code generator tool for the [Bonsai](https://bonsai-rx.org/) programming language. It leverages [JSON Schema](https://json-schema.org/) as a standard to specify [record data types](https://en.wikipedia.org/wiki/Record_(computer_science)), and automatically generates operators to create and manipulate these objects. It builds on top of  [NJsonSchema](https://github.com/RicoSuter/NJsonSchema) by providing further customization of the generated code as well as Bonsai-specific features.
 
 ## Getting Started
 

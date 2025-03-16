@@ -1,7 +1,4 @@
----
-uid: basic-usage
----
-
+# Basic Usage
 
 ## Automatic generation of Bonsai code using Bonsai.Sgen
 
@@ -83,7 +80,7 @@ dotnet bonsai.sgen --schema docs/workflows/person_and_dog.json --output docs/wor
 ```
 
 :::workflow
-![PersonAndDog as BonsaiSgen](~/workflows/person-and-dog-example-bonsai-sgen.bonsai)
+![Person And Dog](~/workflows/person-and-dog.bonsai)
 :::
 
 A few things worth noting in this example:
@@ -99,7 +96,7 @@ The previous example highlights the simplicity of generating Bonsai code for sim
 
 
 :::workflow
-![PersonAndDog building as BonsaiSgen](~/workflows/person-and-dog-nested-building-example-bonsai-sgen.bonsai)
+![Person And Dog Nested Building](~/workflows/person-and-dog-nested-building.bonsai)
 :::
 
 ## Enums
@@ -181,7 +178,7 @@ For value types, the generated code will render a [Nullable value type](https://
 For reference types, the generated code will not render a nullable type since reference types are already nullable in C#. A consumer can test for `null` to determine if the value is present by simply using an `ExpressionTransform` operator with `it == null`.:
 
 :::workflow
-![Nullable pet](~/workflows/person-and-pets-enum-nullable.bonsai)
+![Nullable pet](~/workflows/person-and-pet-enum-nullable.bonsai)
 :::
 
 ## Required fields
@@ -215,7 +212,7 @@ The two operations are afforded via the `SerializeToYaml` (or `SerializeToJson`)
 > Remember to add the necessary package references to your `Extensions.csproj` file depending on the serializer you want to use!
 > ```xml
 > <ItemGroup>
->   <PackageReference Include="Bonsai.Core" Version="2.8.0" />
+>   <PackageReference Include="Bonsai.Core" Version="2.8.5" />
 >   <PackageReference Include="YamlDotNet" Version="13.7.1" />
-></ItemGroup>
+> </ItemGroup>
 > ```
