@@ -1,4 +1,6 @@
-# Why Bonsai Sgen?
+# Why use Bonsai.Sgen?
+
+## Data schemas
 
 `Bonsai.Sgen` addresses the challenge of writing boilerplate code to model domain-specific data in Bonsai. Let's explore this with a simple example.
 
