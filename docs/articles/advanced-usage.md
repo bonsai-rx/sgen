@@ -31,9 +31,7 @@ While `oneOf` is supported, statically typed languages like `C#` require the exa
 
 ## Tagged-Unions
 
-## Tagged Unions
-
-Unions types can be made type-aware by using[`tagged unions`](https://en.wikipedia.org/wiki/Tagged_union) (or `discriminated unions`). The syntax for tagged unions is not part of the `json-schema` specification, but it is supported by the [`OpenAPI` standard](https://swagger.io/docs/specification/v3_0/data-models/inheritance-and-polymorphism/#discriminator), which is a superset of `json-schema`. The key idea behind tagged unions is to add a `discriminator` field to the schema that specifies the property that will be used to determine the type of the object at runtime.
+Unions types can be made type-aware by using [`tagged unions`](https://en.wikipedia.org/wiki/Tagged_union) (or `discriminated unions`). The syntax for tagged unions is not part of the `json-schema` specification, but it is supported by the [`OpenAPI` standard](https://swagger.io/docs/specification/v3_0/data-models/inheritance-and-polymorphism/#discriminator), which is a superset of `json-schema`. The key idea behind tagged unions is to add a `discriminator` field to the schema that specifies the property that will be used to determine the type of the object at runtime.
 
 For example, a `Pet` object that can be either a `Dog` or a `Cat` can be represented as follows:
 
@@ -64,7 +62,7 @@ As you can see below, we still get a `Pet` type. Better than `object` but still 
 :::
 
 > [!Important]
-> In is advisable to use references in the `oneOf` syntax. Not only does this decision make your `json-schema` significantly smaller, it will also help `Bonsai.Sgen` generate the correct class hierarchy if multiple unions are present in the schema. If you use inline objects, `Bonsai.Sgen` will likely have to generate a new root class for each union, which can lead to a lot of duplicated code and a more complex object hierarchy.
+> In is strongly recommended to use references with the `oneOf` syntax. Not only does this decision make your `json-schema` significantly smaller, it will also help `Bonsai.Sgen` generate the correct class hierarchy if multiple unions are present in the schema. If you use inline objects, `Bonsai.Sgen` will likely have to generate a new root class for each union, which can lead to a lot of duplicated code and a more complex object hierarchy.
 
 
 
@@ -97,6 +95,6 @@ In Bonsai, use the `Add` operator to sum `Cat` objects:
 ![Discriminated Unions](~/workflows/sum-cats.bonsai)
 :::
 
-## Other supported tags
+## Supported tags
 
 - `x-abstract`: Marks a class as abstract, preventing it from being generated as an operator in Bonsai.

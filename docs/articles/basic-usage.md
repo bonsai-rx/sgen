@@ -23,7 +23,7 @@ First, define the schema of the object in a JSON file:
 
 Next, run the `Bonsai.Sgen` tool to generate the Bonsai code:
 
-```cmd
+```shell
 dotnet bonsai.sgen --schema docs/workflows/person.json --output docs/workflows/Extensions/PersonSgen.cs
 ```
 
@@ -33,7 +33,7 @@ Finally, use the generated code in your Bonsai workflow:
 ![Person as BonsaiSgen](~/workflows/person-example-bonsai-sgen.bonsai)
 :::
 
-The `Bonsai.Sgen` approach is concise and less error-prone, allowing you to focus on the data structure itself rather than boilerplate code. Additionally, the tool automatically generates, type-aware, serialization and deserialization operators, which are useful when working with external data sources.
+The `Bonsai.Sgen` approach is concise and less error-prone, allowing you to focus on the data structure itself rather than boilerplate code. Additionally, the tool automatically generates, type-aware, [serialization and deserialization operators](#serialization-and-deserialization), which are useful when working with external data sources.
 
 By treating the `json-schema` as the "source of truth," you can generate multiple representations of the object in different languages, ensuring interoperability. This is particularly useful in multi-language environments (e.g., running experiments in Bonsai and analysis in Python) and when sharing data structures across projects.
 
@@ -75,7 +75,7 @@ The previous example demonstrates modeling a single record. In practice, project
 }
 ```
 
-```cmd
+```shell
 dotnet bonsai.sgen --schema docs/workflows/person_and_dog.json --output docs/workflows/Extensions/PersonAndDogSgen.cs --namespace PersonAndDog
 ```
 
@@ -92,7 +92,7 @@ A few things worth noting in this example:
 
 ## Nested objects
 
-The previous example highlights the simplicity of generating Bonsai code for simple objects. However, the real power of `Bonsai.Sgen` comes when dealing with more complex data structures, such as nested objects. Moreover, Bonsai syntax lends itself quite nicely to represent these nested structures as well as build them:
+The real power of `Bonsai.Sgen` comes when dealing with more complex data structures, such as nested objects. Bonsai syntax lends itself quite nicely to represent, as well as compose and manipulate them:
 
 :::workflow
 ![Person And Dog Nested Building](~/workflows/person-and-dog-nested-building.bonsai)
