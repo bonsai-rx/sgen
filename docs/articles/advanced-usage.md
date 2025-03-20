@@ -68,7 +68,7 @@ As you can see below, we still get a `Pet` type. Better than `object` but still 
 
 ## Extending generated code with `partial` classes
 
-Generated classes are marked as [`partial`](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/partial-classes-and-methods), allowing you to extend them without modifying the generated code directly.
+Generated classes are marked as [`partial`](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/partial-classes-and-methods), allowing you to extend them without modifying the generated code directly. This can be done by placing the new `.cs` file in the [`Extensions`](https://bonsai-rx.org/docs/articles/scripting-extensions.html) folder of your project.
 
 For example, to add an operator for summing `Cat` objects:
 
