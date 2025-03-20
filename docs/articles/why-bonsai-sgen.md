@@ -15,7 +15,7 @@ Suppose we have a record-like object that represents a `Person`:
 
 To represent this object in Bonsai, we have a few options:
 
-1. Using an [`ExpressionTransform`](xref:Bonsai.Scripting.Expressions.ExpressionTransform) with a [Data Object Initializer](https://bonsai-rx.org/docs/api/Bonsai.Scripting.Expressions.ExpressionTransform.html#data-object-initializers):
+1. Using an [`ExpressionTransform`](xref:Bonsai.Scripting.Expressions.ExpressionTransform) with a [Data Object Initializer](xref:Bonsai.Scripting.Expressions.ExpressionTransform#data-object-initializers):
 
     :::workflow
     ![Person as DynamicClass](~/workflows/person-example-dynamic-class.bonsai)

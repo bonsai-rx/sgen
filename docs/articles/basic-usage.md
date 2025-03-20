@@ -1,5 +1,9 @@
 # Basic usage
 
+> [!TIP]
+> It is strongly recommend to be familiar with [Bonsai Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html) before using this tool.
+
+
 ## Automatic generation of Bonsai code using Bonsai.Sgen
 
 We will expand this example later, but for now, let's see how to use `Bonsai.Sgen` to automatically generate Bonsai code for the `Person` object.
@@ -24,7 +28,7 @@ First, define the schema of the object in a JSON file:
 Next, run the `Bonsai.Sgen` tool to generate the Bonsai code:
 
 ```shell
-dotnet bonsai.sgen --schema docs/workflows/person.json --output docs/workflows/Extensions/PersonSgen.cs
+dotnet bonsai.sgen --schema person.json --output Extensions/PersonSgen.cs
 ```
 
 Finally, use the generated code in your Bonsai workflow:
@@ -76,7 +80,7 @@ The previous example demonstrates modeling a single record. In practice, project
 ```
 
 ```shell
-dotnet bonsai.sgen --schema docs/workflows/person_and_dog.json --output docs/workflows/Extensions/PersonAndDogSgen.cs --namespace PersonAndDog
+dotnet bonsai.sgen --schema person-and-dog.json --output Extensions/PersonAndDogSgen.cs --namespace PersonAndDog
 ```
 
 :::workflow
@@ -86,7 +90,7 @@ dotnet bonsai.sgen --schema docs/workflows/person_and_dog.json --output docs/wor
 A few things worth noting in this example:
 
 - The schema file contains two definitions: `Person` and `Dog` that give rise to two operators (`Person` and `Dog`) in the generated code.
-- A third definition `PersonAndPet` is used to combine the two objects into a single record. This can be omitted as we will see later by using the `x-abstract` property.
+- A third definition `PersonAndPet` is used to combine the two objects into a single record.
 - The `--namespace` flag is used to specify the namespace of the generated code. This is useful to prevent name clashes between different schemas (e.g. `PersonAndDog.Person` and `Person` from the previous example).
 - Both `Person` and `Dog` are passed as references. If definitions are instead passed in-line (i.e. redefined each time), Bonsai.Sgen may not be able to correctly identify them as the same object, and may thus generate multiple classes of the same object.
 
@@ -175,7 +179,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 
 For value types, the generated code will render a [Nullable value type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types) type. This type will expose two properties: `HasValue` and `Value`, that can be used to test and manipulate the type, respectively.
 
-For reference types, the generated code will not render a nullable type since reference types are already nullable in C#. A consumer can test for `null` to determine if the value is present by simply using an `ExpressionTransform` operator with `it == null`:
+For reference types, the generated code will not render a nullable type since reference types are already nullable in C#. A data consumer application can test for `null` to determine if the value is present by simply using an `ExpressionTransform` operator with `it == null`:
 
 :::workflow
 ![Nullable pet](~/workflows/person-and-pet-enum-nullable.bonsai)
