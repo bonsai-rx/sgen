@@ -1,0 +1,48 @@
+{
+  "title": "PersonAndPet",
+  "definitions": {
+    "Person": {
+      "title": "Person",
+      "type": "object",
+      "properties": {
+        "Age": {
+          "type": "integer"
+        },
+        "FirstName": {
+          "type": "string"
+        },
+        "LastName": {
+          "type": "string"
+        },
+        "DOB": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Dog": {
+      "title": "Dog",
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Breed": {
+          "type": "string"
+        },
+        "Age": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "owner": {
+      "$ref": "#/definitions/Person"
+    },
+    "pet": {
+      "$ref": "#/definitions/Dog"
+    }
+  }
+}
