@@ -1,19 +1,9 @@
 <Project>
   <PropertyGroup>
-    <Authors>Bonsai</Authors>
-    <Copyright>Copyright © Bonsai Foundation CIC and Contributors</Copyright>
+    <PackageTags>Bonsai Rx Sgen Schema Serializer Generators</PackageTags>
     <PackageProjectUrl>https://bonsai-rx.org/sgen</PackageProjectUrl>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageIcon>icon.png</PackageIcon>
-    <IncludeSymbols>true</IncludeSymbols>
-  </PropertyGroup>
 
-  <ItemGroup Condition="'$(IsPackable)' == 'true'">
-    <Content Include="$(MSBuildThisFileDirectory)..\LICENSE" PackagePath="/" />
-    <Content Include="$(MSBuildThisFileDirectory)..\icon.png" PackagePath="/" />
-    <Content Include="$(MSBuildThisFileDirectory)..\README.md" PackagePath="/" />
-  </ItemGroup>
+    <Authors>Bonsai Foundation</Authors>
+    <Copyright>Copyright © Bonsai Foundation CIC and Contributors</Copyright>
+  </PropertyGroup>
 </Project>
