@@ -3,21 +3,18 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32825.248
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bonsai.Sgen", "src\Bonsai.Sgen\Bonsai.Sgen.csproj", "{871C451B-BCFC-4DBA-B65E-35BB52D8F379}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C2B91AD3-A136-4833-897F-123A6B3578DD}"
-	ProjectSection(SolutionItems) = preProject
-		.editorconfig = .editorconfig
-		Directory.Build.props = Directory.Build.props
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bonsai.Sgen", "src\Bonsai.Sgen\Bonsai.Sgen.csproj", "{871C451B-BCFC-4DBA-B65E-35BB52D8F379}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bonsai.Sgen.Tests", "src\Bonsai.Sgen.Tests\Bonsai.Sgen.Tests.csproj", "{DF485243-376F-4632-A637-D489B799F59A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{8F113225-6141-412D-8F6F-8669775C796F}"
 	ProjectSection(SolutionItems) = preProject
-		build\Common.props = build\Common.props
+		build\Common.csproj.props = build\Common.csproj.props
+		build\Common.csproj.targets = build\Common.csproj.targets
+		build\Common.Tests.csproj.props = build\Common.Tests.csproj.props
+		build\icon.png = build\icon.png
 		build\Package.props = build\Package.props
-		build\Version.props = build\Version.props
+		build\Project.csproj.props = build\Project.csproj.props
 	EndProjectSection
 EndProject
 Global

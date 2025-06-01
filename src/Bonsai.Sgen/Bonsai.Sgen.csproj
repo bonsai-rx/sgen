@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <PackageId>Bonsai.Sgen</PackageId>
-    <ToolCommandName>bonsai.sgen</ToolCommandName>
+    <Title>Bonsai Serializer Generator</Title>
     <Description>A tool for automatically generating YML serialization classes from schema files.</Description>
-    <PackageTags>Bonsai Rx Sgen Schema Serializer Generators</PackageTags>
+
+    <OutputType>Exe</OutputType>
     <PackAsTool>true</PackAsTool>
+
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
