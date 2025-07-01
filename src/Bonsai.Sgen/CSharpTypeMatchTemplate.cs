@@ -59,7 +59,7 @@ namespace Bonsai.Sgen
             var sourceTypeReference = new CodeTypeReference(ModelType.TypeName);
             var genericTypeParameter = new CodeTypeParameter("TResult") { Constraints = { sourceTypeReference } };
             var sourceParameter = new CodeParameterDeclarationExpression(
-                new CodeTypeReference(typeof(IObservable<>)) { TypeArguments = { sourceTypeReference } }, "source");
+                new CodeTypeReference(typeof(IObservable<>)) { TypeArguments = { typeof(object) } }, "source");
             type.Members.Add(new CodeMemberMethod
             {
                 Name = "Process",
@@ -75,7 +75,7 @@ namespace Bonsai.Sgen
                     new CodeExpressionStatement(new CodeSnippetExpression(
 @$"return System.Reactive.Linq.Observable.Create<{genericTypeParameter.Name}>(observer =>
         {{
-            var sourceObserver = System.Reactive.Observer.Create<{ModelType.TypeName}>(
+            var sourceObserver = System.Reactive.Observer.Create<object>(
                 value =>
                 {{
                     var match = value as {genericTypeParameter.Name};
