@@ -158,7 +158,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 }
 ```
 
-`json-schema` `array`s will be rendered as [`List<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1?view=net-9.0) in the generated code and can be manipulated (and created) as such.
+`json-schema` `array` will be rendered as [`List<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1?view=net-9.0) in the generated code and can be manipulated (and created) as such.
 
 :::workflow
 ![Person and Pets](~/workflows/person-and-pets-enum.bonsai)
@@ -179,7 +179,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 
 For value types, the generated code will render a [Nullable value type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types) type. This type will expose two properties: `HasValue` and `Value`, that can be used to test and manipulate the type, respectively.
 
-For reference types, the generated code will not render a nullable type since reference types are already nullable in C#. A data consumer application can test for `null` to determine if the value is present by simply using an `ExpressionTransform` operator with `it == null`:
+For reference types, the generated code will not render a nullable type since reference types are already nullable in C#. An application can test for `null` to determine if the value is present by simply using an `ExpressionTransform` operator with `it == null`:
 
 :::workflow
 ![Nullable pet](~/workflows/person-and-pet-enum-nullable.bonsai)
