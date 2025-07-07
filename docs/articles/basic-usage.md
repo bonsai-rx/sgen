@@ -1,7 +1,7 @@
 # Basic usage
 
 > [!TIP]
-It is strongly recommended to be familiar with [Bonsai Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html) before using this tool.
+> It is strongly recommended to be familiar with [Bonsai Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html) before using this tool.
 
 
 ## Automatic generation of Bonsai code using Bonsai.Sgen

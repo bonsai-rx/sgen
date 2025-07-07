@@ -36,7 +36,7 @@
       {
         "files": [
           "images/**",
-          "workflows/**/*.{bonsai,svg}",
+          "workflows/**/*.{bonsai,svg,json}",
           "{articles,tutorials,examples}/**/*.{bonsai,svg}"
         ]
       },
