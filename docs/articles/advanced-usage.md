@@ -35,7 +35,7 @@ Unions types can be made type-aware by using [`tagged unions`](https://en.wikipe
 
 For example, a `Pet` object that can be either a `Dog` or a `Cat` can be represented as follows:
 
-[person](~/workflows/person-and-discriminated-pets.json)
+[person-and-discriminated-pets.json](~/workflows/person-and-discriminated-pets.json)
 
 ```json
 "Pet": {

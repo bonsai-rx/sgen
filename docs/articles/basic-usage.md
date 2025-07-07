@@ -1,7 +1,7 @@
 # Basic usage
 
 > [!TIP]
-> It is strongly recommend to be familiar with [Bonsai Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html) before using this tool.
+It is strongly recommended to be familiar with [Bonsai Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html) before using this tool.
 
 
 ## Automatic generation of Bonsai code using Bonsai.Sgen
@@ -10,7 +10,7 @@ We will expand this example later, but for now, let's see how to use `Bonsai.Sge
 
 First, define the schema of the object in a JSON file:
 
-[person](~/workflows/person.json)
+[person.json](~/workflows/person.json)
 
 ```json
 {
@@ -45,7 +45,7 @@ By treating the `json-schema` as the "source of truth," you can generate multipl
 
 The previous example demonstrates modeling a single record. In practice, projects often require modeling multiple object types. This is where `Bonsai.Sgen` excels, allowing you to generate multiple objects from a single schema file:
 
-[person_and_dog](~/workflows/person-and-dog.json)
+[person-and-dog.json](~/workflows/person-and-dog.json)
 
 ```json
 {
@@ -108,7 +108,7 @@ The real power of `Bonsai.Sgen` comes when dealing with more complex data struct
 
 We can replace the `Pet` object in the previous example with an [`enum`](https://json-schema.org/understanding-json-schema/reference/enum):
 
-[Pet as Enum](~/workflows/person-and-pet-enum.json).
+[person-and-pet-enum.json](~/workflows/person-and-pet-enum.json).
 
 ```json
 (...)
@@ -177,7 +177,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 }
 ```
 
-For value types, the generated code will render a [Nullable value type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types) type. This type will expose two properties: `HasValue` and `Value`, that can be used to test and manipulate the type, respectively.
+For value types, the generated code will render a [Nullable value type](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types). This type will expose two properties: `HasValue` and `Value`, that can be used to test and manipulate the type, respectively.
 
 For reference types, the generated code will not render a nullable type since reference types are already nullable in C#. An application can test for `null` to determine if the value is present by simply using an `ExpressionTransform` operator with `it == null`:
 
@@ -190,7 +190,7 @@ For reference types, the generated code will not render a nullable type since re
 `json-schema` supports the [`required`](https://json-schema.org/learn/getting-started-step-by-step#define-required-properties) keyword to specify which fields are required. By default, all fields are optional. This can be useful to enforce the presence of certain fields in the object at deserialization time. However, `Bonsai.Sgen` will not generate any code to enforce this requirement during object construction, only at deserialization. It is up to the user to ensure that the object is correctly populated before using it.
 
 > [!Note]
-> Some confusion may arise about the distinction between `null` and `required`. This is all the more confusing since different languages and libraries may refer to these concepts differently. For the sake of this tool (and honestly in general) the following definitions are used:
+> Some confusion may arise about the distinction between `null` and `required`. This is all the more confusing since different languages and libraries may refer to these concepts in different ways. For the sake of this tool, the following definitions are used:
 >
 > - `nullable` means that the field can be `null` or type `T`
 > - `required` means that the field must be present in the object at deserialization time
