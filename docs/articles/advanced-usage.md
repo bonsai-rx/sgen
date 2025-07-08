@@ -2,9 +2,9 @@
 
 ## Unions
 
-In the previous examples, we have seen how create object properties of a single type. However, in practice, data structures' fields can often be represented by one of several types. We have actually seen a special case of this behavior in the previous nullable example, where a field can be either a value of a given type `T` or `null` (or an Union between type `T` and `null`).
+In the previous examples, we have seen how to create object properties of a single type. However, in many real-world applications, data structure fields can be represented by one of several types. We have actually seen a special case of this behavior in the previous nullable example, where a field can be either a value of a given type `T` or `null` (or a "union" between type `T` and `null`).
 
-`json-schema` allows union types using the `oneOf` keyword. For example:
+JSON Schema allows union types using the `oneOf` keyword. For example:
 
 ```json
 {
@@ -27,11 +27,11 @@ Running `Bonsai.Sgen` on this schema generates the following type signature for 
 public object FooProperty
 ```
 
-While `oneOf` is supported, statically typed languages like `C#` require the exact type at compile time. Thus, the property is "up-cast" to `object`, and users must down-cast it to the correct type at runtime.
+While `oneOf` is supported, statically typed languages like C# require the exact type at compile time. Thus, the property is "up-cast" to `object`, and users must down-cast it to the correct type at runtime.
 
 ## Tagged-Unions
 
-Unions types can be made type-aware by using [`tagged unions`](https://en.wikipedia.org/wiki/Tagged_union) (or `discriminated unions`). The syntax for tagged unions is not part of the `json-schema` specification, but it is supported by the [`OpenAPI` standard](https://swagger.io/docs/specification/v3_0/data-models/inheritance-and-polymorphism/#discriminator), which is a superset of `json-schema`. The key idea behind tagged unions is to add a `discriminator` field to the schema that specifies the property that will be used to determine the type of the object at runtime.
+Union types can be made type-aware by using [`tagged unions`](https://en.wikipedia.org/wiki/Tagged_union) (or `discriminated unions`). The syntax for tagged unions is not part of the JSON Schema specification, however it is supported by the [OpenAPI standard](https://swagger.io/docs/specification/v3_0/data-models/inheritance-and-polymorphism/#discriminator), which is a superset of JSON Schema. The key idea behind tagged unions is to add a `discriminator` field to the schema that specifies the property that will be used to determine the type of the object at runtime.
 
 For example, a `Pet` object that can be either a `Dog` or a `Cat` can be represented as follows:
 
@@ -53,17 +53,16 @@ For example, a `Pet` object that can be either a `Dog` or a `Cat` can be represe
 }
 ```
 
-In `C#`, `Bonsai.Sgen` will generate a root type `Pet` that will be inherited by the `Dog` and `Cat` types (since in the worst case scenario, the discriminated property must be shared). The `Pet` type will have a `pet_type` property that will be used to downcast to the proper type at runtime. At this point we can open our example in `Bonsai` and see how the `Pet` type is represented in the workflow.
+Given this schema, `Bonsai.Sgen` will generate a root type `Pet` that will be specialised by the `Dog` and `Cat` types (since in the worst case scenario, the discriminated property must be shared). The `Pet` type will have a `pet_type` property that will be used to downcast to the proper type at runtime. At this point we can open our example in `Bonsai` and see how the `Pet` type is represented in the workflow.
 
-As you can see below, we still get a `Pet` type. Better than `object` but still not a `Dog` or `Cat` type. Fortunately, `Bonsai.Sgen` will generate an operator that can be used to filter and downcast the `Pet` objects to the correct type at runtime. These are called `Match<T>` operators. `MatchPet` can be used to select the desired target type which will allow us access to the properties of the `Dog` or `Cat` subtypes. Conversely, we can also upcast a `Dog` or `Cat` to a `Pet` by leaving the `MatchPet` operator's `Type` property empty.
+As you can see below, we still get a `Pet` type. Better than `object`, but still not a `Dog` or `Cat` type. Fortunately, `Bonsai.Sgen` will generate an operator that can be used to filter and downcast the `Pet` objects to the correct type at runtime. These are called `Match<T>` operators. `MatchPet` can be used to select the desired target type which will allow us access to the properties of the `Dog` or `Cat` subtypes. Conversely, we can also upcast a `Dog` or `Cat` to a `Pet` by leaving the `MatchPet` operator's `Type` property empty.
 
 :::workflow
 ![Discriminated Unions](~/workflows/person-pet-discriminated-union.bonsai)
 :::
 
-> [!Important]
-> In is strongly recommended to use references with the `oneOf` syntax. Not only does this decision make your `json-schema` significantly smaller, it will also help `Bonsai.Sgen` generate the correct class hierarchy if multiple unions are present in the schema. If you use inline objects, `Bonsai.Sgen` will likely have to generate a new root class for each union, which can lead to a lot of duplicated code and a more complex object hierarchy.
-
+> [!IMPORTANT]
+> It is strongly recommended to use references with the `oneOf` syntax. Not only does this decision make your JSON Schema significantly smaller, it will also help `Bonsai.Sgen` generate the correct class hierarchy if multiple unions are present in the schema. If you use inline objects, `Bonsai.Sgen` will likely have to generate a new root class for each union, which can lead to a lot of duplicated code and a more complex object hierarchy.
 
 
 ## Extending generated code with `partial` classes

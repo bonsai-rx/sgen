@@ -1,5 +1,5 @@
 - name: Getting Started
   href: ../index.md
-- href: why-bonsai-sgen.md
+- href: data-definition.md
 - href: basic-usage.md
 - href: advanced-usage.md

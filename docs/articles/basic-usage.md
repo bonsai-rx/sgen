@@ -1,45 +1,16 @@
 # Basic usage
 
+`Bonsai.Sgen` can be used to generate many different kinds of models with different relationships between types.
+
 > [!TIP]
 > It is strongly recommended to be familiar with [Bonsai Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html) before using this tool.
 
 
-## Automatic generation of Bonsai code using Bonsai.Sgen
+## Single object
 
-We will expand this example later, but for now, let's see how to use `Bonsai.Sgen` to automatically generate Bonsai code for the `Person` object.
+In this first example we recall how to model the single record type `Person` defined in the [Data Definition](data-definition.md) section.
 
-First, define the schema of the object in a JSON file:
-
-[person.json](~/workflows/person.json)
-
-```json
-{
-  "title": "Person",
-  "type": "object",
-  "properties": {
-    "Age": { "type": "integer" },
-    "FirstName": { "type": "string" },
-    "LastName": { "type": "string" },
-    "DOB": { "type": "string", "format": "date-time" }
-  }
-}
-```
-
-Next, run the `Bonsai.Sgen` tool to generate the Bonsai code:
-
-```shell
-dotnet bonsai.sgen --schema person.json --output Extensions/PersonSgen.cs
-```
-
-Finally, use the generated code in your Bonsai workflow:
-
-:::workflow
-![Person as BonsaiSgen](~/workflows/person-example-bonsai-sgen.bonsai)
-:::
-
-The `Bonsai.Sgen` approach is concise and less error-prone, allowing you to focus on the data structure itself rather than boilerplate code. Additionally, the tool automatically generates, type-aware, [serialization and deserialization operators](#serialization-and-deserialization), which are useful when working with external data sources.
-
-By treating the `json-schema` as the "source of truth," you can generate multiple representations of the object in different languages, ensuring interoperability. This is particularly useful in multi-language environments (e.g., running experiments in Bonsai and analysis in Python) and when sharing data structures across projects.
+[!INCLUDE [](example-person.md)]
 
 ## Multiple objects
 
@@ -79,7 +50,7 @@ The previous example demonstrates modeling a single record. In practice, project
 }
 ```
 
-```shell
+```powershell
 dotnet bonsai.sgen --schema person-and-dog.json --output Extensions/PersonAndDogSgen.cs --namespace PersonAndDog
 ```
 
@@ -104,7 +75,7 @@ The real power of `Bonsai.Sgen` comes when dealing with more complex data struct
 
 ## Enums
 
-`Bonsai.Sgen` also supports the generation of enums using the `enum` type in the `json-schema`:
+`Bonsai.Sgen` also supports the generation of enums using the `enum` type in the JSON Schema:
 
 We can replace the `Pet` object in the previous example with an [`enum`](https://json-schema.org/understanding-json-schema/reference/enum):
 
@@ -149,7 +120,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 
 ## Lists
 
-`Bonsai.Sgen` also supports the generation of lists using the `array` type in the `json-schema`:
+`Bonsai.Sgen` also supports the generation of lists using the `array` type in the JSON Schema:
 
 ```json
 "pets": {
@@ -158,7 +129,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 }
 ```
 
-`json-schema` `array` will be rendered as [`List<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1?view=net-9.0) in the generated code and can be manipulated (and created) as such.
+JSON Schema `array` will be rendered as [`List<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1?view=net-9.0) in the generated code and can be manipulated (and created) as such.
 
 :::workflow
 ![Person and Pets](~/workflows/person-and-pets-enum.bonsai)
@@ -166,7 +137,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 
 ## Nullable types
 
-`json-schema` supports the `null` type, which can be used to represent nullable types. The standard is a bit loose in this regard, but `Bonsai.Sgen` will generate a nullable-T if the json-schema represents it using the `oneOf` keyword:
+JSON Schema supports the `null` type, which can be used to represent nullable types. The standard is a bit loose in this regard, but `Bonsai.Sgen` will generate a nullable-T if the JSON Schema represents it using the `oneOf` keyword:
 
 ```json
 "pet": {
@@ -187,7 +158,7 @@ For reference types, the generated code will not render a nullable type since re
 
 ## Required fields
 
-`json-schema` supports the [`required`](https://json-schema.org/learn/getting-started-step-by-step#define-required-properties) keyword to specify which fields are required. By default, all fields are optional. This can be useful to enforce the presence of certain fields in the object at deserialization time. However, `Bonsai.Sgen` will not generate any code to enforce this requirement during object construction, only at deserialization. It is up to the user to ensure that the object is correctly populated before using it.
+JSON Schema supports the [`required`](https://json-schema.org/learn/getting-started-step-by-step#define-required-properties) keyword to specify which fields are required. By default, all fields are optional. This can be useful to enforce the presence of certain fields in the object at deserialization time. However, `Bonsai.Sgen` will not generate any code to enforce this requirement during object construction, only at deserialization. It is up to the user to ensure that the object is correctly populated before using it.
 
 > [!Note]
 > Some confusion may arise about the distinction between `null` and `required`. This is all the more confusing since different languages and libraries may refer to these concepts in different ways. For the sake of this tool, the following definitions are used:
@@ -200,7 +171,7 @@ For reference types, the generated code will not render a nullable type since re
 
 ## Serialization and Deserialization
 
-One of the biggest perks of using json-schema to represent our objects is the guarantee that all records are (de)serializable. This means that we can go from a text-based format (great for specification and logging) to a `C#` type seamlessly, and vice-versa. `Bonsai.Sgen` will optionally generate (de)serialization operators for all objects in the schema if the `--serializer` property is not `None`. Currently, two formats are supported out of the box: `Json` (via [`NewtonsoftJson`](https://github.com/JamesNK/Newtonsoft.Json)) and `yaml` (via [`YamlDotNet`](https://github.com/aaubry/YamlDotNet)).
+One of the biggest perks of using JSON Schema to represent our objects is the guarantee that all records are (de)serializable. This means that we can go from a text-based format (great for specification and logging) to a C# type seamlessly, and vice-versa. `Bonsai.Sgen` will optionally generate (de)serialization operators for all objects in the schema if the `--serializer` property is not `None`. Currently, two formats are supported out of the box: `Json` (via [`NewtonsoftJson`](https://github.com/JamesNK/Newtonsoft.Json)) and `yaml` (via [`YamlDotNet`](https://github.com/aaubry/YamlDotNet)).
 
 The two operations are afforded via the `SerializeToYaml` (or `SerializeToJson`) and `DeserializeFromYaml` (or `DeserializeFromJson`) operators, respectively.
 
