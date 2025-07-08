@@ -4,45 +4,34 @@
 
 ## Getting Started
 
-1. Navigate to the [Bonsai.Sgen NuGet tool package](https://www.nuget.org/packages/Bonsai.Sgen/)
-2. Click `.NET CLI (Local)` and copy the two suggested commands. E.g.:
+1. Install `Bonsai.Sgen` as a local tool:
 
     ```cmd
-    dotnet new tool-manifest # if you are setting up this repo
+    dotnet new tool-manifest
+    ```
+
+    ```cmd
     dotnet tool install --local Bonsai.Sgen
     ```
 
-3. To view the tool help reference documentation, run:
-
-    ```cmd
-    dotnet bonsai.sgen --help
-    ```
-
-4. To generate YAML serialization classes from a schema file:
+2. Generate YAML serialization classes from a schema file:
 
     ```cmd
     dotnet bonsai.sgen --schema schema.json --serializer YamlDotNet
     ```
 
-5. To generate JSON serialization classes from a schema file:
+3. Copy the generated class file to your project `Extensions` folder.
 
-    ```cmd
-    dotnet bonsai.sgen --schema schema.json --serializer NewtonsoftJson
-    ```
-
-6. Copy the generated class file to your project `Extensions` folder.
-
-7. Add the necessary package references to your `Extensions.csproj` file. For example:
+4. Add the necessary package references to your `Extensions.csproj` file:
 
     ```xml
-    <ItemGroup>
-      <PackageReference Include="Bonsai.Core" Version="2.8.5" />
-      <PackageReference Include="YamlDotNet" Version="13.7.1" />
-    </ItemGroup>
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
     ```
 
-8. To restore the tool at any point, run:
+## Additional Documentation
 
-    ```cmd
-    dotnet tool restore
-    ```
+For additional documentation and examples, refer to the [Sgen documentation pages](https://bonsai-rx.org/sgen).
+
+## Feedback & Contributing
+
+`Bonsai.Sgen` is released as open source under the [MIT license](https://licenses.nuget.org/MIT). Bug reports and contributions are welcome at [the GitHub repository](https://github.com/bonsai-rx/sgen).
