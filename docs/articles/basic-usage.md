@@ -185,8 +185,5 @@ The two operations are afforded via the `SerializeToYaml` (or `SerializeToJson`)
 > [!Tip]
 > Remember to add the necessary package references to your `Extensions.csproj` file depending on the serializer you want to use!
 > ```xml
-> <ItemGroup>
->   <PackageReference Include="Bonsai.Core" Version="2.8.5" />
->   <PackageReference Include="YamlDotNet" Version="13.7.1" />
-> </ItemGroup>
+> <PackageReference Include="YamlDotNet" Version="16.3.0" />
 > ```
