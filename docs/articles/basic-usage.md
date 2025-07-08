@@ -187,3 +187,6 @@ The two operations are afforded via the `SerializeToYaml` (or `SerializeToJson`)
 > ```xml
 > <PackageReference Include="YamlDotNet" Version="16.3.0" />
 > ```
+> ```xml
+> <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+> ```

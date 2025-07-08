@@ -30,7 +30,7 @@
 
 ## Additional Documentation
 
-For additional documentation and examples, refer to the [Sgen documentation pages](https://bonsai-rx.org/sgen).
+For additional documentation and examples, refer to the [Sgen documentation pages](https://bonsai-rx.org/sgen/articles/basic-usage.html).
 
 ## Feedback & Contributing
 
