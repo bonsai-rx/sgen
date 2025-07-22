@@ -67,12 +67,12 @@ namespace Bonsai.Sgen
         {
             base.BuildType(type);
             type.CustomAttributes.Add(new CodeAttributeDeclaration(
-                new CodeTypeReference("Bonsai.CombinatorAttribute")));
-            type.CustomAttributes.Add(new CodeAttributeDeclaration(
                 new CodeTypeReference("Bonsai.WorkflowElementCategoryAttribute"),
                 new CodeAttributeArgument(new CodeFieldReferenceExpression(
                     new CodeTypeReferenceExpression("Bonsai.ElementCategory"),
                     "Transform"))));
+            type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                new CodeTypeReference("Bonsai.CombinatorAttribute")));
             var typeInspector = CSharpYamlDiscriminatorTemplateHelper.RenderDiscriminatorTypeInspector(DiscriminatorTypes);
             type.Members.Add(new CodeSnippetTypeMember(
 @"    private System.IObservable<string> Process<T>(System.IObservable<T> source)
