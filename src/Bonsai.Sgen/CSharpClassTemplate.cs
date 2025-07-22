@@ -185,16 +185,17 @@ namespace Bonsai.Sgen
 
             if (Model.GenerateJsonMethods && !Model.IsAbstract)
             {
-                var processMethod = new CodeMemberMethod
+                const string CombinatorMethodName = "Generate";
+                var combinatorMethod = new CodeMemberMethod
                 {
-                    Name = "Process",
+                    Name = CombinatorMethodName,
                     Attributes = MemberAttributes.Public | MemberAttributes.Final,
                     ReturnType = new CodeTypeReference(typeof(IObservable<>))
                     {
                         TypeArguments = { new CodeTypeReference(Model.ClassName) }
                     }
                 };
-                processMethod.Statements.Add(new CodeMethodReturnStatement(
+                combinatorMethod.Statements.Add(new CodeMethodReturnStatement(
                     new CodeMethodInvokeExpression(
                         new CodeMethodReferenceExpression(
                             new CodeTypeReferenceExpression("System.Reactive.Linq.Observable"),
@@ -207,9 +208,9 @@ namespace Bonsai.Sgen
                 {
                     TypeArguments = { new CodeTypeReference(genericTypeParameter) }
                 }, "source");
-                var genericProcessMethod = new CodeMemberMethod
+                var genericCombinatorMethod = new CodeMemberMethod
                 {
-                    Name = "Process",
+                    Name = CombinatorMethodName,
                     Attributes = MemberAttributes.Public | MemberAttributes.Final,
                     TypeParameters = { genericTypeParameter },
                     Parameters = { genericSourceParameter },
@@ -218,7 +219,7 @@ namespace Bonsai.Sgen
                         TypeArguments = { new CodeTypeReference(Model.ClassName) }
                     }
                 };
-                genericProcessMethod.Statements.Add(new CodeMethodReturnStatement(
+                genericCombinatorMethod.Statements.Add(new CodeMethodReturnStatement(
                     new CodeMethodInvokeExpression(
                         new CodeMethodReferenceExpression(
                             new CodeTypeReferenceExpression("System.Reactive.Linq.Observable"),
@@ -227,15 +228,16 @@ namespace Bonsai.Sgen
                         new CodeSnippetExpression(
                             @$"_ => new {Model.ClassName}(this)"))));
 
-                type.Members.Add(processMethod);
-                type.Members.Add(genericProcessMethod);
-                type.CustomAttributes.Add(new CodeAttributeDeclaration(
-                    new CodeTypeReference("Bonsai.CombinatorAttribute")));
+                type.Members.Add(combinatorMethod);
+                type.Members.Add(genericCombinatorMethod);
                 type.CustomAttributes.Add(new CodeAttributeDeclaration(
                     new CodeTypeReference("Bonsai.WorkflowElementCategoryAttribute"),
                     new CodeAttributeArgument(new CodeFieldReferenceExpression(
                         new CodeTypeReferenceExpression("Bonsai.ElementCategory"),
                         "Source"))));
+                type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference("Bonsai.CombinatorAttribute"),
+                    new CodeAttributeArgument(new CodePrimitiveExpression(CombinatorMethodName))));
             }
 
             const string PrintMembersMethodName = "PrintMembers";
