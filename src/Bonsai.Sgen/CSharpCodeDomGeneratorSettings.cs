@@ -15,6 +15,9 @@ namespace Bonsai.Sgen
             ArrayInstanceType = "System.Collections.Generic.List";
             ArrayBaseType = "System.Collections.Generic.List";
             ArrayType = "System.Collections.Generic.List";
+            DictionaryInstanceType = "System.Collections.Generic.Dictionary";
+            DictionaryBaseType = "System.Collections.Generic.Dictionary";
+            DictionaryType = "System.Collections.Generic.Dictionary";
         }
 
         public SerializerLibraries SerializerLibraries { get; set; }
