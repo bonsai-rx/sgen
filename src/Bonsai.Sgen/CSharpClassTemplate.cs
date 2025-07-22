@@ -273,7 +273,7 @@ namespace Bonsai.Sgen
                         stringBuilderVariable,
                         AppendMethodName,
                         new CodeSnippetExpression(
-                            $"\"{property.Name} = \" + {property.FieldName}" +
+                            $"\"{property.PropertyName} = \" + {property.FieldName}" +
                             (++propertyIndex < propertyCount ? " + \", \"" : string.Empty))));
                 }
                 printMembersMethod.Statements.Add(new CodeMethodReturnStatement(new CodePrimitiveExpression(propertyCount > 0)));
