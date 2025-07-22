@@ -10,7 +10,7 @@ namespace Bonsai.Sgen
     internal abstract class CSharpSerializerTemplate : CSharpCodeDomTemplate
     {
         public CSharpSerializerTemplate(
-            IEnumerable<CodeArtifact> modelTypes,
+            IEnumerable<CSharpClassCodeArtifact> modelTypes,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
@@ -19,7 +19,7 @@ namespace Bonsai.Sgen
             ModelTypes = modelTypes;
         }
 
-        public IEnumerable<CodeArtifact> ModelTypes { get; }
+        public IEnumerable<CSharpClassCodeArtifact> ModelTypes { get; }
 
         public abstract string Description { get; }
 
@@ -44,7 +44,7 @@ namespace Bonsai.Sgen
 
         public CSharpDeserializerTemplate(
             JsonSchema schema,
-            IEnumerable<CodeArtifact> modelTypes,
+            IEnumerable<CSharpClassCodeArtifact> modelTypes,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
@@ -75,14 +75,14 @@ namespace Bonsai.Sgen
                             new CodeTypeReference(modelType.TypeName))))));
             }
 
-            var defaultType = _schema.Title;
-            if (string.IsNullOrEmpty(defaultType))
-                defaultType = ModelTypes.FirstOrDefault()?.TypeName;
+            var defaultType = ModelTypes.FirstOrDefault(
+                modelType => modelType.Model.Schema == _schema,
+                ModelTypes.First());
 
             type.Members.Add(new CodeSnippetTypeMember(
 @$"    public {TypeName}()
     {{
-        Type = new Bonsai.Expressions.TypeMapping<{defaultType}>();
+        Type = new Bonsai.Expressions.TypeMapping<{defaultType.TypeName}>();
     }}
 
     public Bonsai.Expressions.TypeMapping Type {{ get; set; }}
