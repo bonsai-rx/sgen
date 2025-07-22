@@ -23,12 +23,12 @@ namespace Bonsai.Sgen
         {
             base.BuildType(type);
             type.CustomAttributes.Add(new CodeAttributeDeclaration(
-                new CodeTypeReference("Bonsai.CombinatorAttribute")));
-            type.CustomAttributes.Add(new CodeAttributeDeclaration(
                 new CodeTypeReference("Bonsai.WorkflowElementCategoryAttribute"),
                 new CodeAttributeArgument(new CodeFieldReferenceExpression(
                     new CodeTypeReferenceExpression("Bonsai.ElementCategory"),
                     "Transform"))));
+            type.CustomAttributes.Add(new CodeAttributeDeclaration(
+                new CodeTypeReference("Bonsai.CombinatorAttribute")));
             type.Members.Add(new CodeSnippetTypeMember(
 @"    public Newtonsoft.Json.Formatting Formatting { get; set; }
 
