@@ -71,16 +71,8 @@ namespace Bonsai.Sgen
                 }
 
                 var generatorTypeName = parseResult.GetValue(generatorTypeNameOption);
-                if (string.IsNullOrEmpty(generatorTypeName))
-                {
-                    if (!schema.HasTypeNameTitle)
-                    {
-                        Console.Error.WriteLine("No root name is specified and schema has no title that can be used as type name.");
-                        return;
-                    }
-
-                    generatorTypeName = schema.Title;
-                }
+                if (!string.IsNullOrEmpty(generatorTypeName))
+                    schema.Title = generatorTypeName;
 
                 var generatorNamespace = parseResult.GetValue(generatorNamespaceOption);
                 var serializerLibraries = parseResult.GetValue(serializerLibrariesOption);
@@ -93,7 +85,7 @@ namespace Bonsai.Sgen
                 schema = schema.WithCompatibleDefinitions(settings.TypeNameGenerator)
                                .WithResolvedDiscriminatorInheritance();
                 var generator = new CSharpCodeDomGenerator(schema, settings);
-                var code = generator.GenerateFile(generatorTypeName);
+                var code = generator.GenerateFile(schema.Title);
 
                 var outputFilePath = parseResult.GetValue(outputPathOption);
                 if (string.IsNullOrEmpty(outputFilePath))
