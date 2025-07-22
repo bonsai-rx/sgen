@@ -1,7 +1,6 @@
 ﻿using System.CodeDom;
 using System.CodeDom.Compiler;
 using NJsonSchema;
-using NJsonSchema.CodeGeneration;
 
 namespace Bonsai.Sgen
 {
@@ -31,9 +30,12 @@ namespace Bonsai.Sgen
                     new CodeTypeReferenceExpression("Bonsai.ElementCategory"),
                     "Transform"))));
             type.Members.Add(new CodeSnippetTypeMember(
-@"    private System.IObservable<string> Process<T>(System.IObservable<T> source)
+@"    public Newtonsoft.Json.Formatting Formatting { get; set; }
+
+    private System.IObservable<string> Process<T>(System.IObservable<T> source)
     {
-        return System.Reactive.Linq.Observable.Select(source, value => Newtonsoft.Json.JsonConvert.SerializeObject(value));
+        var formatting = Formatting;
+        return System.Reactive.Linq.Observable.Select(source, value => Newtonsoft.Json.JsonConvert.SerializeObject(value, formatting));
     }"));
             foreach (var modelType in ModelTypes)
             {
