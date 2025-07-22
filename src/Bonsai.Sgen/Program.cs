@@ -17,7 +17,6 @@ namespace Bonsai.Sgen
 
             var generatorNamespaceOption = new Option<string?>("--namespace")
             {
-                DefaultValueFactory = _ => "DataSchema",
                 Description = "Specifies the namespace to use for all generated serialization classes."
             };
 
@@ -57,14 +56,16 @@ namespace Bonsai.Sgen
             rootCommand.SetAction(async (parseResult, cancellationToken) =>
             {
                 JsonSchema schema;
+                FileInfo? schemaPath;
                 if (Console.IsInputRedirected)
                 {
+                    schemaPath = null;
                     using var stream = Console.OpenStandardInput();
                     schema = await JsonSchema.FromJsonAsync(stream, cancellationToken);
                 }
                 else
                 {
-                    var schemaPath = parseResult.GetRequiredValue(schemaPathArgument);
+                    schemaPath = parseResult.GetRequiredValue(schemaPathArgument);
                     schema = Uri.IsWellFormedUriString(schemaPath.FullName, UriKind.Absolute)
                         ? await JsonSchema.FromUrlAsync(schemaPath.FullName, cancellationToken)
                         : await JsonSchema.FromFileAsync(schemaPath.FullName, cancellationToken);
@@ -75,12 +76,22 @@ namespace Bonsai.Sgen
                     schema.Title = generatorTypeName;
 
                 var generatorNamespace = parseResult.GetValue(generatorNamespaceOption);
-                var serializerLibraries = parseResult.GetValue(serializerLibrariesOption);
-                var settings = new CSharpCodeDomGeneratorSettings
+                if (string.IsNullOrEmpty(generatorNamespace))
                 {
-                    Namespace = generatorNamespace,
-                    SerializerLibraries = serializerLibraries
-                };
+                    generatorNamespace = schemaPath is not null
+                        ? Path.GetFileNameWithoutExtension(schemaPath.Name)
+                        : "DataSchema";
+                }
+
+                var serializerLibraries = parseResult.GetValue(serializerLibrariesOption);
+                var settings = new CSharpCodeDomGeneratorSettings();
+                var typeNameGenerator = (CSharpTypeNameGenerator)settings.TypeNameGenerator;
+                generatorNamespace = typeNameGenerator.Generate(
+                    schema,
+                    generatorNamespace,
+                    typeNameGenerator.ReservedTypeNames);
+                settings.Namespace = generatorNamespace;
+                settings.SerializerLibraries = serializerLibraries;
 
                 schema = schema.WithCompatibleDefinitions(settings.TypeNameGenerator)
                                .WithResolvedDiscriminatorInheritance();
