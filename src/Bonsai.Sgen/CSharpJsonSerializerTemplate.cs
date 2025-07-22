@@ -8,7 +8,7 @@ namespace Bonsai.Sgen
     internal class CSharpJsonSerializerTemplate : CSharpSerializerTemplate
     {
         public CSharpJsonSerializerTemplate(
-            IEnumerable<CodeArtifact> modelTypes,
+            IEnumerable<CSharpClassCodeArtifact> modelTypes,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
@@ -50,7 +50,7 @@ namespace Bonsai.Sgen
     {
         public CSharpJsonDeserializerTemplate(
             JsonSchema schema,
-            IEnumerable<CodeArtifact> modelTypes,
+            IEnumerable<CSharpClassCodeArtifact> modelTypes,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)

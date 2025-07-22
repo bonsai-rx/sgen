@@ -47,8 +47,8 @@ namespace Bonsai.Sgen
     internal class CSharpYamlSerializerTemplate : CSharpSerializerTemplate
     {
         public CSharpYamlSerializerTemplate(
-            IEnumerable<CodeArtifact> modelTypes,
-            IEnumerable<CodeArtifact> discriminatorTypes,
+            IEnumerable<CSharpClassCodeArtifact> modelTypes,
+            IEnumerable<CSharpClassCodeArtifact> discriminatorTypes,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
@@ -100,8 +100,8 @@ namespace Bonsai.Sgen
     {
         public CSharpYamlDeserializerTemplate(
             JsonSchema schema,
-            IEnumerable<CodeArtifact> modelTypes,
-            IEnumerable<CodeArtifact> discriminatorTypes,
+            IEnumerable<CSharpClassCodeArtifact> modelTypes,
+            IEnumerable<CSharpClassCodeArtifact> discriminatorTypes,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
