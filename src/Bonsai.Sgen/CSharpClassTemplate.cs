@@ -237,7 +237,7 @@ namespace Bonsai.Sgen
                         "Source"))));
                 type.CustomAttributes.Add(new CodeAttributeDeclaration(
                     new CodeTypeReference("Bonsai.CombinatorAttribute"),
-                    new CodeAttributeArgument(new CodePrimitiveExpression(CombinatorMethodName))));
+                    new CodeAttributeArgument("MethodName", new CodePrimitiveExpression(CombinatorMethodName))));
             }
 
             const string PrintMembersMethodName = "PrintMembers";

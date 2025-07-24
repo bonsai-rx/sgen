@@ -17,5 +17,13 @@ namespace Bonsai.Sgen
 
             return base.Generate(schema, typeNameHint, reservedTypeNames);
         }
+
+        public string GenerateNamespace(JsonSchema schema, string namespaceNameHint)
+        {
+            const char NamespaceSeparator = '.';
+            var parts = namespaceNameHint.Split(NamespaceSeparator, StringSplitOptions.RemoveEmptyEntries);
+            var partIdentifiers = Array.ConvertAll(parts, part => Generate(schema, part));
+            return string.Join(NamespaceSeparator, partIdentifiers);
+        }
     }
 }

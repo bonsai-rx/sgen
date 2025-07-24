@@ -15,19 +15,27 @@ namespace Bonsai.Sgen
                 Arity = Console.IsInputRedirected ? ArgumentArity.Zero : ArgumentArity.ExactlyOne
             });
 
-            var generatorNamespaceOption = new Option<string?>("--namespace")
+            var generatorNamespaceOption = new Option<string?>("--namespace", "-ns")
             {
-                Description = "Specifies the namespace to use for all generated serialization classes."
+                Description = "The namespace to use for all generated serialization classes. If not specified, " +
+                              "the type name hint of the root element will be used, if available."
             };
 
             var generatorTypeNameOption = new Option<string?>("--root")
             {
-                Description = "Specifies the name of the class used to represent the schema root element."
+                Description = "Type name hint to use for the schema root element. If not specified, the title " +
+                              "of the JSON schema will be used, if available."
             };
 
-            var outputPathOption = new Option<string>("--output")
+            var outputPathOption = new Option<string>("--output", "-o")
             {
-                Description = "Specifies the name of the file containing the generated code."
+                Description = "Location to place the generated output. The default is the current directory."
+            };
+
+            var nameOption = new Option<string>("--name", "-n")
+            {
+                Description = "Name of the generated output file. If no name is specified, the type name hint " +
+                              "of the root element type will be used, if available."
             };
 
             var serializerLibrariesOption = new Option<SerializerLibraries>("--serializer")
@@ -52,6 +60,7 @@ namespace Bonsai.Sgen
             rootCommand.Options.Add(generatorNamespaceOption);
             rootCommand.Options.Add(generatorTypeNameOption);
             rootCommand.Options.Add(outputPathOption);
+            rootCommand.Options.Add(nameOption);
             rootCommand.Options.Add(serializerLibrariesOption);
             rootCommand.SetAction(async (parseResult, cancellationToken) =>
             {
@@ -71,39 +80,42 @@ namespace Bonsai.Sgen
                         : await JsonSchema.FromFileAsync(schemaPath.FullName, cancellationToken);
                 }
 
+                var settings = new CSharpCodeDomGeneratorSettings();
+                var nameGenerator = (CSharpTypeNameGenerator)settings.TypeNameGenerator;
+                settings.SerializerLibraries = parseResult.GetValue(serializerLibrariesOption);
+
+                schema = schema.WithCompatibleDefinitions(nameGenerator)
+                               .WithResolvedDiscriminatorInheritance();
+                var generator = new CSharpCodeDomGenerator(schema, settings);
+
                 var generatorTypeName = parseResult.GetValue(generatorTypeNameOption);
-                if (!string.IsNullOrEmpty(generatorTypeName))
-                    schema.Title = generatorTypeName;
+                if (string.IsNullOrEmpty(generatorTypeName) && schema.HasTypeNameTitle)
+                {
+                    generatorTypeName = schema.Title;
+                }
 
                 var generatorNamespace = parseResult.GetValue(generatorNamespaceOption);
                 if (string.IsNullOrEmpty(generatorNamespace))
-                {
-                    generatorNamespace = schemaPath is not null
-                        ? Path.GetFileNameWithoutExtension(schemaPath.Name)
-                        : "DataSchema";
-                }
+                    generatorNamespace =
+                        schemaPath is not null ? Path.GetFileNameWithoutExtension(schemaPath.Name) :
+                        !string.IsNullOrEmpty(schema.Title) ? schema.Title :
+                        "DataSchema";
 
-                var serializerLibraries = parseResult.GetValue(serializerLibrariesOption);
-                var settings = new CSharpCodeDomGeneratorSettings();
-                var typeNameGenerator = (CSharpTypeNameGenerator)settings.TypeNameGenerator;
-                generatorNamespace = typeNameGenerator.Generate(
-                    schema,
-                    generatorNamespace,
-                    typeNameGenerator.ReservedTypeNames);
-                settings.Namespace = generatorNamespace;
-                settings.SerializerLibraries = serializerLibraries;
+                settings.Namespace = nameGenerator.GenerateNamespace(schema, generatorNamespace);
+                var code = generator.GenerateFile(generatorTypeName);
 
-                schema = schema.WithCompatibleDefinitions(settings.TypeNameGenerator)
-                               .WithResolvedDiscriminatorInheritance();
-                var generator = new CSharpCodeDomGenerator(schema, settings);
-                var code = generator.GenerateFile(schema.Title);
-
-                var outputFilePath = parseResult.GetValue(outputPathOption);
+                var outputFilePath = parseResult.GetValue(nameOption);
                 if (string.IsNullOrEmpty(outputFilePath))
+                    outputFilePath = $"{settings.Namespace}.Generated.cs";
+
+                var outputPath = parseResult.GetValue(outputPathOption);
+                if (!string.IsNullOrEmpty(outputPath))
                 {
-                    outputFilePath = $"{generatorNamespace}.Generated.cs";
+                    Directory.CreateDirectory(outputPath);
+                    outputFilePath = Path.Combine(outputPath, outputFilePath);
                 }
 
+                outputFilePath = Path.ChangeExtension(outputFilePath, ".cs");
                 Console.WriteLine($"Writing schema classes to {outputFilePath}...");
                 File.WriteAllText(outputFilePath, code);
             });
