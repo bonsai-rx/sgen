@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<WorkflowBuilder Version="2.8.5"
+<WorkflowBuilder Version="2.9.0"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                 xmlns:p1="clr-namespace:DataSchema;assembly=Extensions"
+                 xmlns:p1="clr-namespace:Person;assembly=Extensions"
                  xmlns:io="clr-namespace:Bonsai.IO;assembly=Bonsai.System"
                  xmlns="https://bonsai-rx.org/2018/workflow">
   <Workflow>
@@ -11,10 +11,14 @@
         <Text><![CDATA[]]></Text>
       </Expression>
       <Expression xsi:type="Combinator">
-        <Combinator xsi:type="p1:Person" />
+        <Combinator xsi:type="p1:Person">
+          <p1:Age>0</p1:Age>
+        </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
-        <Combinator xsi:type="p1:SerializeToYaml" />
+        <Combinator xsi:type="p1:SerializeToJson">
+          <p1:Formatting>Indented</p1:Formatting>
+        </Combinator>
       </Expression>
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="io:WriteAllText">
@@ -29,7 +33,7 @@
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="io:ReadAllText" />
       </Expression>
-      <Expression xsi:type="p1:DeserializeFromYaml">
+      <Expression xsi:type="p1:DeserializeFromJson">
         <p1:Type xsi:type="TypeMapping" TypeArguments="p1:Person" />
       </Expression>
       <Expression xsi:type="MemberSelector">

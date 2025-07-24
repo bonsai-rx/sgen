@@ -51,7 +51,7 @@ The previous example demonstrates modeling a single record. In practice, project
 ```
 
 ```powershell
-dotnet bonsai.sgen --schema person-and-dog.json --output Extensions/PersonAndDogSgen.cs --namespace PersonAndDog
+dotnet bonsai.sgen person-and-dog.json -o Extensions --serializer yaml
 ```
 
 :::workflow
@@ -62,12 +62,15 @@ A few things worth noting in this example:
 
 - The schema file contains two definitions: `Person` and `Dog` that give rise to two operators (`Person` and `Dog`) in the generated code.
 - A third definition `PersonAndPet` is used to combine the two objects into a single record.
-- The `--namespace` flag is used to specify the namespace of the generated code. This is useful to prevent name clashes between different schemas (e.g. `PersonAndDog.Person` and `Person` from the previous example).
-- Both `Person` and `Dog` are passed as references. If definitions are instead passed in-line (i.e. redefined each time), Bonsai.Sgen may not be able to correctly identify them as the same object, and may thus generate multiple classes of the same object.
+- The `--serializer` flag is used to indicate we want to generate YAML [serialization and deserialization operators](#serialization-and-deserialization) operators for these record types.
+- The namespace of the classes in the generated file is different from the previous example. By default, the namespace is generated from the name of the JSON schema file. This is useful to prevent name clashes between different schemas (e.g. `PersonAndDog.Person` and `Person` from the previous example).
+
+> [!TIP]
+> The `--namespace` flag can also be used to specify the namespace of the generated code explicitly.
 
 ## Nested objects
 
-The real power of `Bonsai.Sgen` comes when dealing with more complex data structures, such as nested objects. Bonsai syntax lends itself quite nicely to represent, as well as compose and manipulate them:
+The real power of `Bonsai.Sgen` comes when dealing with more complex data structures, such as nested objects. Bonsai syntax lends itself quite nicely to represent, as well as compose and manipulate, nested objects:
 
 :::workflow
 ![Person And Dog Nested Building](~/workflows/person-and-dog-nested-building.bonsai)
@@ -158,20 +161,20 @@ For reference types, the generated code will not render a nullable type since re
 
 ## Required fields
 
-JSON Schema supports the [`required`](https://json-schema.org/learn/getting-started-step-by-step#define-required-properties) keyword to specify which fields are required. By default, all fields are optional. This can be useful to enforce the presence of certain fields in the object at deserialization time. However, `Bonsai.Sgen` will not generate any code to enforce this requirement during object construction, only at deserialization. It is up to the user to ensure that the object is correctly populated before using it.
+JSON Schema supports the [`required`](https://json-schema.org/learn/getting-started-step-by-step#define-required-properties) keyword to specify which fields are required. By default, all fields are optional. This can be useful to enforce the presence of certain fields in the object at deserialization time. However, `Bonsai.Sgen` will not generate any code to enforce this requirement during object construction, only at deserialization. It is up to you to ensure the object is correctly populated before using it.
 
 > [!Note]
 > Some confusion may arise about the distinction between `null` and `required`. This is all the more confusing since different languages and libraries may refer to these concepts in different ways. For the sake of this tool, the following definitions are used:
 >
-> - `nullable` means that the field can be `null` or type `T`
-> - `required` means that the field must be present in the object at deserialization time
-> - An object can be `nullable` and `required` at the same time. This means it MUST be defined in the object, but it can be defined as `null`.
-> - An object can be `not required` and `nullable`. This does NOT mean that the object is, by default, `null`. It means that the object should have a default value, which can in theory be `null`.
-> - An object can be `not required` and `not nullable`. This means that the object must have a default value, which cannot be `null`.
+> - `nullable` means the field can be `null` or type `T`.
+> - `required` means the field must be present in the object at deserialization time.
+> - A field can be `nullable` and `required` at the same time. This means it MUST be defined in the object, but it can be defined as `null`.
+> - A field can be `not required` and `nullable`. This does NOT necessarily mean the default value of the field is `null`. Rather, this declaration specifies the field can accept `null` values, and that the object provides a default value, but on its own says nothing about what that default value might be.
+> - A field can be `not required` and `not nullable`. This means the object must provide a default value, and this value cannot be `null`.
 
 ## Serialization and Deserialization
 
-One of the biggest perks of using JSON Schema to represent our objects is the guarantee that all records are (de)serializable. This means that we can go from a text-based format (great for specification and logging) to a C# type seamlessly, and vice-versa. `Bonsai.Sgen` will optionally generate (de)serialization operators for all objects in the schema if the `--serializer` property is not `None`. Currently, two formats are supported out of the box: `Json` (via [`NewtonsoftJson`](https://github.com/JamesNK/Newtonsoft.Json)) and `yaml` (via [`YamlDotNet`](https://github.com/aaubry/YamlDotNet)).
+One of the biggest perks of using JSON Schema to represent our objects is the guarantee that all records are (de)serializable. This means we can go from a text-based format (great for specification and logging) to a C# type seamlessly, and vice-versa. `Bonsai.Sgen` will optionally generate (de)serialization operators for all objects in the schema if the `--serializer` property is not `None`. Currently, two formats are supported out of the box: `json` (via [`NewtonsoftJson`](https://github.com/JamesNK/Newtonsoft.Json)) and `yaml` (via [`YamlDotNet`](https://github.com/aaubry/YamlDotNet)).
 
 The two operations are afforded via the `SerializeToYaml` (or `SerializeToJson`) and `DeserializeFromYaml` (or `DeserializeFromJson`) operators, respectively.
 
