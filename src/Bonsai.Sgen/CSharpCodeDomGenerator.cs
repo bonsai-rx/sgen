@@ -33,6 +33,8 @@ namespace Bonsai.Sgen
             Settings = settings;
         }
 
+        public CSharpTypeResolver Resolver => _resolver;
+
         public new CSharpCodeDomGeneratorSettings Settings { get; }
 
         protected override CodeArtifact GenerateType(JsonSchema schema, string typeNameHint)

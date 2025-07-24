@@ -15,14 +15,16 @@ namespace Bonsai.Sgen
                 Arity = Console.IsInputRedirected ? ArgumentArity.Zero : ArgumentArity.ExactlyOne
             });
 
-            var generatorNamespaceOption = new Option<string?>("--namespace")
+            var generatorNamespaceOption = new Option<string?>("--namespace", "-ns")
             {
-                Description = "Specifies the namespace to use for all generated serialization classes."
+                Description = "The namespace to use for all generated serialization classes. If not specified, " +
+                              "the type name hint of the root element will be used, if available."
             };
 
             var generatorTypeNameOption = new Option<string?>("--root")
             {
-                Description = "Specifies the name of the class used to represent the schema root element."
+                Description = "Type name hint to use for the schema root element. If not specified, the title " +
+                              "of the JSON schema will be used, if available."
             };
 
             var outputPathOption = new Option<string>("--output")
@@ -71,32 +73,32 @@ namespace Bonsai.Sgen
                         : await JsonSchema.FromFileAsync(schemaPath.FullName, cancellationToken);
                 }
 
-                var generatorTypeName = parseResult.GetValue(generatorTypeNameOption);
-                if (!string.IsNullOrEmpty(generatorTypeName))
-                    schema.Title = generatorTypeName;
-
-                var generatorNamespace = parseResult.GetValue(generatorNamespaceOption);
-                if (string.IsNullOrEmpty(generatorNamespace))
-                {
-                    generatorNamespace = schemaPath is not null
-                        ? Path.GetFileNameWithoutExtension(schemaPath.Name)
-                        : "DataSchema";
-                }
-
-                var serializerLibraries = parseResult.GetValue(serializerLibrariesOption);
                 var settings = new CSharpCodeDomGeneratorSettings();
-                var typeNameGenerator = (CSharpTypeNameGenerator)settings.TypeNameGenerator;
-                generatorNamespace = typeNameGenerator.Generate(
-                    schema,
-                    generatorNamespace,
-                    typeNameGenerator.ReservedTypeNames);
-                settings.Namespace = generatorNamespace;
-                settings.SerializerLibraries = serializerLibraries;
+                var nameGenerator = (CSharpTypeNameGenerator)settings.TypeNameGenerator;
+                settings.SerializerLibraries = parseResult.GetValue(serializerLibrariesOption);
 
-                schema = schema.WithCompatibleDefinitions(settings.TypeNameGenerator)
+                schema = schema.WithCompatibleDefinitions(nameGenerator)
                                .WithResolvedDiscriminatorInheritance();
                 var generator = new CSharpCodeDomGenerator(schema, settings);
-                var code = generator.GenerateFile(schema.Title);
+
+                var generatorTypeName = parseResult.GetValue(generatorTypeNameOption);
+                if (string.IsNullOrEmpty(generatorTypeName))
+                {
+                    generatorTypeName = generator.Resolver.Resolve(schema, false, schema.Title);
+                    if (nameGenerator.ReservedTypeNames.Contains(generatorTypeName))
+                        generatorTypeName =
+                            schema.HasTypeNameTitle ? schema.Title :
+                            schemaPath is not null ? Path.GetFileNameWithoutExtension(schemaPath.Name) :
+                            "DataSchema";
+                }
+
+                generatorTypeName = nameGenerator.Generate(schema, generatorTypeName, nameGenerator.ReservedTypeNames);
+                var generatorNamespace = parseResult.GetValue(generatorNamespaceOption);
+                if (string.IsNullOrEmpty(generatorNamespace))
+                    generatorNamespace = generatorTypeName;
+
+                settings.Namespace = generatorNamespace;
+                var code = generator.GenerateFile(generatorTypeName);
 
                 var outputFilePath = parseResult.GetValue(outputPathOption);
                 if (string.IsNullOrEmpty(outputFilePath))
