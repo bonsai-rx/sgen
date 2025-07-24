@@ -3,7 +3,6 @@ using System.CodeDom.Compiler;
 using System.ComponentModel;
 using System.Xml.Serialization;
 using NJsonSchema;
-using NJsonSchema.CodeGeneration;
 
 namespace Bonsai.Sgen
 {
