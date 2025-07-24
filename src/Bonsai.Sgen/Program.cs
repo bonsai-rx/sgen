@@ -89,27 +89,24 @@ namespace Bonsai.Sgen
                 var generator = new CSharpCodeDomGenerator(schema, settings);
 
                 var generatorTypeName = parseResult.GetValue(generatorTypeNameOption);
-                if (string.IsNullOrEmpty(generatorTypeName))
+                if (string.IsNullOrEmpty(generatorTypeName) && schema.HasTypeNameTitle)
                 {
-                    generatorTypeName = generator.Resolver.Resolve(schema, false, schema.Title);
-                    if (nameGenerator.ReservedTypeNames.Contains(generatorTypeName))
-                        generatorTypeName =
-                            schema.HasTypeNameTitle ? schema.Title :
-                            schemaPath is not null ? Path.GetFileNameWithoutExtension(schemaPath.Name) :
-                            "DataSchema";
+                    generatorTypeName = schema.Title;
                 }
 
-                generatorTypeName = nameGenerator.Generate(schema, generatorTypeName, nameGenerator.ReservedTypeNames);
                 var generatorNamespace = parseResult.GetValue(generatorNamespaceOption);
                 if (string.IsNullOrEmpty(generatorNamespace))
-                    generatorNamespace = generatorTypeName;
+                    generatorNamespace =
+                        schemaPath is not null ? Path.GetFileNameWithoutExtension(schemaPath.Name) :
+                        !string.IsNullOrEmpty(schema.Title) ? schema.Title :
+                        "DataSchema";
 
-                settings.Namespace = generatorNamespace;
+                settings.Namespace = nameGenerator.GenerateNamespace(schema, generatorNamespace);
                 var code = generator.GenerateFile(generatorTypeName);
 
                 var outputFilePath = parseResult.GetValue(nameOption);
                 if (string.IsNullOrEmpty(outputFilePath))
-                    outputFilePath = $"{generatorNamespace}.Generated.cs";
+                    outputFilePath = $"{settings.Namespace}.Generated.cs";
 
                 var outputPath = parseResult.GetValue(outputPathOption);
                 if (!string.IsNullOrEmpty(outputPath))
