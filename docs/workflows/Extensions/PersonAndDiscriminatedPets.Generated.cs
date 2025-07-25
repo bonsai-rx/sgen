@@ -153,8 +153,8 @@ namespace PersonAndDiscriminatedPets
 
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.6.0.0 (YamlDotNet v16.0.0.0)")]
     [YamlDiscriminator("pet_type")]
-    [JsonInheritanceAttribute("dog", typeof(Dog))]
     [JsonInheritanceAttribute("cat", typeof(Cat))]
+    [JsonInheritanceAttribute("dog", typeof(Dog))]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Pet
@@ -295,8 +295,8 @@ namespace PersonAndDiscriminatedPets
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.6.0.0 (YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Combinator)]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Dog>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Cat>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Dog>))]
     public partial class MatchPet : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {
     

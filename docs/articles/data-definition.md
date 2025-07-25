@@ -100,7 +100,7 @@ Although initially this form may seem less direct and more complicated than even
 2. Data objects backed by JSON Schemas can be used to read and write JSON files with validation guarantees.
 3. Both JSON files and JSON Schemas are interoperable with any other language.
 
-With `Bonsai.Sgen` you can focus on the specification of the data structure itself, rather than on the details of boilerplate code. Furthermore, you don't even need to write the schema by hand directly in JSON, since you can use any language supporting JSON Schemas. For example, you can easily write a full data model in Python and use those classes directly to generate a JSON Schema for Bonsai.
+With `Bonsai.Sgen` you can focus on the specification of the data structure itself, rather than on the details of boilerplate code. Furthermore, you don't even need to write the schema by hand directly in JSON, since you can use any language supporting JSON Schemas. For example, you can easily [write a full data model in Python](python-usage.md#data-model) and use those classes directly to generate a JSON Schema for Bonsai.
 
 ### Saving and Loading
 
