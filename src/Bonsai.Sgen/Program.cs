@@ -38,22 +38,21 @@ namespace Bonsai.Sgen
                               "of the root element type will be used, if available."
             };
 
-            var serializerLibrariesOption = new Option<SerializerLibraries>("--serializer")
+            var serializerLibrariesOption = new Option<SerializerOptions>("--serializer")
             {
                 Description = "Specifies the serializer data annotations to include in the generated classes.",
-                DefaultValueFactory = _ => SerializerLibraries.YamlDotNet,
                 AllowMultipleArgumentsPerToken = true,
                 Arity = ArgumentArity.OneOrMore,
                 CustomParser = result =>
                 {
-                    SerializerLibraries serializers = default;
+                    SerializerOptions serializers = default;
                     foreach (var token in result.Tokens)
                     {
-                        serializers |= (SerializerLibraries)Enum.Parse(typeof(SerializerLibraries), token.Value);
+                        serializers |= (SerializerOptions)Enum.Parse(typeof(SerializerOptions), token.Value);
                     }
                     return serializers;
                 }
-            }.AcceptOnlyFromAmong(typeof(SerializerLibraries).GetEnumNames());
+            }.AcceptOnlyFromAmong(typeof(SerializerOptions).GetEnumNames());
             
             var rootCommand = new RootCommand("Tool for automatically generating YML serialization classes from schema files.");
             rootCommand.Arguments.Add(schemaPathArgument);
@@ -82,7 +81,7 @@ namespace Bonsai.Sgen
 
                 var settings = new CSharpCodeDomGeneratorSettings();
                 var nameGenerator = (CSharpTypeNameGenerator)settings.TypeNameGenerator;
-                settings.SerializerLibraries = parseResult.GetValue(serializerLibrariesOption);
+                settings.SerializerLibraries = (SerializerLibraries)parseResult.GetValue(serializerLibrariesOption);
 
                 schema = schema.WithCompatibleDefinitions(nameGenerator)
                                .WithResolvedDiscriminatorInheritance();
@@ -123,5 +122,12 @@ namespace Bonsai.Sgen
             var parseResult = rootCommand.Parse(args);
             return await parseResult.InvokeAsync();
         }
+    }
+
+    [Flags]
+    enum SerializerOptions
+    {
+        json = SerializerLibraries.NewtonsoftJson,
+        yaml = SerializerLibraries.YamlDotNet
     }
 }
