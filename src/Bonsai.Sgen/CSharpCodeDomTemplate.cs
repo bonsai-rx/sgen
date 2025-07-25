@@ -38,6 +38,9 @@ namespace Bonsai.Sgen
 
         private string GetVersionString()
         {
+            if (Settings.SerializerLibraries == SerializerLibraries.None)
+                return $"{GeneratorAssemblyName.Version}";
+
             var serializerLibraries = new List<string>();
             if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
             {
