@@ -1,4 +1,4 @@
-# Python usage
+# Pydantic usage
 
 JSON Schema files compatible with `Bonsai.Sgen` can be generated automatically from Python using the [Pydantic](https://docs.pydantic.dev/latest/) data validation library. This has several advantages:
 
