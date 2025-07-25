@@ -15,11 +15,15 @@ name: Bonsai.Sgen
 on:
   push:
     # This prevents tag pushes from triggering this workflow
-    branches: ['*']
+    branches: ['**']
   pull_request:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      publish-docs-website:
+        description: "Publish docs website to GitHub Pages?"
+        default: "false"
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -314,7 +318,8 @@ jobs:
     if: |
       !cancelled() && !failure() && needs.build-documentation.result == 'success'
       && (github.event_name == 'release'
-        || (vars.CONTINUOUS_DOCUMENTATION && github.event_name != 'pull_request')
+      || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish-docs-website == 'true')
+      || (github.event_name == 'push' && vars.CONTINUOUS_DOCUMENTATION)
       )
     steps:
       # ----------------------------------------------------------------------- Download documentation website components
@@ -340,5 +345,4 @@ jobs:
       # ----------------------------------------------------------------------- Publish to GitHub Pages
       - name: Publish to GitHub Pages
         id: publish
-        if: github.event_name == 'release' || vars.CONTINUOUS_DOCUMENTATION || github.event.repository.fork
         uses: actions/deploy-pages@v4

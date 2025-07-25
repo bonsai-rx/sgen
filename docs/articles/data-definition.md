@@ -1,6 +1,6 @@
 # Data Definition
 
-`Bonsai.Sgen` addresses the problem of defining and implementing custom data types in the Bonsai programming language. Let's explore this with a simple example.
+`Bonsai.Sgen` addresses the problem of defining and implementing custom data types in the Bonsai programming language. Let's explore this problem with a simple example.
 
 ## Introduction
 
@@ -33,7 +33,9 @@ new(
 )
 ```
 
-This approach works, but is somewhat brittle, as the `Person` record exists only as an anonymous type in the current workflow compiler context. This limitation prevents the creation of named references to the type, required for instance to create [Subject Sources](https://bonsai-rx.org/docs/articles/subjects.html#source-subjects). It also requires scripting to be used anywhere we need to create new objects.
+A data object initializer expression will create a new anonymous record type in the current workflow context, but unfortunately this comes with several limitations.
+
+First, the type has no name, so we do not know whether it refers to the `Person` concept, or any other concept. Furthermore, having no name means it is not possible to create any objects requiring a named reference to a type, for exampling when creating [Subject Sources](https://bonsai-rx.org/docs/articles/subjects.html#source-subjects). Finally, this approach requires the use of scripting anywhere we need to create new objects.
 
 ## Custom Scripting Extension
 
@@ -98,7 +100,7 @@ Although initially this form may seem less direct and more complicated than even
 2. Data objects backed by JSON Schemas can be used to read and write JSON files with validation guarantees.
 3. Both JSON files and JSON Schemas are interoperable with any other language.
 
-With `Bonsai.Sgen` you can focus on the specification of the data structure itself, rather than on the details of boilerplate code. Furthermore, you don't even need to write the schema by hand directly in JSON, since you can use any language supporting JSON Schemas. For example, you can easily write a full data model in Python and use those classes directly to generate a JSON Schema for Bonsai.
+With `Bonsai.Sgen` you can focus on the specification of the data structure itself, rather than on the details of boilerplate code. Furthermore, you don't even need to write the schema by hand directly in JSON, since you can use any language supporting JSON Schemas. For example, you can easily [write a full data model in Python](pydantic-usage.md#model-definition) and use those classes directly to generate a JSON Schema for Bonsai.
 
 ### Saving and Loading
 

@@ -5,13 +5,13 @@
 //----------------------
 
 
-namespace DataSchema
+namespace PersonAndPetEnumNullable
 {
     #pragma warning disable // Disable all warnings
 
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.4.0.0 (YamlDotNet v13.0.0.0)")]
-    [Bonsai.CombinatorAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.6.0.0 (YamlDotNet v16.0.0.0)")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Person
     {
     
@@ -88,12 +88,12 @@ namespace DataSchema
             }
         }
     
-        public System.IObservable<Person> Process()
+        public System.IObservable<Person> Generate()
         {
             return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Person(this)));
         }
     
-        public System.IObservable<Person> Process<TSource>(System.IObservable<TSource> source)
+        public System.IObservable<Person> Generate<TSource>(System.IObservable<TSource> source)
         {
             return System.Reactive.Linq.Observable.Select(source, _ => new Person(this));
         }
@@ -122,13 +122,114 @@ namespace DataSchema
     }
 
 
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.6.0.0 (YamlDotNet v16.0.0.0)")]
+    public enum Pet
+    {
+    
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="Dog")]
+        Dog = 0,
+    
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="Cat")]
+        Cat = 1,
+    
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="Fish")]
+        Fish = 2,
+    
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="Bird")]
+        Bird = 3,
+    
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="Reptile")]
+        Reptile = 4,
+    }
+
+
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.6.0.0 (YamlDotNet v16.0.0.0)")]
+    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
+    [Bonsai.CombinatorAttribute(MethodName="Generate")]
+    public partial class PersonAndPet
+    {
+    
+        private Person _owner;
+    
+        private Pet? _pet;
+    
+        public PersonAndPet()
+        {
+        }
+    
+        protected PersonAndPet(PersonAndPet other)
+        {
+            _owner = other._owner;
+            _pet = other._pet;
+        }
+    
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="owner")]
+        public Person Owner
+        {
+            get
+            {
+                return _owner;
+            }
+            set
+            {
+                _owner = value;
+            }
+        }
+    
+        [System.Xml.Serialization.XmlIgnoreAttribute()]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="pet")]
+        public Pet? Pet
+        {
+            get
+            {
+                return _pet;
+            }
+            set
+            {
+                _pet = value;
+            }
+        }
+    
+        public System.IObservable<PersonAndPet> Generate()
+        {
+            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new PersonAndPet(this)));
+        }
+    
+        public System.IObservable<PersonAndPet> Generate<TSource>(System.IObservable<TSource> source)
+        {
+            return System.Reactive.Linq.Observable.Select(source, _ => new PersonAndPet(this));
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("Owner = " + _owner + ", ");
+            stringBuilder.Append("Pet = " + _pet);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
     /// <summary>
     /// Serializes a sequence of data model objects into YAML strings.
     /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.4.0.0 (YamlDotNet v13.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.6.0.0 (YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("Serializes a sequence of data model objects into YAML strings.")]
-    [Bonsai.CombinatorAttribute()]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
+    [Bonsai.CombinatorAttribute()]
     public partial class SerializeToYaml
     {
     
@@ -146,23 +247,29 @@ namespace DataSchema
         {
             return Process<Person>(source);
         }
+
+        public System.IObservable<string> Process(System.IObservable<PersonAndPet> source)
+        {
+            return Process<PersonAndPet>(source);
+        }
     }
 
 
     /// <summary>
     /// Deserializes a sequence of YAML strings into data model objects.
     /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.4.0.0 (YamlDotNet v13.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.6.0.0 (YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("Deserializes a sequence of YAML strings into data model objects.")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Person>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PersonAndPet>))]
     public partial class DeserializeFromYaml : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {
     
         public DeserializeFromYaml()
         {
-            Type = new Bonsai.Expressions.TypeMapping<Person>();
+            Type = new Bonsai.Expressions.TypeMapping<PersonAndPet>();
         }
 
         public Bonsai.Expressions.TypeMapping Type { get; set; }

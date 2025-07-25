@@ -18,7 +18,7 @@ First, define the JSON Schema for our `Person` data type:
 Generate custom Bonsai extension code using `Bonsai.Sgen`:
 
 ```powershell
-dotnet bonsai.sgen --schema person.json --output Extensions/PersonSgen.Generated.cs
+dotnet bonsai.sgen person.json -o Extensions --serializer json
 ```
 
 Use the generated operators directly in your Bonsai workflow:

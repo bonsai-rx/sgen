@@ -14,18 +14,24 @@
     dotnet tool install --local Bonsai.Sgen
     ```
 
-2. Generate YAML serialization classes from a schema file:
+2. Generate YAML or JSON serialization classes from a schema file to your project `Extensions` folder:
 
     ```cmd
-    dotnet bonsai.sgen --schema schema.json --serializer YamlDotNet
+    dotnet bonsai.sgen schema.json -o Extensions --serializer yaml
     ```
 
-3. Copy the generated class file to your project `Extensions` folder.
+    ```cmd
+    dotnet bonsai.sgen schema.json -o Extensions --serializer json
+    ```
 
-4. Add the necessary package references to your `Extensions.csproj` file:
+3. Add the necessary package references to your `Extensions.csproj` file:
 
     ```xml
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    ```
+
+    ```xml
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     ```
 
 ## Additional Documentation

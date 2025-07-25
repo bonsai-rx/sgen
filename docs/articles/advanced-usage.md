@@ -27,7 +27,7 @@ Running `Bonsai.Sgen` on this schema generates the following type signature for 
 public object FooProperty
 ```
 
-While `oneOf` is supported, statically typed languages like C# require the exact type at compile time. Thus, the property is "up-cast" to `object`, and users must down-cast it to the correct type at runtime.
+While `oneOf` is supported, statically typed languages like C# require the exact type at compile time. Thus, the property is "up-cast" to `object`, and you must down-cast it to the correct type at runtime.
 
 ## Tagged-Unions
 
@@ -41,14 +41,14 @@ For example, a `Pet` object that can be either a `Dog` or a `Cat` can be represe
 "Pet": {
   "discriminator": {
     "mapping": {
-      "cat": "#/definitions/Cat",
-      "dog": "#/definitions/Dog"
+      "cat": "#/$defs/Cat",
+      "dog": "#/$defs/Dog"
     },
     "propertyName": "pet_type"
   },
   "oneOf": [
-    { "$ref": "#/definitions/Dog" },
-    { "$ref": "#/definitions/Cat" }
+    { "$ref": "#/$defs/Dog" },
+    { "$ref": "#/$defs/Cat" }
   ]
 }
 ```

@@ -1,5 +1,5 @@
 {
-  "definitions": {
+  "$defs": {
     "Cat": {
       "properties": {
         "pet_type": {
@@ -51,19 +51,20 @@
     "Pet": {
       "discriminator": {
         "mapping": {
-          "cat": "#/definitions/Cat",
-          "dog": "#/definitions/Dog"
+          "cat": "#/$defs/Cat",
+          "dog": "#/$defs/Dog"
         },
         "propertyName": "pet_type"
       },
       "oneOf": [
         {
-          "$ref": "#/definitions/Dog"
+          "$ref": "#/$defs/Cat"
         },
         {
-          "$ref": "#/definitions/Cat"
+          "$ref": "#/$defs/Dog"
         }
-      ]
+      ],
+      "title": "Pet"
     }
   },
   "properties": {
@@ -72,7 +73,7 @@
       "type": "string"
     },
     "pet": {
-      "$ref": "#/definitions/Pet"
+      "$ref": "#/$defs/Pet"
     }
   },
   "required": [

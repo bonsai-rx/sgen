@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<WorkflowBuilder Version="2.8.5"
+<WorkflowBuilder Version="2.9.0"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xmlns:p1="clr-namespace:PersonAndDiscriminatedPets;assembly=Extensions"
                  xmlns:rx="clr-namespace:Bonsai.Reactive;assembly=Bonsai.Core"
@@ -33,8 +33,8 @@
       <Expression xsi:type="p1:MatchPet" />
       <Expression xsi:type="Combinator">
         <Combinator xsi:type="p1:Dog">
-          <p1:CanBark>true</p1:CanBark>
           <p1:Age>0</p1:Age>
+          <p1:CanBark>true</p1:CanBark>
         </Combinator>
       </Expression>
       <Expression xsi:type="p1:MatchPet" />

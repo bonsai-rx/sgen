@@ -3,3 +3,4 @@
 .bonsai/Settings/
 .vs/
 /artifacts/
+__pycache__/

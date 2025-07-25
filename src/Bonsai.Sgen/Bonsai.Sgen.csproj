@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Title>Bonsai Serializer Generator</Title>
-    <Description>A tool for automatically generating YML serialization classes from schema files.</Description>
+    <Description>Tool for automatically generating serialization classes from JSON Schema files.</Description>
 
     <OutputType>Exe</OutputType>
     <PackAsTool>true</PackAsTool>

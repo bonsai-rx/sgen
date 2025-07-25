@@ -1,6 +1,6 @@
 {
   "title": "PersonAndPet",
-  "definitions": {
+  "$defs": {
     "Person": {
       "title": "Person",
       "type": "object",
@@ -29,10 +29,10 @@
   "type": "object",
   "properties": {
     "owner": {
-      "$ref": "#/definitions/Person"
+      "$ref": "#/$defs/Person"
     },
     "pet": {
-      "$ref": "#/definitions/Pet"
+      "$ref": "#/$defs/Pet"
     }
   }
 }

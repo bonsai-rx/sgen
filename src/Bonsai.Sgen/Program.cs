@@ -15,16 +15,16 @@ namespace Bonsai.Sgen
                 Arity = Console.IsInputRedirected ? ArgumentArity.Zero : ArgumentArity.ExactlyOne
             });
 
-            var generatorNamespaceOption = new Option<string?>("--namespace", "-ns")
+            var generatorNamespaceOption = new Option<string?>("--namespace")
             {
-                Description = "The namespace to use for all generated serialization classes. If not specified, " +
-                              "the type name hint of the root element will be used, if available."
+                Description = "Namespace to use for generated code. If not specified, the sanitized name " +
+                              "of the schema file will be used."
             };
 
             var generatorTypeNameOption = new Option<string?>("--root")
             {
                 Description = "Type name hint to use for the schema root element. If not specified, the title " +
-                              "of the JSON schema will be used, if available."
+                              "of the schema will be used."
             };
 
             var outputPathOption = new Option<string>("--output", "-o")
@@ -34,8 +34,7 @@ namespace Bonsai.Sgen
 
             var nameOption = new Option<string>("--name", "-n")
             {
-                Description = "Name of the generated output file. If no name is specified, the type name hint " +
-                              "of the root element type will be used, if available."
+                Description = "Name of the generated output file. If not specified, the namespace will be used."
             };
 
             var serializerLibrariesOption = new Option<SerializerOptions>("--serializer")
@@ -54,7 +53,7 @@ namespace Bonsai.Sgen
                 }
             }.AcceptOnlyFromAmong(typeof(SerializerOptions).GetEnumNames());
             
-            var rootCommand = new RootCommand("Tool for automatically generating YML serialization classes from schema files.");
+            var rootCommand = new RootCommand("Tool for automatically generating serialization classes from JSON Schema files.");
             rootCommand.Arguments.Add(schemaPathArgument);
             rootCommand.Options.Add(generatorNamespaceOption);
             rootCommand.Options.Add(generatorTypeNameOption);
