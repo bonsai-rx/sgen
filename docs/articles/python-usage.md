@@ -16,7 +16,7 @@ To install pydantic directly into the virtual environment:
 uv pip install pydantic
 ```
 
-## Data model
+## Model definition
 
 A JSON Schema can be directly defined using [Pydantic models](https://docs.pydantic.dev/latest/concepts/models/) which fully specify all the constraints between the types in the schema. For example, the code below can be used to generate the entire schema for the [tagged unions](advanced-usage.md#tagged-unions) example:
 
@@ -68,4 +68,26 @@ This will generate the file `person-and-discriminated-pets.json` which can then 
 
 ```powershell
 dotnet bonsai.sgen "person-and-discriminated-pets.json" -o Extensions --serializer json
+```
+
+## Model serialization
+
+Once the model classes are specified in Pydantic, we can create and manipulate model objects directly in Python, export them to a JSON file, or read a JSON file back into model objects.
+
+#### Serialize to JSON
+```python
+from pathlib import Path
+from person_and_discriminated_pets import PersonAndPet, Cat
+
+data = PersonAndPet(owner="Avery", pet=Cat(age=2, can_meow=False))
+Path("data.json").write_text(data.model_dump_json(indent=2))
+```
+
+#### Deserialize from JSON
+```python
+from pathlib import Path
+from person_and_discriminated_pets import PersonAndPet
+
+json = Path("data.json").read_text()
+data = PersonAndPet.model_validate_json(json)
 ```
