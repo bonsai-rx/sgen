@@ -21,7 +21,7 @@ The previous example demonstrates modeling a single record. In practice, project
 ```json
 {
   "title": "PersonAndPet",
-  "definitions": {
+  "$defs": {
     "Person": {
       "title": "Person",
       "type": "object",
@@ -44,8 +44,8 @@ The previous example demonstrates modeling a single record. In practice, project
   },
   "type": "object",
   "properties": {
-    "owner": { "$ref": "#/definitions/Person" },
-    "pet": { "$ref": "#/definitions/Dog" }
+    "owner": { "$ref": "#/$defs/Person" },
+    "pet": { "$ref": "#/$defs/Dog" }
   }
 }
 ```
@@ -96,8 +96,8 @@ We can replace the `Pet` object in the previous example with an [`enum`](https:/
 },
 "type": "object",
 "properties": {
-  "owner": {"$ref": "#/definitions/Person"},
-  "pet": {"$ref": "#/definitions/Pet"}
+  "owner": {"$ref": "#/$defs/Person"},
+  "pet": {"$ref": "#/$defs/Pet"}
 }
 ```
 
@@ -128,7 +128,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 ```json
 "pets": {
   "type": "array",
-  "items": {"$ref": "#/definitions/Pet"}
+  "items": {"$ref": "#/$defs/Pet"}
 }
 ```
 
@@ -145,7 +145,7 @@ JSON Schema supports the `null` type, which can be used to represent nullable ty
 ```json
 "pet": {
   "oneOf": [
-    {"$ref": "#/definitions/Pet"},
+    {"$ref": "#/$defs/Pet"},
     {"type": "null"}
   ]
 }

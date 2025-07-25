@@ -41,14 +41,14 @@ For example, a `Pet` object that can be either a `Dog` or a `Cat` can be represe
 "Pet": {
   "discriminator": {
     "mapping": {
-      "cat": "#/definitions/Cat",
-      "dog": "#/definitions/Dog"
+      "cat": "#/$defs/Cat",
+      "dog": "#/$defs/Dog"
     },
     "propertyName": "pet_type"
   },
   "oneOf": [
-    { "$ref": "#/definitions/Dog" },
-    { "$ref": "#/definitions/Cat" }
+    { "$ref": "#/$defs/Dog" },
+    { "$ref": "#/$defs/Cat" }
   ]
 }
 ```
