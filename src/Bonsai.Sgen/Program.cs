@@ -12,7 +12,7 @@ namespace Bonsai.Sgen
             {
                 Description = "Specifies the URL or path to the JSON schema describing the data types " +
                               "for which to generate serialization classes.",
-                Arity = Console.IsInputRedirected ? ArgumentArity.Zero : ArgumentArity.ExactlyOne
+                Arity = Console.IsInputRedirected ? ArgumentArity.ZeroOrOne : ArgumentArity.ExactlyOne
             });
 
             var generatorNamespaceOption = new Option<string?>("--namespace")
@@ -63,17 +63,15 @@ namespace Bonsai.Sgen
             rootCommand.SetAction(async (parseResult, cancellationToken) =>
             {
                 JsonSchema schema;
-                FileInfo? schemaPath;
-                if (Console.IsInputRedirected)
+                var schemaPath = parseResult.GetValue(schemaPathArgument);
+                if (schemaPath is null && Console.IsInputRedirected)
                 {
-                    schemaPath = null;
                     using var stream = Console.OpenStandardInput();
                     schema = await JsonSchema.FromJsonAsync(stream, cancellationToken);
                 }
                 else
                 {
-                    schemaPath = parseResult.GetRequiredValue(schemaPathArgument);
-                    schema = Uri.IsWellFormedUriString(schemaPath.FullName, UriKind.Absolute)
+                    schema = Uri.IsWellFormedUriString(schemaPath!.FullName, UriKind.Absolute)
                         ? await JsonSchema.FromUrlAsync(schemaPath.FullName, cancellationToken)
                         : await JsonSchema.FromFileAsync(schemaPath.FullName, cancellationToken);
                 }
