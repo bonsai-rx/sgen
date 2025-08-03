@@ -98,6 +98,14 @@ jobs:
         if: matrix.platform.rid == 'win-x64'
         run: dotnet test --no-restore --no-build --configuration ${{matrix.configuration}} --verbosity normal --framework net8.0-windows
 
+      # ----------------------------------------------------------------------- Test schemas
+      - name: Test JSON schema generation
+        working-directory: ./docs
+        run: pwsh ./process-schemas.ps1 -SchemaPath workflows/person.json -OutputFolder workflows/Extensions -Serializer json -Verbose
+      - name: Test YAML schema generation
+        working-directory: ./docs
+        run: pwsh ./process-schemas.ps1 -SchemaPath workflows/person-*.json -OutputFolder workflows/Extensions -Serializer yaml -Verbose
+
       # ----------------------------------------------------------------------- Collect artifacts
       - name: Collect NuGet packages
         uses: actions/upload-artifact@v4
