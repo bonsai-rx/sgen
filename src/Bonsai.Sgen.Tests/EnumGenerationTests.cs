@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NJsonSchema;
 using NJsonSchema.Generation;
+using System.Xml.Serialization;
 
 namespace Bonsai.Sgen.Tests
 {
@@ -70,6 +71,15 @@ namespace Bonsai.Sgen.Tests
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("EnumMemberAttribute(Value=\"A\")"));
             Assert.IsTrue(code.Contains("YamlMemberAttribute(Alias=\"A\")"));
+        }
+
+        [TestMethod]
+        public void GenerateStringEnum_OmitXmlIgnoreAttributeInEnumProperties()
+        {
+            var schema = JsonSchema.FromType<Foo>();
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsFalse(code.Contains(nameof(XmlIgnoreAttribute)), $"Enum properties must omit {nameof(XmlIgnoreAttribute)}.");
         }
 
         [TestMethod]

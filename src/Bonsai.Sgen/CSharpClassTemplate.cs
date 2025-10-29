@@ -122,7 +122,8 @@ namespace Bonsai.Sgen
                     }
                 };
 
-                if (!isPrimitive || property.Type == "object")
+                var xmlSerializable = isPrimitive || propertySchema?.ActualSchema.IsEnumeration is true;
+                if (!xmlSerializable || property.Type == "object")
                 {
                     propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(XmlIgnoreAttribute))));
