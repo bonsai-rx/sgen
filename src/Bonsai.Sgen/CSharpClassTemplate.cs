@@ -166,27 +166,27 @@ namespace Bonsai.Sgen
                 type.Members.Add(fieldDeclaration);
                 type.Members.Add(propertyDeclaration);
 
-                if (propertySchema?.ActualSchema.Format == "duration")
+                var xmlPropertyDeclaration = propertySchema?.ActualSchema.Format switch
                 {
-                    type.Members.Add(new CodeMemberProperty
+                    "date-time" => new CodeMemberProperty
                     {
-                        Name = $"{property.PropertyName}Xml",
-                        Attributes = MemberAttributes.Public | MemberAttributes.Final,
-                        Type = new CodeTypeReference(typeof(string)),
-                        CustomAttributes =
+                        GetStatements =
                         {
-                            new CodeAttributeDeclaration(
-                                new CodeTypeReference(typeof(BrowsableAttribute)),
-                                new CodeAttributeArgument(new CodePrimitiveExpression(false))),
-                            new CodeAttributeDeclaration(
-                                new CodeTypeReference(typeof(EditorBrowsableAttribute)),
-                                new CodeAttributeArgument(new CodeFieldReferenceExpression(
-                                    new CodeTypeReferenceExpression(typeof(EditorBrowsableState)),
-                                    nameof(EditorBrowsableState.Never)))),
-                            new CodeAttributeDeclaration(
-                                new CodeTypeReference(typeof(XmlElementAttribute)),
-                                new CodeAttributeArgument(new CodePrimitiveExpression(property.PropertyName)))
+                            new CodeMethodReturnStatement(new CodeSnippetExpression(property.IsNullable
+                                ? $"{property.FieldName}.HasValue ? {property.FieldName}.GetValueOrDefault().ToString(\"o\") : null"
+                                : $"{property.FieldName}.ToString(\"o\")"))
                         },
+                        SetStatements =
+                        {
+                            new CodeAssignStatement(
+                                new CodeVariableReferenceExpression(property.FieldName),
+                                new CodeSnippetExpression(property.IsNullable
+                                    ? $"!string.IsNullOrEmpty(value) ? System.DateTimeOffset.Parse(value) : (System.DateTimeOffset?)null"
+                                    : "System.DateTimeOffset.Parse(value)"))
+                        }
+                    },
+                    "duration" => new CodeMemberProperty
+                    {
                         GetStatements =
                         {
                             new CodeMethodReturnStatement(new CodeSnippetExpression(property.IsNullable
@@ -201,7 +201,26 @@ namespace Bonsai.Sgen
                                     ? $"!string.IsNullOrEmpty(value) ? System.Xml.XmlConvert.ToTimeSpan(value) : (System.TimeSpan?)null"
                                     : "System.Xml.XmlConvert.ToTimeSpan(value)"))
                         }
-                    });
+                    },
+                    _ => null
+                };
+                if (xmlPropertyDeclaration is not null)
+                {
+                    xmlPropertyDeclaration.Name = $"{property.PropertyName}Xml";
+                    xmlPropertyDeclaration.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                    xmlPropertyDeclaration.Type = new CodeTypeReference(typeof(string));
+                    xmlPropertyDeclaration.CustomAttributes.Add(new(
+                        new CodeTypeReference(typeof(BrowsableAttribute)),
+                        new CodeAttributeArgument(new CodePrimitiveExpression(false))));
+                    xmlPropertyDeclaration.CustomAttributes.Add(new(
+                        new CodeTypeReference(typeof(EditorBrowsableAttribute)),
+                        new CodeAttributeArgument(new CodeFieldReferenceExpression(
+                            new CodeTypeReferenceExpression(typeof(EditorBrowsableState)),
+                            nameof(EditorBrowsableState.Never)))));
+                    xmlPropertyDeclaration.CustomAttributes.Add(new(
+                        new CodeTypeReference(typeof(XmlElementAttribute)),
+                        new CodeAttributeArgument(new CodePrimitiveExpression(property.PropertyName))));
+                    type.Members.Add(xmlPropertyDeclaration);
                 }
             }
 

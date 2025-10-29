@@ -13,10 +13,27 @@ namespace Bonsai.Sgen.Tests
             public TimeSpan? Baz { get; set; }
         }
 
+        public class FooDateTime
+        {
+            public DateTimeOffset Bar { get; set; }
+
+            public DateTimeOffset? Baz { get; set; }
+        }
+
         [TestMethod]
         public void GenerateTimeSpanProperties_EnsureKnownTypesAndXmlSerialization()
         {
             var schema = JsonSchema.FromType<FooTimeSpan>();
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("public string BarXml"));
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        public void GenerateDateTimeProperties_EnsureKnownTypesAndXmlSerialization()
+        {
+            var schema = JsonSchema.FromType<FooDateTime>();
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("public string BarXml"));
