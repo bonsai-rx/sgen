@@ -81,7 +81,8 @@ namespace Bonsai.Sgen
         {
             var serializer = new YamlDotNet.Serialization.SerializerBuilder()
 " + typeInspector +
-@"                .Build();
+@"                  .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
+                  .Build();
             return System.Reactive.Linq.Observable.Select(source, value => serializer.Serialize(value)); 
         });
     }"));
@@ -128,7 +129,8 @@ namespace Bonsai.Sgen
         {
             var serializer = new YamlDotNet.Serialization.DeserializerBuilder()
 " + typeInspector + typeDiscriminators +
-@"                .Build();
+@"                  .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
+                  .Build();
             return System.Reactive.Linq.Observable.Select(source, value =>
             {
                 var reader = new System.IO.StringReader(value);

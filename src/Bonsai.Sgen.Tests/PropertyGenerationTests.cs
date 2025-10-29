@@ -27,6 +27,8 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("public string BarXml"));
+            Assert.IsTrue(code.Contains("JsonIgnoreAttribute"), "JsonIgnoreAttribute is missing.");
+            Assert.IsTrue(code.Contains("YamlIgnoreAttribute"), "YamlIgnoreAttribute is missing.");
             CompilerTestHelper.CompileFromSource(code);
         }
 
@@ -37,6 +39,8 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("public string BarXml"));
+            Assert.IsTrue(code.Contains("JsonIgnoreAttribute"), "JsonIgnoreAttribute is missing.");
+            Assert.IsTrue(code.Contains("YamlIgnoreAttribute"), "YamlIgnoreAttribute is missing.");
             CompilerTestHelper.CompileFromSource(code);
         }
 
