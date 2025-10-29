@@ -165,6 +165,44 @@ namespace Bonsai.Sgen
 
                 type.Members.Add(fieldDeclaration);
                 type.Members.Add(propertyDeclaration);
+
+                if (propertySchema?.ActualSchema.Format == "duration")
+                {
+                    type.Members.Add(new CodeMemberProperty
+                    {
+                        Name = $"{property.PropertyName}Xml",
+                        Attributes = MemberAttributes.Public | MemberAttributes.Final,
+                        Type = new CodeTypeReference(typeof(string)),
+                        CustomAttributes =
+                        {
+                            new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(BrowsableAttribute)),
+                                new CodeAttributeArgument(new CodePrimitiveExpression(false))),
+                            new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(EditorBrowsableAttribute)),
+                                new CodeAttributeArgument(new CodeFieldReferenceExpression(
+                                    new CodeTypeReferenceExpression(typeof(EditorBrowsableState)),
+                                    nameof(EditorBrowsableState.Never)))),
+                            new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(XmlElementAttribute)),
+                                new CodeAttributeArgument(new CodePrimitiveExpression(property.PropertyName)))
+                        },
+                        GetStatements =
+                        {
+                            new CodeMethodReturnStatement(new CodeSnippetExpression(property.IsNullable
+                                ? $"{property.FieldName}.HasValue ? System.Xml.XmlConvert.ToString({property.FieldName}.GetValueOrDefault()) : null"
+                                : $"System.Xml.XmlConvert.ToString({property.FieldName})"))
+                        },
+                        SetStatements =
+                        {
+                            new CodeAssignStatement(
+                                new CodeVariableReferenceExpression(property.FieldName),
+                                new CodeSnippetExpression(property.IsNullable
+                                    ? $"!string.IsNullOrEmpty(value) ? System.Xml.XmlConvert.ToTimeSpan(value) : (System.TimeSpan?)null"
+                                    : "System.Xml.XmlConvert.ToTimeSpan(value)"))
+                        }
+                    });
+                }
             }
 
             var copyConstructor = new CodeConstructor { Attributes = MemberAttributes.Family };
