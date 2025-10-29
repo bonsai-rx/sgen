@@ -209,6 +209,10 @@ namespace Bonsai.Sgen
                     xmlPropertyDeclaration.Name = $"{property.PropertyName}Xml";
                     xmlPropertyDeclaration.Attributes = MemberAttributes.Public | MemberAttributes.Final;
                     xmlPropertyDeclaration.Type = new CodeTypeReference(typeof(string));
+                    if (jsonSerializer)
+                        xmlPropertyDeclaration.CustomAttributes.Add(new(new CodeTypeReference(typeof(JsonIgnoreAttribute))));
+                    if (yamlSerializer)
+                        xmlPropertyDeclaration.CustomAttributes.Add(new(new CodeTypeReference(typeof(YamlIgnoreAttribute))));
                     xmlPropertyDeclaration.CustomAttributes.Add(new(
                         new CodeTypeReference(typeof(BrowsableAttribute)),
                         new CodeAttributeArgument(new CodePrimitiveExpression(false))));
