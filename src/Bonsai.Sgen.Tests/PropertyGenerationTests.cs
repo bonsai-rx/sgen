@@ -6,6 +6,23 @@ namespace Bonsai.Sgen.Tests
     [TestClass]
     public class PropertyGenerationTests
     {
+        public class FooTimeSpan
+        {
+            public TimeSpan Bar { get; set; }
+
+            public TimeSpan? Baz { get; set; }
+        }
+
+        [TestMethod]
+        public void GenerateTimeSpanProperties_EnsureKnownTypesAndXmlSerialization()
+        {
+            var schema = JsonSchema.FromType<FooTimeSpan>();
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("public string BarXml"));
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
         [TestMethod]
         public async Task GenerateFromRequiredNullableProperty_EnsurePropertyAnnotation()
         {
