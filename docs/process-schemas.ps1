@@ -16,11 +16,11 @@ if ($OutputFolder) {
     $OutputFolder = Join-Path (Get-Location) $OutputFolder
 }
 
-$SgenPath = Join-Path (Get-Location) $SgenPath | Join-Path -ChildPath "Bonsai.Sgen"
+$SgenPath = Join-Path (Get-Location) $SgenPath | Join-Path -ChildPath "Bonsai.Sgen.dll"
 Push-Location $PSScriptRoot
 try {
     foreach ($schemaPath in Get-ChildItem -File -Recurse $SchemaPath) {
-        &$SgenPath $schemaPath --output $OutputFolder --serializer @Serializer
+        dotnet $SgenPath $schemaPath --output $OutputFolder --serializer @Serializer
     }
 } finally {
     Pop-Location
