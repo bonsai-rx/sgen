@@ -109,7 +109,7 @@ jobs:
         id: verify-dist
         run: |
           git add . --intent-to-add --ignore-removal
-          git diff --name-status --exit-code
+          git diff --name-status --ignore-matching-lines 'System.CodeDom.Compiler.GeneratedCodeAttribute' --exit-code
 
       # ----------------------------------------------------------------------- Collect artifacts
       - name: Collect NuGet packages
