@@ -101,10 +101,10 @@ jobs:
       # ----------------------------------------------------------------------- Test schemas
       - name: Test JSON schema generation
         working-directory: ./docs
-        run: pwsh ./process-schemas.ps1 -SchemaPath workflows/person.json -OutputFolder workflows/Extensions -Serializer json -Verbose
+        run: pwsh ./process-schemas.ps1 -SchemaPath workflows/person.json -SgenPath ../artifacts/bin/Bonsai.Sgen/${{matrix.configuration}} -Serializer json -Verbose
       - name: Test YAML schema generation
         working-directory: ./docs
-        run: pwsh ./process-schemas.ps1 -SchemaPath workflows/person-*.json -OutputFolder workflows/Extensions -Serializer yaml -Verbose
+        run: pwsh ./process-schemas.ps1 -SchemaPath workflows/person-*.json -SgenPath ../artifacts/bin/Bonsai.Sgen/${{matrix.configuration}} -Serializer yaml -Verbose
 
       # ----------------------------------------------------------------------- Collect artifacts
       - name: Collect NuGet packages

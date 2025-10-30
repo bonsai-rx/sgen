@@ -2,7 +2,7 @@
     [string[]]$Serializer=@("yaml"),
     [string]$SchemaPath=".\workflows\*.json",
     [string]$OutputFolder=".\workflows\Extensions",
-    [string]$SgenPath="..\artifacts\bin\Bonsai.Sgen\release\Bonsai.Sgen"
+    [string]$SgenPath="..\artifacts\bin\Bonsai.Sgen\release"
 )
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
@@ -16,6 +16,7 @@ if ($OutputFolder) {
     $OutputFolder = Join-Path (Get-Location) $OutputFolder
 }
 
+$SgenPath = Join-Path (Get-Location) $SgenPath | Join-Path -ChildPath "Bonsai.Sgen"
 Push-Location $PSScriptRoot
 try {
     foreach ($schemaPath in Get-ChildItem -File -Recurse $SchemaPath) {
