@@ -14,6 +14,8 @@ namespace Bonsai.Sgen.Tests
         {
             public Bar Bar { get; set; }
 
+            public Bar? Baz { get; set; }
+
             [JsonConverter(typeof(StringEnumConverter))]
             public Bar Bar2 { get; set; }
         }
