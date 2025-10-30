@@ -98,13 +98,18 @@ jobs:
         if: matrix.platform.rid == 'win-x64'
         run: dotnet test --no-restore --no-build --configuration ${{matrix.configuration}} --verbosity normal --framework net8.0-windows
 
-      # ----------------------------------------------------------------------- Test schemas
-      - name: Test JSON schema generation
+      # ----------------------------------------------------------------------- Regenerate code
+      - name: Test JSON serializer generation
         working-directory: ./docs
         run: pwsh ./process-schemas.ps1 -SchemaPath workflows/person.json -SgenPath ../artifacts/bin/Bonsai.Sgen/${{matrix.configuration}} -Serializer json -Verbose
-      - name: Test YAML schema generation
+      - name: Test YAML serializer generation
         working-directory: ./docs
         run: pwsh ./process-schemas.ps1 -SchemaPath "workflows/person-*.json" -SgenPath ../artifacts/bin/Bonsai.Sgen/${{matrix.configuration}} -Serializer yaml -Verbose
+      - name: Verify pre-generated code is up to date
+        id: verify-dist
+        run: |
+          git add . --intent-to-add --ignore-removal
+          git diff --name-status --exit-code
 
       # ----------------------------------------------------------------------- Collect artifacts
       - name: Collect NuGet packages
