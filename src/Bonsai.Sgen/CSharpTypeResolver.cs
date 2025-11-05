@@ -12,6 +12,21 @@ namespace Bonsai.Sgen
         {
         }
 
+        public override string Resolve(JsonSchema schema, bool isNullable, string typeNameHint)
+        {
+            var typeName = base.Resolve(schema, isNullable, typeNameHint);
+            if (schema.IsDictionary &&
+                schema.ExtensionData?.TryGetValue(JsonSchemaExtensions.PropertyNamesSchema, out var value) is true &&
+                value is JsonSchema propertyNamesSchema)
+            {
+                var valueType = ResolveDictionaryValueType(schema, "object");
+                var keyType = Resolve(propertyNamesSchema, propertyNamesSchema.ActualSchema.IsNullable(Settings.SchemaType), string.Empty);
+                return string.Format(Settings.DictionaryType + "<{0}, {1}>", keyType, valueType);
+            }
+
+            return typeName;
+        }
+
         public override JsonSchema RemoveNullability(JsonSchema schema)
         {
             JsonSchema? selectedSchema = null;

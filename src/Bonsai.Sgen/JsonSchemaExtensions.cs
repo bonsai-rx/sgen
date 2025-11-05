@@ -10,6 +10,7 @@ namespace Bonsai.Sgen
     internal static class JsonSchemaExtensions
     {
         public const string TypeNameAnnotation = "x-sgen-typename";
+        public const string PropertyNamesSchema = "PropertyNamesSchema";
 
         public static bool TryGetExternalTypeName(this JsonSchema schema, out string typeName)
         {
@@ -184,6 +185,8 @@ namespace Bonsai.Sgen
         class DefinitionSchemaVisitor : JsonSchemaVisitorBase
         {
             const string DefsExtension = "$defs";
+            const string ReferenceKeyword = "$ref";
+            const string PropertyNamesExtension = "propertyNames";
 
             public DefinitionSchemaVisitor(object rootObject, JsonReferenceResolver referenceResolver)
             {
@@ -214,7 +217,7 @@ namespace Bonsai.Sgen
 
             protected override JsonSchema VisitSchema(JsonSchema schema, string path, string typeNameHint)
             {
-                if (schema.ExtensionData?.TryGetValue(DefsExtension, out var defs) == true &&
+                if (schema.ExtensionData?.TryGetValue(DefsExtension, out var defs) is true &&
                     defs is IDictionary<string, object> definitions)
                 {
                     foreach (var entry in definitions)
@@ -230,6 +233,23 @@ namespace Bonsai.Sgen
                         }
                         else definition = (JsonSchema)entry.Value;
                         schema.Definitions.Add(entry.Key, definition);
+                    }
+                }
+
+                if (schema.IsDictionary &&
+                    schema.ExtensionData?.TryGetValue(PropertyNamesExtension, out var value) is true &&
+                    value is IDictionary<string, object> propertyNames &&
+                    propertyNames.TryGetValue(ReferenceKeyword, out var referenceValue) &&
+                    referenceValue is string referencePath)
+                {
+                    var reference = ReferenceResolver.ResolveReferenceAsync(
+                        RootObject,
+                        referencePath,
+                        typeof(JsonSchema),
+                        ContractResolver).Result;
+                    if (reference is JsonSchema propertyNamesSchema)
+                    {
+                        schema.ExtensionData[PropertyNamesSchema] = propertyNamesSchema;
                     }
                 }
 
