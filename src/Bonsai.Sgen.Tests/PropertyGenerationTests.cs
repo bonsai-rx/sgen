@@ -183,5 +183,53 @@ namespace Bonsai.Sgen.Tests
             Assert.IsTrue(code.Contains("_fooWithDefault.BarWithDefault.Label = \"top_default\""));
             CompilerTestHelper.CompileFromSource(code);
         }
+
+        [TestMethod]
+        public async Task GenerateFromAdditionalPropertiesWithPropertyNames_EnsureKeyIsEnumType()
+        {
+            var schema = await JsonSchema.FromJsonAsync(@"
+{
+    ""$schema"": ""https://json-schema.org/draft-07/schema#"",
+    ""$defs"": {
+      ""Element"": {
+        ""properties"": {
+          ""value"": {
+            ""type"": ""integer""
+          }
+        },
+        ""type"": ""object""
+      },
+      ""KeyEnum"": {
+        ""enum"": [
+          ""Key1"",
+          ""Key2""
+        ],
+        ""type"": ""string""
+      }
+    },
+    ""properties"": {
+      ""elements"": {
+        ""additionalProperties"": {
+          ""$ref"": ""#/$defs/Element""
+        },
+        ""propertyNames"": {
+          ""$ref"": ""#/$defs/KeyEnum""
+        },
+        ""type"": ""object""
+      }
+    },
+    ""required"": [
+      ""elements""
+    ],
+    ""title"": ""Container"",
+    ""type"": ""object""
+}
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("System.Collections.Generic.Dictionary<KeyEnum, Element>"));
+            Assert.IsTrue(code.Contains("new System.Collections.Generic.Dictionary<KeyEnum, Element>"));
+            CompilerTestHelper.CompileFromSource(code);
+        }
     }
 }
