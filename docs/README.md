@@ -34,7 +34,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     ```
 
-> [!NOTE]
+> [!IMPORTANT]
 > 
 > Make sure the above packages are installed in your Bonsai environment as well. `YamlDotNet` should be built-in, whereas `Newtonsoft.Json` may have to be installed. To find `Newtonsoft.Json`, go to the package manager, click "Show advanced", and it will usually be the first package in the list.
 
