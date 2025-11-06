@@ -11,6 +11,7 @@ namespace Bonsai.Sgen
             TypeNameGenerator = new CSharpTypeNameGenerator();
             EnumNameGenerator = new CSharpEnumNameGenerator();
             PropertyNameGenerator = new CSharpPropertyNameGenerator();
+            ValueGenerator = new CSharpValueGenerator(this);
             JsonLibrary = CSharpJsonLibrary.NewtonsoftJson;
             ArrayInstanceType = "System.Collections.Generic.List";
             ArrayBaseType = "System.Collections.Generic.List";
