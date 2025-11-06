@@ -115,5 +115,48 @@ namespace Bonsai.Sgen.Tests
             Assert.IsTrue(code.Contains("StringEnumConverter"));
             CompilerTestHelper.CompileFromSource(code);
         }
+
+        [TestMethod]
+        public async Task GenerateStringEnum_DefaultEnumValueUsesSimpleTypeName()
+        {
+            var schema = await JsonSchema.FromJsonAsync(@"
+{
+    ""$defs"": {
+      ""EventName"": {
+        ""enum"": [
+          ""None"",
+          ""Event1"",
+          ""Event2""
+        ],
+        ""type"": ""string""
+      },
+      ""Foo"": {
+        ""properties"": {
+          ""eventName"": {
+            ""$ref"": ""#/$defs/EventName"",
+            ""default"": ""None""
+          }
+        },
+        ""type"": ""object""
+      }
+    },
+    ""properties"": {
+      ""foo"": {
+        ""$ref"": ""#/$defs/Foo""
+      }
+    },
+    ""required"": [
+      ""foo""
+    ],
+    ""title"": ""FooContainer"",
+    ""type"": ""object""
+}
+");
+
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: "FooContainer");
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("EventName.None"));
+            CompilerTestHelper.CompileFromSource(code);
+        }
     }
 }
