@@ -231,5 +231,95 @@ namespace Bonsai.Sgen.Tests
             Assert.IsTrue(code.Contains("new System.Collections.Generic.Dictionary<KeyEnum, Element>"));
             CompilerTestHelper.CompileFromSource(code);
         }
+
+        [TestMethod]
+        public async Task GenerateOptionalProperties_EnsureOneOfResolvesToNullable()
+        {
+            var schema = await JsonSchema.FromJsonAsync(@"
+{
+    ""$defs"": {
+      ""Element"": {
+        ""properties"": {
+          ""value"": {
+            ""oneOf"": [
+              {
+                ""type"": ""integer""
+              },
+              {
+                ""type"": ""null""
+              }
+            ],
+            ""default"": null
+          }
+        },
+        ""type"": ""object""
+      }
+    },
+    ""properties"": {
+      ""optional"": {
+        ""oneOf"": [
+          {
+            ""$ref"": ""#/$defs/Element""
+          },
+          {
+            ""type"": ""null""
+          }
+        ],
+        ""default"": null,
+      }
+    },
+    ""title"": ""Container"",
+    ""type"": ""object""
+}");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("private int? _value"));
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        public async Task GenerateOptionalProperties_EnsureAnyOfResolvesToNullable()
+        {
+            var schema = await JsonSchema.FromJsonAsync(@"
+{
+    ""$defs"": {
+      ""Element"": {
+        ""properties"": {
+          ""value"": {
+            ""anyOf"": [
+              {
+                ""type"": ""integer""
+              },
+              {
+                ""type"": ""null""
+              }
+            ],
+            ""default"": null
+          }
+        },
+        ""type"": ""object""
+      }
+    },
+    ""properties"": {
+      ""optional"": {
+        ""anyOf"": [
+          {
+            ""$ref"": ""#/$defs/Element""
+          },
+          {
+            ""type"": ""null""
+          }
+        ],
+        ""default"": null,
+      }
+    },
+    ""title"": ""Container"",
+    ""type"": ""object""
+}");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("private int? _value"));
+            CompilerTestHelper.CompileFromSource(code);
+        }
     }
 }
