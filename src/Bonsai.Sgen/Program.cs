@@ -81,6 +81,7 @@ namespace Bonsai.Sgen
                 settings.SerializerLibraries = (SerializerLibraries)parseResult.GetValue(serializerLibrariesOption);
 
                 schema = schema.WithCompatibleDefinitions(nameGenerator)
+                               .WithResolvedAnyOfNullableProperty()
                                .WithResolvedDiscriminatorInheritance();
                 var generator = new CSharpCodeDomGenerator(schema, settings);
 
