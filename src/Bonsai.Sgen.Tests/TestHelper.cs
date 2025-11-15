@@ -15,6 +15,7 @@ namespace Bonsai.Sgen.Tests
                 SerializerLibraries = serializerLibraries
             };
             schema = schema.WithCompatibleDefinitions(settings.TypeNameGenerator)
+                           .WithResolvedAnyOfNullableProperty()
                            .WithResolvedDiscriminatorInheritance();
 
             return new CSharpCodeDomGenerator(schema, settings);

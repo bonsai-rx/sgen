@@ -34,6 +34,13 @@ namespace Bonsai.Sgen
             return schema;
         }
 
+        public static JsonSchema WithResolvedAnyOfNullableProperty(this JsonSchema schema)
+        {
+            var anyOfNullablePropertyVisitor = new AnyOfNullablePropertySchemaVisitor();
+            anyOfNullablePropertyVisitor.Visit(schema);
+            return schema;
+        }
+
         public static JsonSchema WithResolvedDiscriminatorInheritance(this JsonSchema schema)
         {
             var discriminatorVisitor = new DiscriminatorSchemaVisitor(schema);
@@ -175,6 +182,26 @@ namespace Bonsai.Sgen
                     if (discriminatorSchema != null)
                     {
                         schema.Properties.Remove(discriminatorSchema.PropertyName);
+                    }
+                }
+
+                return schema;
+            }
+        }
+
+        class AnyOfNullablePropertySchemaVisitor : JsonSchemaVisitorBase
+        {
+            protected override JsonSchema VisitSchema(JsonSchema schema, string path, string typeNameHint)
+            {
+                if (schema.OneOf.Count == 0 && schema.AnyOf.Count == 2)
+                {
+                    if (schema.AnyOf.Count(anyOf => anyOf.IsNullable(SchemaType.JsonSchema)) == 1)
+                    {
+                        foreach (var anyOf in schema.AnyOf)
+                        {
+                            schema.OneOf.Add(anyOf);
+                        }
+                        schema.AnyOf.Clear();
                     }
                 }
 
