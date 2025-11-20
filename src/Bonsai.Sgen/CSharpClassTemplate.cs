@@ -89,6 +89,12 @@ namespace Bonsai.Sgen
                         new CodeVariableReferenceExpression(property.FieldName),
                         new CodeSnippetExpression(property.DefaultValue)));
                 }
+                else if (isNullablePrimitive && propertySchema?.Default is object defaultValue)
+                {
+                    defaultConstructor.Statements.Add(new CodeAssignStatement(
+                        new CodeVariableReferenceExpression(property.FieldName),
+                        new CodePrimitiveExpression(defaultValue)));
+                }
                 else if (propertySchema?.Default is JObject jsonObject)
                 {
                     var targetObject = new CodeVariableReferenceExpression(property.FieldName);

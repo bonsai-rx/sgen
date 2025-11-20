@@ -250,7 +250,7 @@ namespace Bonsai.Sgen.Tests
                 ""type"": ""null""
               }
             ],
-            ""default"": null
+            ""default"": 5
           }
         },
         ""type"": ""object""
@@ -275,6 +275,7 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("private int? _value"));
+            Assert.IsTrue(code.Contains("_value = 5"), "Default value is not being assigned correctly.");
             Assert.IsFalse(
                 code.IndexOf(nameof(XmlIgnoreAttribute)) < code.IndexOf("Value"),
                 $"Nullable primitive properties must omit {nameof(XmlIgnoreAttribute)}.");
@@ -298,7 +299,7 @@ namespace Bonsai.Sgen.Tests
                 ""type"": ""null""
               }
             ],
-            ""default"": null
+            ""default"": 5
           }
         },
         ""type"": ""object""
@@ -323,6 +324,7 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("private int? _value"));
+            Assert.IsTrue(code.Contains("_value = 5"), "Default value is not being assigned correctly.");
             Assert.IsFalse(
                 code.IndexOf(nameof(XmlIgnoreAttribute)) < code.IndexOf("Value"),
                 $"Nullable primitive properties must omit {nameof(XmlIgnoreAttribute)}.");
