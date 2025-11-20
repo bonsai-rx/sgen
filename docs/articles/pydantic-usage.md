@@ -25,23 +25,23 @@ A JSON Schema can be directly defined using [Pydantic models](https://docs.pydan
 ```python
 import json
 from pathlib import Path
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal, Optional, Union
 from pydantic import BaseModel, Field, RootModel
 
 
 class PetBase(BaseModel):
     pet_type: str
-    age: int | None = Field(default=None)
+    age: Optional[int] = Field(default=None)
 
 
 class Cat(PetBase):
-    pet_type: Literal["cat"] = "cat"
+    pet_type: Literal["cat"] = Field(default="cat")
     can_meow: bool = Field(default=True)
 
 
 class Dog(PetBase):
-    pet_type: Literal["dog"] = "dog"
-    can_bark: bool | None = Field(default=True)
+    pet_type: Literal["dog"] = Field(default="dog")
+    can_bark: Optional[bool] = Field(default=True)
 
 
 class Pet(RootModel):
@@ -50,7 +50,7 @@ class Pet(RootModel):
 
 class PersonAndPet(BaseModel):
     owner: str
-    pet: Pet | None = Field(default=None)
+    pet: Optional[Pet] = Field(default=None)
 
 
 if __name__ == "__main__":
