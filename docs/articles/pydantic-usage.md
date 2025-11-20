@@ -31,17 +31,17 @@ from pydantic import BaseModel, Field, RootModel
 
 class PetBase(BaseModel):
     pet_type: str
-    age: int
+    age: int | None = Field(default=None)
 
 
 class Cat(PetBase):
-    pet_type: Literal["cat"]
+    pet_type: Literal["cat"] = "cat"
     can_meow: bool = Field(default=True)
 
 
 class Dog(PetBase):
-    pet_type: Literal["dog"]
-    can_bark: bool = Field(default=True)
+    pet_type: Literal["dog"] = "dog"
+    can_bark: bool | None = Field(default=True)
 
 
 class Pet(RootModel):
@@ -50,7 +50,7 @@ class Pet(RootModel):
 
 class PersonAndPet(BaseModel):
     owner: str
-    pet: Pet
+    pet: Pet | None = Field(default=None)
 
 
 if __name__ == "__main__":
