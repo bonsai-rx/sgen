@@ -9,8 +9,16 @@
           "type": "string"
         },
         "age": {
-          "title": "Age",
-          "type": "integer"
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age"
         },
         "can_meow": {
           "default": true,
@@ -18,9 +26,6 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "age"
-      ],
       "title": "Cat",
       "type": "object"
     },
@@ -33,18 +38,30 @@
           "type": "string"
         },
         "age": {
-          "title": "Age",
-          "type": "integer"
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age"
         },
         "can_bark": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": true,
-          "title": "Can Bark",
-          "type": "boolean"
+          "title": "Can Bark"
         }
       },
-      "required": [
-        "age"
-      ],
       "title": "Dog",
       "type": "object"
     },
@@ -73,12 +90,19 @@
       "type": "string"
     },
     "pet": {
-      "$ref": "#/$defs/Pet"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Pet"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [
-    "owner",
-    "pet"
+    "owner"
   ],
   "title": "PersonAndPet",
   "type": "object"

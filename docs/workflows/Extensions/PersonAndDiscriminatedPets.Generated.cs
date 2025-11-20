@@ -9,13 +9,13 @@ namespace PersonAndDiscriminatedPets
 {
     #pragma warning disable // Disable all warnings
 
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Cat : Pet
     {
     
-        private int _age;
+        private int? _age;
     
         private bool _canMeow;
     
@@ -32,7 +32,7 @@ namespace PersonAndDiscriminatedPets
         }
     
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="age")]
-        public int Age
+        public int? Age
         {
             get
             {
@@ -80,15 +80,15 @@ namespace PersonAndDiscriminatedPets
     }
 
 
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class Dog : Pet
     {
     
-        private int _age;
+        private int? _age;
     
-        private bool _canBark;
+        private bool? _canBark;
     
         public Dog()
         {
@@ -103,7 +103,7 @@ namespace PersonAndDiscriminatedPets
         }
     
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="age")]
-        public int Age
+        public int? Age
         {
             get
             {
@@ -116,7 +116,7 @@ namespace PersonAndDiscriminatedPets
         }
     
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="can_bark")]
-        public bool CanBark
+        public bool? CanBark
         {
             get
             {
@@ -151,7 +151,7 @@ namespace PersonAndDiscriminatedPets
     }
 
 
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     [YamlDiscriminator("pet_type")]
     [JsonInheritanceAttribute("cat", typeof(Cat))]
     [JsonInheritanceAttribute("dog", typeof(Dog))]
@@ -198,7 +198,7 @@ namespace PersonAndDiscriminatedPets
     }
 
 
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
     [Bonsai.CombinatorAttribute(MethodName="Generate")]
     public partial class PersonAndPet
@@ -292,7 +292,7 @@ namespace PersonAndDiscriminatedPets
         public System.Type Type { get; private set; }
     }
 
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Combinator)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Cat>))]
@@ -333,7 +333,7 @@ namespace PersonAndDiscriminatedPets
     }
 
 
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     [System.AttributeUsageAttribute((System.AttributeTargets.Class | System.AttributeTargets.Interface))]
     public class YamlDiscriminatorAttribute : System.Attribute
     {
@@ -348,7 +348,7 @@ namespace PersonAndDiscriminatedPets
     }
 
 
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     public class YamlDiscriminatorTypeInspector : YamlDotNet.Serialization.TypeInspectors.ReflectionTypeInspector
     {
     
@@ -446,7 +446,7 @@ namespace PersonAndDiscriminatedPets
     /// <summary>
     /// Serializes a sequence of data model objects into YAML strings.
     /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("Serializes a sequence of data model objects into YAML strings.")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [Bonsai.CombinatorAttribute()]
@@ -490,7 +490,7 @@ namespace PersonAndDiscriminatedPets
     /// <summary>
     /// Deserializes a sequence of YAML strings into data model objects.
     /// </summary>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.0.0 (YamlDotNet v16.0.0.0)")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.7.2.0 (YamlDotNet v16.0.0.0)")]
     [System.ComponentModel.DescriptionAttribute("Deserializes a sequence of YAML strings into data model objects.")]
     [System.ComponentModel.DefaultPropertyAttribute("Type")]
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
