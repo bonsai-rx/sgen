@@ -79,6 +79,7 @@ namespace Bonsai.Sgen
                 propertyCount++;
                 modelSchemaProperties.TryGetValue(property.Name, out var propertySchema);
                 var isPrimitive = PrimitiveTypes.TryGetValue(property.Type, out string? underlyingType);
+                var isNullablePrimitive = property.Type.EndsWith('?') && PrimitiveTypes.ContainsKey(property.Type.TrimEnd('?'));
                 var fieldDeclaration = new CodeMemberField(
                     isPrimitive ? underlyingType : property.Type,
                     property.FieldName);
@@ -122,7 +123,7 @@ namespace Bonsai.Sgen
                     }
                 };
 
-                var xmlSerializable = isPrimitive || propertySchema?.ActualTypeSchema.IsEnumeration is true;
+                var xmlSerializable = isPrimitive || isNullablePrimitive || propertySchema?.ActualTypeSchema.IsEnumeration is true;
                 if (!xmlSerializable || property.Type == "object")
                 {
                     propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
