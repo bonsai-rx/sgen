@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NJsonSchema;
+using System.Xml.Serialization;
 
 namespace Bonsai.Sgen.Tests
 {
@@ -274,6 +275,9 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("private int? _value"));
+            Assert.IsFalse(
+                code.IndexOf(nameof(XmlIgnoreAttribute)) < code.IndexOf("Value"),
+                $"Nullable primitive properties must omit {nameof(XmlIgnoreAttribute)}.");
             CompilerTestHelper.CompileFromSource(code);
         }
 
@@ -319,6 +323,9 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("private int? _value"));
+            Assert.IsFalse(
+                code.IndexOf(nameof(XmlIgnoreAttribute)) < code.IndexOf("Value"),
+                $"Nullable primitive properties must omit {nameof(XmlIgnoreAttribute)}.");
             CompilerTestHelper.CompileFromSource(code);
         }
     }
