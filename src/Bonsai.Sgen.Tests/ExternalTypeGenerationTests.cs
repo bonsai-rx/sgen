@@ -122,5 +122,40 @@ schema => new TestJsonReferenceResolver(
             Assert.IsTrue(codeB.Contains("class DerivedType : TestHelper.Base.CommonType"), "Incorrect type declaration.");
             CompilerTestHelper.CompileFromSource(codeA, codeB);
         }
+
+        [TestMethod]
+        public async Task GenerateWithInternalTypeReference_EmitInternalTypeDefinition()
+        {
+            var schemaNamespace = $"{nameof(TestHelper)}.Derived";
+            var schemaA = await CreateCommonDefinitions();
+            var schemaB = await JsonSchema.FromJsonAsync(@"
+{
+    ""$schema"": ""http://json-schema.org/draft-04/schema#"",
+    ""definitions"": {
+      ""SpecificType"": {
+        ""type"": ""object"",
+        ""properties"": {
+          ""Bar"": {
+            ""$ref"": ""https://schemaA/definitions/CommonType""
+          },
+          ""Baz"": {
+            ""type"": ""integer""
+          }
+        }
+      }
+    }
+  }
+",
+            documentPath: "",
+            schema => new TestJsonReferenceResolver(
+                new JsonSchemaAppender(schema, new DefaultTypeNameGenerator()),
+                schemaA,
+                schemaNamespace));
+
+            var generatorB = TestHelper.CreateGenerator(schemaB, schemaNamespace: schemaNamespace);
+            var codeB = generatorB.GenerateFile();
+            Assert.IsTrue(codeB.Contains("public partial class CommonType"), "Missing internal type definition.");
+            CompilerTestHelper.CompileFromSource(codeB);
+        }
     }
 }

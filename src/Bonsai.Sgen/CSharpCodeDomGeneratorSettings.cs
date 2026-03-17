@@ -8,7 +8,7 @@ namespace Bonsai.Sgen
         {
             GenerateDataAnnotations = false;
             GenerateJsonMethods = true;
-            TypeNameGenerator = new CSharpTypeNameGenerator();
+            TypeNameGenerator = new CSharpTypeNameGenerator(this);
             EnumNameGenerator = new CSharpEnumNameGenerator();
             PropertyNameGenerator = new CSharpPropertyNameGenerator();
             ValueGenerator = new CSharpValueGenerator(this);
