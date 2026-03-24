@@ -75,6 +75,37 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        [DataRow("uint8", "byte")]
+        [DataRow("int8", "sbyte")]
+        [DataRow("uint16", "ushort")]
+        [DataRow("int16", "short")]
+        [DataRow("uint32", "uint")]
+        [DataRow("int32", "int")]
+        [DataRow("uint64", "ulong")]
+        [DataRow("int64", "long")]
+        public async Task GenerateFromPropertyIntegerFormat_EnsureMatchingPrimitiveType(string format, string type)
+        {
+            var schema = await JsonSchema.FromJsonAsync(@$"
+{{
+    ""$schema"": ""http://json-schema.org/draft-04/schema#"",
+    ""type"": ""object"",
+    ""title"": ""Container"",
+    ""properties"": {{
+      ""value"": {{
+        ""type"": ""integer"",
+        ""format"": ""{format}"",
+      }}
+    }},
+    ""required"": [""value""]
+}}
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains($"public {type} Value"), "Missing or invalid property definition.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
         public async Task GenerateFromSimplePropertyDefault_EnsureDefaultInitializer()
         {
             var schema = await JsonSchema.FromJsonAsync(@"
