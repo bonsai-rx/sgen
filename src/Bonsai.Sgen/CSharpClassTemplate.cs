@@ -78,10 +78,11 @@ namespace Bonsai.Sgen
             {
                 propertyCount++;
                 modelSchemaProperties.TryGetValue(property.Name, out var propertySchema);
-                var isPrimitive = PrimitiveTypes.TryGetValue(property.Type, out string? underlyingType);
-                var isNullablePrimitive = property.Type.EndsWith('?') && PrimitiveTypes.ContainsKey(property.Type.TrimEnd('?'));
+                var propertyType = ResolvePropertyType(property);
+                var isPrimitive = PrimitiveTypes.TryGetValue(propertyType, out string? underlyingType);
+                var isNullablePrimitive = property.Type.EndsWith('?') && PrimitiveTypes.ContainsKey(propertyType.TrimEnd('?'));
                 var fieldDeclaration = new CodeMemberField(
-                    isPrimitive ? underlyingType : property.Type,
+                    isPrimitive ? underlyingType : propertyType,
                     property.FieldName);
                 if (property.HasDefaultValue)
                 {
@@ -116,7 +117,7 @@ namespace Bonsai.Sgen
                 {
                     Name = property.PropertyName,
                     Attributes = MemberAttributes.Public | MemberAttributes.Final,
-                    Type = new CodeTypeReference(isPrimitive ? underlyingType : property.Type),
+                    Type = new CodeTypeReference(isPrimitive ? underlyingType : propertyType),
                     GetStatements =
                     {
                         new CodeMethodReturnStatement(new CodeSnippetExpression(property.FieldName))
@@ -130,7 +131,7 @@ namespace Bonsai.Sgen
                 };
 
                 var xmlSerializable = isPrimitive || isNullablePrimitive || propertySchema?.ActualTypeSchema.IsEnumeration is true;
-                if (!xmlSerializable || property.Type == "object")
+                if (!xmlSerializable || propertyType == "object")
                 {
                     propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(XmlIgnoreAttribute))));
@@ -435,6 +436,25 @@ namespace Bonsai.Sgen
                 }
                 finally { defaultPropertySchema.Default = schemaDefault; }
             }
+        }
+
+        static string ResolvePropertyType(PropertyModel property)
+        {
+            if (property.Type != "int")
+                return property.Type;
+
+            return property.Format switch
+            {
+                "uint8" => "byte",
+                "int8" => "sbyte",
+                "uint16" => "ushort",
+                "int16" => "short",
+                "uint32" => "uint",
+                "int32" => "int",
+                "uint64" => "ulong",
+                "int64" => "long",
+                _ => property.Type,
+            };
         }
 
         static readonly Dictionary<string, string> PrimitiveTypes = new()
