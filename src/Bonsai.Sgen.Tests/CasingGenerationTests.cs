@@ -8,7 +8,7 @@ namespace Bonsai.Sgen.Tests
     {
         private static Task<JsonSchema> CreateTestSchema()
         {
-            return JsonSchema.FromJsonAsync(@"
+            return SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",

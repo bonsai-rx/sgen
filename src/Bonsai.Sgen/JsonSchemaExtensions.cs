@@ -25,6 +25,22 @@ namespace Bonsai.Sgen
             return false;
         }
 
+        public static Func<JsonSchema, JsonReferenceResolver> CreateJsonReferenceResolverFactory()
+        {
+            return CreateJsonReferenceResolverFactory(schema => new DefinitionReferenceResolver(
+                new JsonSchemaAppender(schema, new DefaultTypeNameGenerator())));
+        }
+
+        public static Func<JsonSchema, JsonReferenceResolver> CreateJsonReferenceResolverFactory(
+            Func<JsonSchema, JsonReferenceResolver> referenceResolverFactory)
+        {
+            return schema =>
+            {
+                DefinitionSchemaVisitor.ResolveDefinitionSchemas(schema, new DefaultContractResolver(), "#");
+                return referenceResolverFactory(schema);
+            };
+        }
+
         public static JsonSchema WithCompatibleDefinitions(this JsonSchema schema, ITypeNameGenerator typeNameGenerator)
         {
             var schemaAppender = new JsonSchemaAppender(schema, typeNameGenerator);
@@ -48,6 +64,25 @@ namespace Bonsai.Sgen
             discriminatorVisitor.Visit(schema);
             derivedDiscriminatorVisitor.Visit(schema);
             return schema;
+        }
+
+        class DefinitionReferenceResolver(JsonSchemaAppender schemaAppender) : JsonReferenceResolver(schemaAppender)
+        {
+            public override async Task<IJsonReference> ResolveFileReferenceAsync(string filePath, CancellationToken cancellationToken = default)
+            {
+                return await JsonSchema.FromFileAsync(filePath, ResolveDefinitionSchemas, cancellationToken);
+            }
+
+            public override async Task<IJsonReference> ResolveUrlReferenceAsync(string url, CancellationToken cancellationToken = default)
+            {
+                return await JsonSchema.FromUrlAsync(url, ResolveDefinitionSchemas, cancellationToken);
+            }
+
+            private JsonReferenceResolver ResolveDefinitionSchemas(JsonSchema schema)
+            {
+                DefinitionSchemaVisitor.ResolveDefinitionSchemas(schema, new DefaultContractResolver(), "#");
+                return this;
+            }
         }
 
         class DiscriminatorSchemaVisitor : JsonSchemaVisitorBase
@@ -246,26 +281,40 @@ namespace Bonsai.Sgen
                 return base.VisitJsonReference(reference, path, typeNameHint);
             }
 
-            protected override JsonSchema VisitSchema(JsonSchema schema, string path, string typeNameHint)
+            public static void ResolveDefinitionSchemas(JsonSchema schema, IContractResolver contractResolver, string path)
             {
                 if (schema.ExtensionData?.TryGetValue(DefsExtension, out var defs) is true &&
                     defs is IDictionary<string, object> definitions)
                 {
-                    foreach (var entry in definitions)
+                    foreach (var entry in definitions.ToList())
                     {
                         JsonSchema definition;
                         if (entry.Value is IDictionary dictionary)
                         {
-                            var settings = new JsonSerializerSettings { ContractResolver = ContractResolver };
+                            var settings = new JsonSerializerSettings { ContractResolver = contractResolver };
                             var json = JsonConvert.SerializeObject(dictionary, settings);
                             definition = JsonConvert.DeserializeObject<JsonSchema>(json, settings) ??
                                 throw new InvalidOperationException(
                                     $"Unable to resolve definition {entry.Key} within JSON path '{path}'.");
+                            definitions[entry.Key] = definition;
                         }
                         else definition = (JsonSchema)entry.Value;
+
+                        if (schema.Definitions.TryGetValue(entry.Key, out var existing))
+                        {
+                            if (existing != definition)
+                                throw new InvalidOperationException(
+                                    $"The key '{entry.Key}' in '$defs' conflicts with an existing definition.");
+                            else continue;
+                        }
                         schema.Definitions.Add(entry.Key, definition);
                     }
                 }
+            }
+
+            protected override JsonSchema VisitSchema(JsonSchema schema, string path, string typeNameHint)
+            {
+                ResolveDefinitionSchemas(schema, ContractResolver, path);
 
                 if (schema.IsDictionary &&
                     schema.ExtensionData?.TryGetValue(PropertyNamesExtension, out var value) is true &&
