@@ -48,7 +48,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateFromRequiredNullableProperty_EnsurePropertyAnnotation()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -85,7 +85,7 @@ namespace Bonsai.Sgen.Tests
         [DataRow("int64", "long")]
         public async Task GenerateFromPropertyIntegerFormat_EnsureMatchingPrimitiveType(string format, string type)
         {
-            var schema = await JsonSchema.FromJsonAsync(@$"
+            var schema = await SchemaTestHelper.FromJsonAsync(@$"
 {{
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -108,7 +108,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateFromSimplePropertyDefault_EnsureDefaultInitializer()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -130,7 +130,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateFromArrayProperty_EnsureDefaultInitializer()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -152,7 +152,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateFromUniqueItemsArrayProperty_EnsureSetType()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -176,7 +176,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateFromArrayPropertyWithoutUniqueItems_EnsureArrayType()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -200,7 +200,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateFromUniqueItemsArrayOfObjects_EnsureSetType()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -232,7 +232,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateFromComplexPropertyDefault_EnsureFieldInitializer()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -299,7 +299,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateFromAdditionalPropertiesWithPropertyNames_EnsureKeyIsEnumType()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""https://json-schema.org/draft-07/schema#"",
     ""$defs"": {
@@ -347,7 +347,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateOptionalProperties_EnsureOneOfResolvesToNullable()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$defs"": {
       ""Element"": {
@@ -396,7 +396,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateOptionalProperties_EnsureAnyOfResolvesToNullable()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$defs"": {
       ""Element"": {

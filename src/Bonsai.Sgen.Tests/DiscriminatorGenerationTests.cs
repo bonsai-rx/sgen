@@ -28,7 +28,7 @@ namespace Bonsai.Sgen.Tests
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
         public async Task GenerateFromAllOfDiscriminatorSchema_SerializerAnnotationsDeclareKnownTypes(SerializerLibraries serializerLibraries)
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -166,6 +166,110 @@ namespace Bonsai.Sgen.Tests
             Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"));
             AssertDiscriminatorAttribute(code, serializerLibraries, "kind");
             CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.YamlDotNet)]
+        [DataRow(SerializerLibraries.NewtonsoftJson)]
+        [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]
+        public async Task GenerateFromDiscriminatorRefSharedByProperties_OmitPropertyBaseTypes(SerializerLibraries serializerLibraries)
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+  ""$defs"": {
+    ""Cat"": {
+      ""properties"": { ""kind"": { ""const"": ""cat"", ""default"": ""cat"", ""type"": ""string"" } },
+      ""title"": ""Cat"",
+      ""type"": ""object""
+    },
+    ""Dog"": {
+      ""properties"": { ""kind"": { ""const"": ""dog"", ""default"": ""dog"", ""type"": ""string"" } },
+      ""title"": ""Dog"",
+      ""type"": ""object""
+    },
+    ""Animal"": {
+      ""discriminator"": {
+        ""mapping"": { ""cat"": ""#/$defs/Cat"", ""dog"": ""#/$defs/Dog"" },
+        ""propertyName"": ""kind""
+      },
+      ""oneOf"": [ { ""$ref"": ""#/$defs/Cat"" }, { ""$ref"": ""#/$defs/Dog"" } ],
+      ""title"": ""Animal""
+    }
+  },
+  ""properties"": {
+    ""pet"": { ""$ref"": ""#/$defs/Animal"" },
+    ""stray"": { ""$ref"": ""#/$defs/Animal"" }
+  },
+  ""title"": ""Container"",
+  ""type"": ""object""
+}
+");
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
+            Assert.IsTrue(code.Contains("public Animal Pet"), "First property does not reference base type.");
+            Assert.IsTrue(code.Contains("public Animal Stray"), "Second property does not reference base type.");
+            Assert.IsFalse(code.Contains("class Pet"), "Unexpected base type generated for first property.");
+            Assert.IsFalse(code.Contains("class Stray"), "Unexpected base type generated for second property.");
+            Assert.IsFalse(code.Contains("class MatchPet") || code.Contains("class MatchStray"), "Unexpected match operator generated for property.");
+            AssertDiscriminatorAttribute(code, serializerLibraries, "kind");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        public async Task GenerateFromExternalDiscriminatorRefSharedByProperties_OmitPropertyBaseTypes()
+        {
+            var directory = Directory.CreateTempSubdirectory(nameof(DiscriminatorGenerationTests));
+            try
+            {
+                File.WriteAllText(Path.Combine(directory.FullName, "animals.json"), @"
+{
+  ""$defs"": {
+    ""Cat"": {
+      ""properties"": { ""kind"": { ""const"": ""cat"", ""default"": ""cat"", ""type"": ""string"" } },
+      ""title"": ""Cat"",
+      ""type"": ""object""
+    },
+    ""Dog"": {
+      ""properties"": { ""kind"": { ""const"": ""dog"", ""default"": ""dog"", ""type"": ""string"" } },
+      ""title"": ""Dog"",
+      ""type"": ""object""
+    },
+    ""Animal"": {
+      ""discriminator"": {
+        ""mapping"": { ""cat"": ""#/$defs/Cat"", ""dog"": ""#/$defs/Dog"" },
+        ""propertyName"": ""kind""
+      },
+      ""oneOf"": [ { ""$ref"": ""#/$defs/Cat"" }, { ""$ref"": ""#/$defs/Dog"" } ],
+      ""title"": ""Animal""
+    }
+  }
+}
+");
+                var containerPath = Path.Combine(directory.FullName, "container.json");
+                File.WriteAllText(containerPath, @"
+{
+  ""properties"": {
+    ""pet"": { ""$ref"": ""animals.json#/$defs/Animal"" },
+    ""stray"": { ""$ref"": ""animals.json#/$defs/Animal"" }
+  },
+  ""title"": ""Container"",
+  ""type"": ""object""
+}
+");
+                var schema = await SchemaTestHelper.FromFileAsync(containerPath);
+                var generator = TestHelper.CreateGenerator(schema);
+                var code = generator.GenerateFile();
+                Assert.IsTrue(code.Contains("class Dog : Animal"), "Derived types do not inherit from base type.");
+                Assert.IsTrue(code.Contains("public Animal Pet"), "First property does not reference base type.");
+                Assert.IsTrue(code.Contains("public Animal Stray"), "Second property does not reference base type.");
+                Assert.IsFalse(code.Contains("class Pet") || code.Contains("class Stray"), "Unexpected base type generated for property.");
+                CompilerTestHelper.CompileFromSource(code);
+            }
+            finally
+            {
+                try { directory.Delete(recursive: true); } catch (IOException) { }
+            }
         }
 
         [TestMethod]

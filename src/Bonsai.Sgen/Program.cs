@@ -64,16 +64,17 @@ namespace Bonsai.Sgen
             {
                 JsonSchema schema;
                 var schemaPath = parseResult.GetValue(schemaPathArgument);
+                var referenceResolverFactory = JsonSchemaExtensions.CreateJsonReferenceResolverFactory();
                 if (schemaPath is null && Console.IsInputRedirected)
                 {
                     using var stream = Console.OpenStandardInput();
-                    schema = await JsonSchema.FromJsonAsync(stream, cancellationToken);
+                    schema = await JsonSchema.FromJsonAsync(stream, documentPath: null, referenceResolverFactory, cancellationToken);
                 }
                 else
                 {
                     schema = Uri.IsWellFormedUriString(schemaPath!.FullName, UriKind.Absolute)
-                        ? await JsonSchema.FromUrlAsync(schemaPath.FullName, cancellationToken)
-                        : await JsonSchema.FromFileAsync(schemaPath.FullName, cancellationToken);
+                        ? await JsonSchema.FromUrlAsync(schemaPath.FullName, referenceResolverFactory, cancellationToken)
+                        : await JsonSchema.FromFileAsync(schemaPath.FullName, referenceResolverFactory, cancellationToken);
                 }
 
                 var settings = new CSharpCodeDomGeneratorSettings();

@@ -8,7 +8,7 @@ namespace Bonsai.Sgen.Tests
     {
         private static async Task<JsonSchema> CreateCommonDefinitions()
         {
-            return await JsonSchema.FromJsonAsync(@"
+            return await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""definitions"": {
@@ -51,7 +51,7 @@ namespace Bonsai.Sgen.Tests
             var generatorA = TestHelper.CreateGenerator(schemaA, schemaNamespace: $"{nameof(TestHelper)}.Base");
             var codeA = generatorA.GenerateFile();
 
-            var schemaB = await JsonSchema.FromJsonAsync(@"
+            var schemaB = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""definitions"": {
@@ -88,7 +88,7 @@ schema => new TestJsonReferenceResolver(
             var generatorA = TestHelper.CreateGenerator(schemaA, schemaNamespace: $"{nameof(TestHelper)}.Base");
             var codeA = generatorA.GenerateFile();
 
-            var schemaB = await JsonSchema.FromJsonAsync(@"
+            var schemaB = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""definitions"": {
@@ -128,7 +128,7 @@ schema => new TestJsonReferenceResolver(
         {
             var schemaNamespace = $"{nameof(TestHelper)}.Derived";
             var schemaA = await CreateCommonDefinitions();
-            var schemaB = await JsonSchema.FromJsonAsync(@"
+            var schemaB = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""definitions"": {

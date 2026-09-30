@@ -4,6 +4,27 @@ namespace Bonsai.Sgen.Tests
 {
     static class SchemaTestHelper
     {
+        public static Task<JsonSchema> FromJsonAsync(string json)
+        {
+            return JsonSchema.FromJsonAsync(json, documentPath: null, JsonSchemaExtensions.CreateJsonReferenceResolverFactory());
+        }
+
+        public static Task<JsonSchema> FromFileAsync(string filePath)
+        {
+            return JsonSchema.FromFileAsync(filePath, JsonSchemaExtensions.CreateJsonReferenceResolverFactory());
+        }
+
+        public static Task<JsonSchema> FromJsonAsync(
+            string json,
+            string documentPath,
+            Func<JsonSchema, JsonReferenceResolver> referenceResolverFactory)
+        {
+            return JsonSchema.FromJsonAsync(
+                json,
+                documentPath,
+                JsonSchemaExtensions.CreateJsonReferenceResolverFactory(referenceResolverFactory));
+        }
+
         public static JsonSchema CreateContainerSchema(IEnumerable<KeyValuePair<string, JsonSchema>> definitions)
         {
             var result = new JsonSchema

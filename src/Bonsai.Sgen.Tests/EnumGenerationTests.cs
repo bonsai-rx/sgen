@@ -41,7 +41,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateIntegerEnumWithRawLiterals_EnumTypeUseValidIdentifiers()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -87,7 +87,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateStringEnum_StringEnumTypeDefinitionWithStringEnumConverter()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$schema"": ""http://json-schema.org/draft-04/schema#"",
     ""type"": ""object"",
@@ -119,7 +119,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         public async Task GenerateStringEnum_DefaultEnumValueUsesSimpleTypeName()
         {
-            var schema = await JsonSchema.FromJsonAsync(@"
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
 {
     ""$defs"": {
       ""EventName"": {
