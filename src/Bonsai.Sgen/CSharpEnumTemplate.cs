@@ -1,7 +1,6 @@
 ﻿using System.CodeDom;
 using System.CodeDom.Compiler;
 using NJsonSchema.CodeGeneration.CSharp.Models;
-using YamlDotNet.Serialization;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -50,20 +49,12 @@ namespace Bonsai.Sgen
             foreach (var enumValue in Model.Enums)
             {
                 var valueDeclaration = new CodeMemberField(type.Name, enumValue.Name);
-                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+                if (Settings.SerializerLibraries != SerializerLibraries.None)
                 {
                     valueDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
                         new CodeTypeReference(typeof(EnumMemberAttribute)),
                         new CodeAttributeArgument(
                             nameof(EnumMemberAttribute.Value),
-                            new CodePrimitiveExpression(enumValue.Value))));
-                }
-                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
-                {
-                    valueDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
-                        new CodeTypeReference(typeof(YamlMemberAttribute)),
-                        new CodeAttributeArgument(
-                            nameof(YamlMemberAttribute.Alias),
                             new CodePrimitiveExpression(enumValue.Value))));
                 }
 
