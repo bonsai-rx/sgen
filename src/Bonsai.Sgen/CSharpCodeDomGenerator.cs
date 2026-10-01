@@ -31,6 +31,8 @@ namespace Bonsai.Sgen
             _provider = new CSharpCodeProvider();
             _options = new CodeGeneratorOptions { BracingStyle = "C" };
             Settings = settings;
+            if (rootObject is JsonSchema schema && settings.TypeNameGenerator is CSharpTypeNameGenerator typeNameGenerator)
+                typeNameGenerator.ReserveAnnotatedTypeNames(schema);
         }
 
         public CSharpTypeResolver Resolver => _resolver;
