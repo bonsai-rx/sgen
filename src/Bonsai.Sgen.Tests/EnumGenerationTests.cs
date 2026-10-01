@@ -35,7 +35,7 @@ namespace Bonsai.Sgen.Tests
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("/// 0 = A"));
             Assert.IsTrue(code.Contains("EnumMemberAttribute(Value=\"0\")"));
-            Assert.IsTrue(code.Contains("YamlMemberAttribute(Alias=\"0\")"));
+            Assert.IsFalse(code.Contains("YamlMemberAttribute(Alias=\"0\")"));
         }
 
         [TestMethod]
@@ -72,7 +72,18 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("EnumMemberAttribute(Value=\"A\")"));
-            Assert.IsTrue(code.Contains("YamlMemberAttribute(Alias=\"A\")"));
+            Assert.IsFalse(code.Contains("YamlMemberAttribute(Alias=\"A\")"));
+        }
+
+        [TestMethod]
+        public void GenerateEnumWithYamlSerializer_SerializerAnnotationsUseEnumMemberValues()
+        {
+            var schema = JsonSchema.FromType<Foo>();
+            var generator = TestHelper.CreateGenerator(schema, SerializerLibraries.YamlDotNet);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("EnumMemberAttribute(Value=\"A\")"), "Enum members must declare their serialized value.");
+            Assert.IsFalse(code.Contains("YamlMemberAttribute(Alias=\"A\")"), "Enum members must not declare YAML aliases.");
+            CompilerTestHelper.CompileFromSource(code);
         }
 
         [TestMethod]
