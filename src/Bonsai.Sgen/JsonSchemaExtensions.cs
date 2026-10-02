@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NJsonSchema;
+using NJsonSchema.CodeGeneration.CSharp;
 using NJsonSchema.References;
 using NJsonSchema.Visitors;
 
@@ -11,6 +12,9 @@ namespace Bonsai.Sgen
     {
         public const string TypeNameAnnotation = "x-sgen-typename";
         public const string PropertyNamesSchema = "PropertyNamesSchema";
+        const string ConstKeyword = "const";
+        public const string UnionWrapperTag = "UnionWrapperTag";
+        public const string UnionWrapperValueProperty = "Value";
 
         public static bool TryGetExternalTypeName(this JsonSchema schema, out string typeName)
         {
@@ -57,9 +61,24 @@ namespace Bonsai.Sgen
             return schema;
         }
 
-        public static JsonSchema WithResolvedDiscriminatorInheritance(this JsonSchema schema)
+        public static bool TryGetUnionWrapperTag(this JsonSchema schema, out string tag)
         {
-            var discriminatorVisitor = new DiscriminatorSchemaVisitor(schema);
+            if (schema.ExtensionData?.TryGetValue(UnionWrapperTag, out object? value) is true &&
+                value is DiscriminatorTag discriminatorTag)
+            {
+                tag = discriminatorTag.Value;
+                return true;
+            }
+
+            tag = string.Empty;
+            return false;
+        }
+
+        record DiscriminatorTag(string Value);
+
+        public static JsonSchema WithResolvedDiscriminatorInheritance(this JsonSchema schema, CSharpGeneratorSettings settings)
+        {
+            var discriminatorVisitor = new DiscriminatorSchemaVisitor(schema, settings);
             var derivedDiscriminatorVisitor = new DerivedDiscriminatorSchemaVisitor();
             discriminatorVisitor.Visit(schema);
             derivedDiscriminatorVisitor.Visit(schema);
@@ -89,29 +108,161 @@ namespace Bonsai.Sgen
         {
             readonly Dictionary<JsonSchema, string> definitionTypeNameLookup = new();
 
-            public DiscriminatorSchemaVisitor(JsonSchema rootObject)
+            public DiscriminatorSchemaVisitor(JsonSchema rootObject, CSharpGeneratorSettings settings)
             {
                 RootObject = rootObject;
+                Settings = settings;
                 VisitDefinitions(rootObject);
             }
 
             public JsonSchema RootObject { get; }
 
-            private void ResolveOneOfInheritance(JsonSchema schema, JsonSchema baseSchema)
+            public CSharpGeneratorSettings Settings { get; }
+
+            private bool IsExternal(JsonSchema schema)
             {
-                foreach (var derivedSchema in schema.OneOf)
+                return schema.TryGetExternalTypeName(out var typeName) &&
+                    !CSharpTypeNameGenerator.NamespaceEquals(typeName, Settings.Namespace);
+            }
+
+            private static bool InheritsOtherType(JsonSchema schema, JsonSchema baseSchema)
+            {
+                var inheritedSchema = schema.InheritedSchema;
+                return inheritedSchema != null && inheritedSchema.ActualSchema != baseSchema;
+            }
+
+            private void ResolveOneOfInheritance(JsonSchema schema, JsonSchema baseSchema, string baseTypeNameHint)
+            {
+                if (IsExternal(baseSchema))
+                {
+                    foreach (var derivedSchema in schema.OneOf)
+                    {
+                        if (derivedSchema.IsNullable(SchemaType.JsonSchema))
+                            continue;
+
+                        var actualSchema = derivedSchema.ActualSchema;
+                        if (!actualSchema.AllOf.Any(schema => schema.Reference == baseSchema))
+                        {
+                            actualSchema.AllOf.Add(new JsonSchema { Reference = baseSchema });
+                        }
+                    }
+                    return;
+                }
+
+                var baseTypeName = Settings.TypeNameGenerator.Generate(baseSchema, baseTypeNameHint, Array.Empty<string>());
+                foreach (var derivedSchema in schema.OneOf.ToList())
                 {
                     if (derivedSchema.IsNullable(SchemaType.JsonSchema))
+                        continue;
+
+                    var memberSchema = derivedSchema.ActualSchema;
+                    if (memberSchema.AllOf.Any(schema => schema.Reference == baseSchema) ||
+                        memberSchema.TryGetUnionWrapperTag(out _))
+                        continue;
+
+                    if (!IsExternal(memberSchema) && !InheritsOtherType(memberSchema, baseSchema))
                     {
+                        memberSchema.AllOf.Add(new JsonSchema { Reference = baseSchema });
                         continue;
                     }
 
-                    var actualSchema = derivedSchema.ActualSchema;
-                    if (!actualSchema.AllOf.Any(schema => schema.Reference == baseSchema))
+                    if (memberSchema.DiscriminatorObject != null)
                     {
-                        actualSchema.AllOf.Add(new JsonSchema { Reference = baseSchema });
+                        definitionTypeNameLookup.TryGetValue(memberSchema, out var memberTypeName);
+                        throw new InvalidOperationException(
+                            $"The discriminated union '{baseTypeName}' has a member '{memberTypeName}' which is " +
+                            "itself a discriminated union. Declare a single union listing every member directly.");
+                    }
+
+                    var wrapperSchema = CreateUnionWrapper(baseSchema, baseTypeName, memberSchema);
+                    ReplaceUnionMember(schema.OneOf, derivedSchema, wrapperSchema);
+                    if (baseSchema.DiscriminatorObject is OpenApiDiscriminator discriminator)
+                    {
+                        foreach (var mapping in discriminator.Mapping.ToList())
+                        {
+                            if (mapping.Value.ActualSchema == memberSchema)
+                                discriminator.Mapping[mapping.Key] = new JsonSchema { Reference = wrapperSchema };
+                        }
                     }
                 }
+            }
+
+            private JsonSchema CreateUnionWrapper(JsonSchema baseSchema, string baseTypeName, JsonSchema memberSchema)
+            {
+                var tag = baseSchema.DiscriminatorObject?.Mapping
+                    .FirstOrDefault(mapping => mapping.Value.ActualSchema == memberSchema).Key;
+                if (string.IsNullOrEmpty(tag))
+                {
+                    throw new InvalidOperationException(
+                        $"The discriminated union '{baseTypeName}' has a member with no discriminator mapping.");
+                }
+
+                var wrapperTypeName = baseTypeName + ToIdentifier(tag);
+                var clashesWithDefinition = RootObject.Definitions.Any(definition =>
+                    definition.Key == wrapperTypeName ||
+                    definition.Value.TryGetExternalTypeName(out var typeName) &&
+                    CSharpTypeNameGenerator.NamespaceEquals(typeName, Settings.Namespace) &&
+                    CSharpTypeNameGenerator.GetTypeNameWithoutNamespace(typeName) == wrapperTypeName);
+                if (clashesWithDefinition)
+                {
+                    throw new InvalidOperationException(
+                        $"The wrapper type '{wrapperTypeName}' for the member '{tag}' of the discriminated union " +
+                        $"'{baseTypeName}' clashes with an existing type. Rename the discriminator value to resolve it.");
+                }
+
+                var discriminatorName = baseSchema.DiscriminatorObject!.PropertyName;
+                if (memberSchema.ActualProperties.TryGetValue(discriminatorName, out var discriminatorProperty) &&
+                    !IsConstant(discriminatorProperty))
+                {
+                    throw new InvalidOperationException(
+                        $"The member '{tag}' of the discriminated union '{baseTypeName}' has a property " +
+                        $"'{discriminatorName}' that clashes with the discriminator. Declare the property as a " +
+                        "constant or rename it to resolve it.");
+                }
+
+                var wrapperSchema = new JsonSchema { Type = JsonObjectType.Object };
+                wrapperSchema.AllOf.Add(new JsonSchema { Reference = baseSchema });
+                wrapperSchema.Properties.Add(UnionWrapperValueProperty, new JsonSchemaProperty { Reference = memberSchema });
+                wrapperSchema.ExtensionData = new Dictionary<string, object>
+                {
+                    [TypeNameAnnotation] = $"{Settings.Namespace}.{wrapperTypeName}",
+                    [UnionWrapperTag] = new DiscriminatorTag(tag)
+                };
+                RootObject.Definitions.Add(wrapperTypeName, wrapperSchema);
+                return wrapperSchema;
+            }
+
+            private static bool IsConstant(JsonSchema schema)
+            {
+                var actualSchema = schema.ActualSchema;
+                return actualSchema.ExtensionData?.ContainsKey(ConstKeyword) is true || actualSchema.Enumeration.Count == 1;
+            }
+
+            private static void ReplaceUnionMember(ICollection<JsonSchema> members, JsonSchema member, JsonSchema wrapperSchema)
+            {
+                if (member.HasReference)
+                {
+                    member.Reference = wrapperSchema;
+                    return;
+                }
+
+                var index = members.ToList().IndexOf(member);
+                var replacement = members.ToList();
+                replacement[index] = new JsonSchema { Reference = wrapperSchema };
+                members.Clear();
+                foreach (var schema in replacement)
+                {
+                    members.Add(schema);
+                }
+            }
+
+            private static string ToIdentifier(string value)
+            {
+                var parts = System.Text.RegularExpressions.Regex.Split(value, "[^A-Za-z0-9]+")
+                    .Where(part => part.Length > 0)
+                    .Select(part => char.ToUpperInvariant(part[0]) + part[1..]);
+                var identifier = string.Concat(parts);
+                return identifier.Length == 0 || char.IsDigit(identifier[0]) ? "_" + identifier : identifier;
             }
 
             protected override JsonSchema VisitSchema(JsonSchema schema, string path, string? typeNameHint)
@@ -138,13 +289,16 @@ namespace Bonsai.Sgen
                                 discriminatorSchema.ExtensionData = new Dictionary<string, object>(actualSchema.ExtensionData);
                             }
                             RootObject.Definitions.Add(typeNameHint, discriminatorSchema);
-                            ResolveOneOfInheritance(actualSchema, discriminatorSchema);
+                            ResolveOneOfInheritance(actualSchema, discriminatorSchema, typeNameHint);
                         }
                         else
                         {
                             if (discriminatorSchema.OneOf.Count > 0)
                             {
-                                ResolveOneOfInheritance(discriminatorSchema, discriminatorSchema);
+                                var baseTypeNameHint = definitionTypeNameLookup.TryGetValue(discriminatorSchema, out var definitionName)
+                                    ? definitionName
+                                    : typeNameHint;
+                                ResolveOneOfInheritance(discriminatorSchema, discriminatorSchema, baseTypeNameHint);
                             }
                         }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Reactive.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NJsonSchema;
 
 namespace Bonsai.Sgen.Tests
@@ -214,6 +215,53 @@ namespace Bonsai.Sgen.Tests
             Assert.IsFalse(code.Contains("class MatchPet") || code.Contains("class MatchStray"), "Unexpected match operator generated for property.");
             AssertDiscriminatorAttribute(code, serializerLibraries, "kind");
             CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""pet"":{""kind"":""dog"",""name"":""Rex""}}")]
+        [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "pet:\n  kind: dog\n  name: Rex\n")]
+        public async Task GenerateFromDiscriminatorSchema_RoundTripTaggedMember(SerializerLibraries serializerLibraries, string format, string text)
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+  ""$defs"": {
+    ""Cat"": {
+      ""properties"": { ""kind"": { ""const"": ""cat"", ""default"": ""cat"", ""type"": ""string"" } },
+      ""title"": ""Cat"",
+      ""type"": ""object""
+    },
+    ""Dog"": {
+      ""properties"": {
+        ""kind"": { ""const"": ""dog"", ""default"": ""dog"", ""type"": ""string"" },
+        ""name"": { ""type"": ""string"" }
+      },
+      ""title"": ""Dog"",
+      ""type"": ""object""
+    },
+    ""Animal"": {
+      ""discriminator"": {
+        ""mapping"": { ""cat"": ""#/$defs/Cat"", ""dog"": ""#/$defs/Dog"" },
+        ""propertyName"": ""kind""
+      },
+      ""oneOf"": [ { ""$ref"": ""#/$defs/Cat"" }, { ""$ref"": ""#/$defs/Dog"" } ],
+      ""title"": ""Animal""
+    }
+  },
+  ""properties"": { ""pet"": { ""$ref"": ""#/$defs/Animal"" } },
+  ""title"": ""Container"",
+  ""type"": ""object""
+}
+");
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            var containerType = SerializerTestHelper.GetGeneratedType(assembly, "Container");
+            var container = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, text);
+            var member = await WorkflowTestHelper.Select(container, "Pet");
+            Assert.AreEqual("Dog", member.GetType().Name, "Tagged member must deserialize as member type.");
+
+            var output = await SerializerTestHelper.Serialize(assembly, $"SerializeTo{format}", containerType, container);
+            StringAssert.Contains(output, "dog", "Serialized member must carry its tag.");
+            StringAssert.Contains(output, "Rex", "Serialized member must carry its properties.");
         }
 
         [TestMethod]

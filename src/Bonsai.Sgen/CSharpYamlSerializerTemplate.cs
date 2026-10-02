@@ -34,7 +34,7 @@ namespace Bonsai.Sgen
 "));
                 return @$"                .WithTypeDiscriminatingNodeDeserializer(o =>
                 {{
-{string.Join("\r\n", discriminatorTypes.Select(type =>
+{string.Join(Environment.NewLine, discriminatorTypes.Select(type =>
                 $"                    AddTypeDiscriminator<{type.TypeName}>(o);"))}
                 }})
 ";
@@ -81,8 +81,8 @@ namespace Bonsai.Sgen
         {
             var serializer = new YamlDotNet.Serialization.SerializerBuilder()
 " + typeInspector +
-@"                  .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
-                  .Build();
+@"                .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
+                .Build();
             return System.Reactive.Linq.Observable.Select(source, value => serializer.Serialize(value)); 
         });
     }"));
@@ -103,12 +103,14 @@ namespace Bonsai.Sgen
             JsonSchema schema,
             IEnumerable<CSharpClassCodeArtifact> modelTypes,
             IEnumerable<CSharpClassCodeArtifact> discriminatorTypes,
+            bool hasUnionWrappers,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
             : base(schema, modelTypes, provider, options, settings)
         {
             DiscriminatorTypes = discriminatorTypes;
+            HasUnionWrappers = hasUnionWrappers;
         }
 
         public override string TypeName => "DeserializeFromYaml";
@@ -117,20 +119,27 @@ namespace Bonsai.Sgen
 
         public IEnumerable<CodeArtifact> DiscriminatorTypes { get; }
 
+        public bool HasUnionWrappers { get; }
+
         public override void BuildType(CodeTypeDeclaration type)
         {
             base.BuildType(type);
             var typeInspector = CSharpYamlDiscriminatorTemplateHelper.RenderDiscriminatorTypeInspector(DiscriminatorTypes);
             var typeDiscriminators = CSharpYamlDiscriminatorTemplateHelper.RenderTypeDiscriminators(type, DiscriminatorTypes);
+            var privateConstructors = HasUnionWrappers
+                ?
+@"                .EnablePrivateConstructors()
+"
+                : string.Empty;
             type.Members.Add(new CodeSnippetTypeMember(
 @"    private static System.IObservable<T> Process<T>(System.IObservable<string> source)
     {
         return System.Reactive.Linq.Observable.Defer(() =>
         {
             var serializer = new YamlDotNet.Serialization.DeserializerBuilder()
-" + typeInspector + typeDiscriminators +
-@"                  .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
-                  .Build();
+" + typeInspector + typeDiscriminators + privateConstructors +
+@"                .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
+                .Build();
             return System.Reactive.Linq.Observable.Select(source, value =>
             {
                 var reader = new System.IO.StringReader(value);

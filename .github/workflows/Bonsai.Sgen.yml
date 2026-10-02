@@ -105,6 +105,10 @@ jobs:
       - name: Test YAML serializer generation
         working-directory: ./docs
         run: pwsh ./process-schemas.ps1 -SchemaPath "workflows/person-*.json" -SgenPath ../artifacts/bin/Bonsai.Sgen/${{matrix.configuration}} -Serializer yaml -Verbose
+      - name: Test JSON and YAML serializer generation
+        working-directory: ./docs
+        shell: pwsh
+        run: ./process-schemas.ps1 -SchemaPath workflows/external-union-member.json -SgenPath ../artifacts/bin/Bonsai.Sgen/${{matrix.configuration}} -Serializer json,yaml -Verbose
       - name: Verify pre-generated code is up to date
         id: verify-dist
         run: |

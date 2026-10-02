@@ -33,6 +33,7 @@ namespace Bonsai.Sgen
             var jsonSerializer = Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson);
             var yamlSerializer = Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet);
             if (Model.IsAbstract) type.TypeAttributes |= System.Reflection.TypeAttributes.Abstract;
+            BuildUnionWrapperConversions(type);
             if (Model.Schema.DiscriminatorObject is OpenApiDiscriminator discriminator)
             {
                 if (jsonSerializer || yamlSerializer)
@@ -382,6 +383,20 @@ namespace Bonsai.Sgen
                     }
                 };
                 type.Members.Add(toStringMethod);
+            }
+        }
+
+        private void BuildUnionWrapperConversions(CodeTypeDeclaration type)
+        {
+            var conversions = Model.GetUnionWrappers().Select(wrapper =>
+@$"    public static implicit operator {Model.ClassName}({wrapper.ValueTypeName} value)
+    {{
+        return new {wrapper.TypeName}(value);
+    }}").ToList();
+            if (conversions.Count > 0)
+            {
+                var separator = Environment.NewLine + Environment.NewLine;
+                type.Members.Add(new CodeSnippetTypeMember(string.Join(separator, conversions)));
             }
         }
 

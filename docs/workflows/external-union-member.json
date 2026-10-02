@@ -1,0 +1,65 @@
+{
+  "title": "PersonAndPet",
+  "$defs": {
+    "Cat": {
+      "title": "Cat",
+      "type": "object",
+      "properties": {
+        "pet_type": {
+          "const": "cat",
+          "default": "cat",
+          "type": "string"
+        },
+        "Name": {
+          "type": "string"
+        },
+        "CanMeow": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Dog": {
+      "title": "Dog",
+      "type": "object",
+      "x-sgen-typename": "PersonAndDog.Dog",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Breed": {
+          "type": "string"
+        },
+        "Age": {
+          "type": "integer"
+        }
+      }
+    },
+    "Pet": {
+      "title": "Pet",
+      "discriminator": {
+        "propertyName": "pet_type",
+        "mapping": {
+          "cat": "#/$defs/Cat",
+          "dog": "#/$defs/Dog"
+        }
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Cat"
+        },
+        {
+          "$ref": "#/$defs/Dog"
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "owner": {
+      "type": "string"
+    },
+    "pet": {
+      "$ref": "#/$defs/Pet"
+    }
+  }
+}
