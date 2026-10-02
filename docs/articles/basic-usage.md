@@ -108,7 +108,7 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 :::
 
 > [!TIP]
-> In certain cases, it may be useful to use `x-enum-names` to specify the rendered names of the enum values.
+> In certain cases, it may be useful to use `x-enumNames` to specify the rendered names of the enum values.
 >
 > ```json
 > {
