@@ -406,29 +406,36 @@ namespace ExternalUnionMember
         {
             var typeMapping = Type;
             var source = System.Linq.Enumerable.First(arguments);
+            var inputType = source.Type.GetGenericArguments()[0];
+            var elementType = inputType;
             var returnType = typeMapping != null ? typeMapping.GetType().GetGenericArguments()[0] : typeof(Pet);
-            if (returnType == typeof(Pet) && !typeof(System.IObservable<Pet>).IsAssignableFrom(source.Type))
+            if (!elementType.IsInterface && !elementType.IsAssignableFrom(typeof(Pet)) && !typeof(Pet).IsAssignableFrom(elementType))
             {
-                var elementType = source.Type.GetGenericArguments()[0];
                 var value = System.Linq.Expressions.Expression.Parameter(elementType, "value");
-                var conversion = System.Linq.Expressions.Expression.Lambda(
-                    System.Linq.Expressions.Expression.Convert(value, returnType),
-                    value);
-                return System.Linq.Expressions.Expression.Call(
+                var conversion = System.Linq.Expressions.Expression.Convert(value, typeof(Pet));
+                source = System.Linq.Expressions.Expression.Call(
                     typeof(System.Reactive.Linq.Observable),
                     "Select",
-                    new System.Type[] { elementType, returnType },
+                    new System.Type[] { elementType, typeof(Pet) },
                     source,
-                    conversion);
+                    System.Linq.Expressions.Expression.Lambda(conversion, value));
+                elementType = typeof(Pet);
             }
-            if (!typeof(Pet).IsAssignableFrom(returnType))
+
+            if (returnType.IsAssignableFrom(elementType))
             {
-                return System.Linq.Expressions.Expression.Call(
-                    typeof(MatchPet),
-                    "ProcessUnwrap",
-                    new System.Type[] { returnType },
-                    source);
+                return System.Linq.Expressions.Expression.Convert(
+                    source,
+                    typeof(System.IObservable<>).MakeGenericType(returnType));
             }
+
+            var matchType = typeof(Pet).IsAssignableFrom(returnType) ? returnType : typeof(Pet);
+            if (!elementType.IsInterface && !elementType.IsAssignableFrom(matchType))
+            {
+                throw new System.InvalidOperationException(
+                    "The input type '" + inputType + "' can never match the type '" + returnType + "'.");
+            }
+
             return System.Linq.Expressions.Expression.Call(
                 typeof(MatchPet),
                 "Process",
@@ -436,33 +443,20 @@ namespace ExternalUnionMember
                 source);
         }
 
-        private static System.IObservable<TValue> ProcessUnwrap<TValue>(System.IObservable<Pet> source)
-        {
-            return System.Reactive.Linq.Observable.Create<TValue>(observer =>
-            {
-                var sourceObserver = System.Reactive.Observer.Create<Pet>(
-                    value =>
-                    {
-                        var match = value as IUnionWrapper<TValue>;
-                        if (match != null) observer.OnNext(match.Value);
-                    },
-                    observer.OnError,
-                    observer.OnCompleted);
-                return System.ObservableExtensions.SubscribeSafe(source, sourceObserver);
-            });
-        }
-
     
-        private static System.IObservable<TResult> Process<TResult>(System.IObservable<Pet> source)
-            where TResult : Pet
+        private static System.IObservable<TResult> Process<TResult>(System.IObservable<object> source)
         {
             return System.Reactive.Linq.Observable.Create<TResult>(observer =>
             {
-                var sourceObserver = System.Reactive.Observer.Create<Pet>(
+                var sourceObserver = System.Reactive.Observer.Create<object>(
                     value =>
                     {
-                        var match = value as TResult;
-                        if (match != null) observer.OnNext(match);
+                        if (value is TResult) observer.OnNext((TResult)value);
+                        else
+                        {
+                            var wrapper = value as IUnionWrapper<TResult>;
+                            if (wrapper != null) observer.OnNext(wrapper.Value);
+                        }
                     },
                     observer.OnError,
                     observer.OnCompleted);

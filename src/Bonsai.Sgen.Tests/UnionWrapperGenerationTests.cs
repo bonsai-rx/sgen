@@ -219,6 +219,98 @@ namespace TestHelper.Base
         }
 
         [TestMethod]
+        [DataRow("Dog", "Dog")]
+        [DataRow("Hamster", "Hamster,Hamster")]
+        [DataRow(null, "Dog,AnimalHamster")]
+        public async Task GenerateWithExternalUnionMember_MatchOperatorFiltersObjectSequence(string? typeName, string expectedTypeNames)
+        {
+            var schema = await CreateExternalMemberSchema();
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var assembly = CompilerTestHelper.CompileToAssembly(ExternalCode, generator.GenerateFile());
+            var externalType = SerializerTestHelper.GetGeneratedType(assembly, "Hamster");
+            var localType = SerializerTestHelper.GetGeneratedType(assembly, "Dog");
+            var unionType = SerializerTestHelper.GetGeneratedType(assembly, "Animal");
+            var match = (ExpressionBuilder)Activator.CreateInstance(SerializerTestHelper.GetGeneratedType(assembly, "MatchAnimal"))!;
+            if (typeName != null) WorkflowTestHelper.SetTypeMapping(match, typeName);
+
+            var source = WorkflowTestHelper.ToObservable(
+                typeof(object),
+                Expression.New(localType),
+                Expression.Convert(Expression.New(externalType), unionType),
+                Expression.New(externalType),
+                Expression.Constant("unrelated"));
+            var result = await WorkflowTestHelper.BuildObservable<object>(source, match).ToArray();
+            Assert.AreEqual(expectedTypeNames, string.Join(",", result.Select(value => value.GetType().Name)), "Match operator must keep only the elements matching its type.");
+        }
+
+        [TestMethod]
+        [DataRow("Dog", "Dog")]
+        [DataRow("Hamster", "Hamster")]
+        [DataRow(null, "Dog,AnimalHamster")]
+        public async Task GenerateWithExternalUnionMember_MatchOperatorConvertsUnrelatedSequence(string? typeName, string expectedTypeNames)
+        {
+            const string PayloadCode = @"
+namespace TestHelper.Base
+{
+    public class Payload
+    {
+        private TestHelper.Derived.Animal _value;
+
+        public static implicit operator Payload(TestHelper.Derived.Animal value)
+        {
+            return new Payload { _value = value };
+        }
+
+        public static explicit operator TestHelper.Derived.Animal(Payload payload)
+        {
+            return payload._value;
+        }
+    }
+}
+";
+            var schema = await CreateExternalMemberSchema();
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var assembly = CompilerTestHelper.CompileToAssembly(ExternalCode, PayloadCode, generator.GenerateFile());
+            var externalType = SerializerTestHelper.GetGeneratedType(assembly, "Hamster");
+            var localType = SerializerTestHelper.GetGeneratedType(assembly, "Dog");
+            var unionType = SerializerTestHelper.GetGeneratedType(assembly, "Animal");
+            var payloadType = SerializerTestHelper.GetGeneratedType(assembly, "Payload");
+            var match = (ExpressionBuilder)Activator.CreateInstance(SerializerTestHelper.GetGeneratedType(assembly, "MatchAnimal"))!;
+            if (typeName != null) WorkflowTestHelper.SetTypeMapping(match, typeName);
+
+            var source = WorkflowTestHelper.ToObservable(
+                payloadType,
+                Expression.Convert(Expression.New(localType), unionType),
+                Expression.Convert(Expression.New(externalType), unionType));
+            var result = await WorkflowTestHelper.BuildObservable<object>(source, match).ToArray();
+            Assert.AreEqual(expectedTypeNames, string.Join(",", result.Select(value => value.GetType().Name)), "Match operator must convert an unrelated sequence to the union before matching.");
+        }
+
+        [TestMethod]
+        [DataRow("Dog", "String")]
+        [DataRow("Hamster", "Dog")]
+        [DataRow("Hamster", "Int32")]
+        public async Task GenerateWithExternalUnionMember_MatchOperatorRejectsImpossibleMatch(string typeName, string inputTypeName)
+        {
+            var schema = await CreateExternalMemberSchema();
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var assembly = CompilerTestHelper.CompileToAssembly(ExternalCode, generator.GenerateFile());
+            var inputType = inputTypeName switch
+            {
+                nameof(Int32) => typeof(int),
+                nameof(String) => typeof(string),
+                _ => SerializerTestHelper.GetGeneratedType(assembly, inputTypeName)
+            };
+            var match = (ExpressionBuilder)Activator.CreateInstance(SerializerTestHelper.GetGeneratedType(assembly, "MatchAnimal"))!;
+            WorkflowTestHelper.SetTypeMapping(match, typeName);
+
+            var source = WorkflowTestHelper.Return(inputType, Expression.Default(inputType));
+            var exception = Assert.ThrowsException<WorkflowBuildException>(
+                () => WorkflowTestHelper.BuildObservable<object>(source, match));
+            StringAssert.Contains(exception.GetBaseException().Message, inputType.Name, "Match operator must reject an input that cannot match its type.");
+        }
+
+        [TestMethod]
         public async Task GenerateWithMemberSharedByUnions_WrapMemberInLaterUnion()
         {
             var schema = await CreateSharedMemberSchema();

@@ -7,8 +7,6 @@ namespace Bonsai.Sgen
 {
     internal class CSharpTypeMatchTemplate : CSharpCodeDomTemplate
     {
-        const string UnwrapMethodName = "ProcessUnwrap";
-
         public CSharpTypeMatchTemplate(
             CSharpClassCodeArtifact modelType,
             CodeDomProvider provider,
@@ -48,18 +46,10 @@ namespace Bonsai.Sgen
                             new CodeTypeReference(typeMappingArgument))))));
             }
 
-            var wrapperMatch = unionWrappers.Count > 0
-                ?
-@$"        if (!typeof({ModelType.TypeName}).IsAssignableFrom(returnType))
-        {{
-            return System.Linq.Expressions.Expression.Call(
-                typeof({TypeName}),
-                ""{UnwrapMethodName}"",
-                new System.Type[] {{ returnType }},
-                source);
-        }}
-"
+            var matchType = unionWrappers.Count > 0
+                ? $"        var matchType = typeof({ModelType.TypeName}).IsAssignableFrom(returnType) ? returnType : typeof({ModelType.TypeName});{Environment.NewLine}"
                 : string.Empty;
+            var matchTypeName = unionWrappers.Count > 0 ? "matchType" : "returnType";
             type.Members.Add(new CodeSnippetTypeMember(
 @$"    public Bonsai.Expressions.TypeMapping Type {{ get; set; }}
 
@@ -67,22 +57,36 @@ namespace Bonsai.Sgen
     {{
         var typeMapping = Type;
         var source = System.Linq.Enumerable.First(arguments);
+        var inputType = source.Type.GetGenericArguments()[0];
+        var elementType = inputType;
         var returnType = typeMapping != null ? typeMapping.GetType().GetGenericArguments()[0] : typeof({ModelType.TypeName});
-        if (returnType == typeof({ModelType.TypeName}) && !typeof(System.IObservable<{ModelType.TypeName}>).IsAssignableFrom(source.Type))
+        if (!elementType.IsInterface && !elementType.IsAssignableFrom(typeof({ModelType.TypeName})) && !typeof({ModelType.TypeName}).IsAssignableFrom(elementType))
         {{
-            var elementType = source.Type.GetGenericArguments()[0];
             var value = System.Linq.Expressions.Expression.Parameter(elementType, ""value"");
-            var conversion = System.Linq.Expressions.Expression.Lambda(
-                System.Linq.Expressions.Expression.Convert(value, returnType),
-                value);
-            return System.Linq.Expressions.Expression.Call(
+            var conversion = System.Linq.Expressions.Expression.Convert(value, typeof({ModelType.TypeName}));
+            source = System.Linq.Expressions.Expression.Call(
                 typeof(System.Reactive.Linq.Observable),
                 ""Select"",
-                new System.Type[] {{ elementType, returnType }},
+                new System.Type[] {{ elementType, typeof({ModelType.TypeName}) }},
                 source,
-                conversion);
+                System.Linq.Expressions.Expression.Lambda(conversion, value));
+            elementType = typeof({ModelType.TypeName});
         }}
-{wrapperMatch}        return System.Linq.Expressions.Expression.Call(
+
+        if (returnType.IsAssignableFrom(elementType))
+        {{
+            return System.Linq.Expressions.Expression.Convert(
+                source,
+                typeof(System.IObservable<>).MakeGenericType(returnType));
+        }}
+
+{matchType}        if (!elementType.IsInterface && !elementType.IsAssignableFrom({matchTypeName}))
+        {{
+            throw new System.InvalidOperationException(
+                ""The input type '"" + inputType + ""' can never match the type '"" + returnType + ""'."");
+        }}
+
+        return System.Linq.Expressions.Expression.Call(
             typeof({TypeName}),
             ""Process"",
             new System.Type[] {{ returnType }},
@@ -90,30 +94,27 @@ namespace Bonsai.Sgen
     }}
 "));
 
+            string match;
+            var genericTypeParameter = new CodeTypeParameter("TResult");
             if (unionWrappers.Count > 0)
             {
-                type.Members.Add(new CodeSnippetTypeMember(
-@$"    private static System.IObservable<TValue> {UnwrapMethodName}<TValue>(System.IObservable<{ModelType.TypeName}> source)
-    {{
-        return System.Reactive.Linq.Observable.Create<TValue>(observer =>
-        {{
-            var sourceObserver = System.Reactive.Observer.Create<{ModelType.TypeName}>(
-                value =>
-                {{
-                    var match = value as {CSharpUnionWrapperInterfaceTemplate.InterfaceName}<TValue>;
-                    if (match != null) observer.OnNext(match.{JsonSchemaExtensions.UnionWrapperValueProperty});
-                }},
-                observer.OnError,
-                observer.OnCompleted);
-            return System.ObservableExtensions.SubscribeSafe(source, sourceObserver);
-        }});
-    }}
-"));
+                match =
+@$"if (value is {genericTypeParameter.Name}) observer.OnNext(({genericTypeParameter.Name})value);
+                    else
+                    {{
+                        var wrapper = value as {CSharpUnionWrapperInterfaceTemplate.InterfaceName}<{genericTypeParameter.Name}>;
+                        if (wrapper != null) observer.OnNext(wrapper.{JsonSchemaExtensions.UnionWrapperValueProperty});
+                    }}";
             }
-            var sourceTypeReference = new CodeTypeReference(ModelType.TypeName);
-            var genericTypeParameter = new CodeTypeParameter("TResult") { Constraints = { sourceTypeReference } };
+            else
+            {
+                genericTypeParameter.Constraints.Add(new CodeTypeReference(ModelType.TypeName));
+                match =
+@$"var match = value as {genericTypeParameter.Name};
+                    if (match != null) observer.OnNext(match);";
+            }
             var sourceParameter = new CodeParameterDeclarationExpression(
-                new CodeTypeReference(typeof(IObservable<>)) { TypeArguments = { sourceTypeReference } }, "source");
+                new CodeTypeReference(typeof(IObservable<>)) { TypeArguments = { new CodeTypeReference(typeof(object)) } }, "source");
             type.Members.Add(new CodeMemberMethod
             {
                 Name = "Process",
@@ -129,11 +130,10 @@ namespace Bonsai.Sgen
                     new CodeExpressionStatement(new CodeSnippetExpression(
 @$"return System.Reactive.Linq.Observable.Create<{genericTypeParameter.Name}>(observer =>
         {{
-            var sourceObserver = System.Reactive.Observer.Create<{ModelType.TypeName}>(
+            var sourceObserver = System.Reactive.Observer.Create<object>(
                 value =>
                 {{
-                    var match = value as {genericTypeParameter.Name};
-                    if (match != null) observer.OnNext(match);
+                    {match}
                 }},
                 observer.OnError,
                 observer.OnCompleted);
