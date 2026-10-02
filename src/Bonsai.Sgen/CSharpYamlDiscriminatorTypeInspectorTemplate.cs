@@ -7,12 +7,16 @@ namespace Bonsai.Sgen
     internal class CSharpYamlDiscriminatorTypeInspectorTemplate : CSharpCodeDomTemplate
     {
         public CSharpYamlDiscriminatorTypeInspectorTemplate(
+            bool hasUnionWrappers,
             CodeDomProvider provider,
             CodeGeneratorOptions options,
             CSharpCodeDomGeneratorSettings settings)
             : base(provider, options, settings)
         {
+            HasUnionWrappers = hasUnionWrappers;
         }
+
+        public bool HasUnionWrappers { get; }
 
         public override string TypeName => "YamlDiscriminatorTypeInspector";
 
@@ -42,7 +46,7 @@ namespace Bonsai.Sgen
         var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type);
         if (discriminatorAttribute != null && typeMatch != null)
         {{
-            return System.Linq.Enumerable.Concat(new[]
+{(HasUnionWrappers ? UnionWrapperPropertiesSnippet : string.Empty)}            return System.Linq.Enumerable.Concat(new[]
             {{
                 new DiscriminatorPropertyDescriptor(discriminatorAttribute.Discriminator, typeMatch.Key)
             }}, innerProperties);
@@ -109,6 +113,109 @@ namespace Bonsai.Sgen
         {{
         }}
     }}"));
+            if (HasUnionWrappers)
+            {
+                type.Members.Add(new CodeSnippetTypeMember(UnionValuePropertyDescriptorSnippet));
+            }
         }
+
+        const string UnionWrapperPropertiesSnippet =
+@$"            var unionWrapperAttribute = ({CSharpYamlUnionWrapperTemplate.AttributeName}Attribute)System.Attribute.GetCustomAttribute(type, typeof({CSharpYamlUnionWrapperTemplate.AttributeName}Attribute));
+            if (unionWrapperAttribute != null)
+            {{
+                var valueType = unionWrapperAttribute.ValueType;
+                var value = container != null ? (({CSharpUnionWrapperInterfaceTemplate.InterfaceName})container).{JsonSchemaExtensions.UnionWrapperValueProperty} : null;
+                innerProperties = System.Linq.Enumerable.Select(
+                    System.Linq.Enumerable.Where(
+                        innerTypeDescriptor.GetProperties(valueType, value),
+                        descriptor => descriptor.Name != discriminatorAttribute.Discriminator),
+                    descriptor => (YamlDotNet.Serialization.IPropertyDescriptor)new UnionValuePropertyDescriptor(valueType, descriptor));
+            }}
+
+";
+
+        const string UnionValuePropertyDescriptorSnippet =
+@"
+    class UnionValuePropertyDescriptor : YamlDotNet.Serialization.IPropertyDescriptor
+    {
+        readonly System.Type valueType;
+        readonly YamlDotNet.Serialization.IPropertyDescriptor innerDescriptor;
+
+        public UnionValuePropertyDescriptor(System.Type valueType, YamlDotNet.Serialization.IPropertyDescriptor innerDescriptor)
+        {
+            this.valueType = valueType;
+            this.innerDescriptor = innerDescriptor;
+        }
+
+        public string Name
+        {
+            get { return innerDescriptor.Name; }
+        }
+
+        public bool Required
+        {
+            get { return innerDescriptor.Required; }
+        }
+
+        public bool CanWrite
+        {
+            get { return innerDescriptor.CanWrite; }
+        }
+
+        public System.Type Type
+        {
+            get { return innerDescriptor.Type; }
+        }
+
+        public System.Type TypeOverride
+        {
+            get { return innerDescriptor.TypeOverride; }
+            set { innerDescriptor.TypeOverride = value; }
+        }
+
+        public System.Type ConverterType
+        {
+            get { return innerDescriptor.ConverterType; }
+        }
+
+        public bool AllowNulls
+        {
+            get { return innerDescriptor.AllowNulls; }
+        }
+
+        public int Order
+        {
+            get { return innerDescriptor.Order; }
+            set { innerDescriptor.Order = value; }
+        }
+
+        public YamlDotNet.Core.ScalarStyle ScalarStyle
+        {
+            get { return innerDescriptor.ScalarStyle; }
+            set { innerDescriptor.ScalarStyle = value; }
+        }
+
+        public T GetCustomAttribute<T>() where T : System.Attribute
+        {
+            return innerDescriptor.GetCustomAttribute<T>();
+        }
+
+        public YamlDotNet.Serialization.IObjectDescriptor Read(object target)
+        {
+            return innerDescriptor.Read(((" + CSharpUnionWrapperInterfaceTemplate.InterfaceName + @")target)." + JsonSchemaExtensions.UnionWrapperValueProperty + @");
+        }
+
+        public void Write(object target, object value)
+        {
+            var wrapper = (" + CSharpUnionWrapperInterfaceTemplate.InterfaceName + @")target;
+            var member = wrapper." + JsonSchemaExtensions.UnionWrapperValueProperty + @";
+            if (member == null)
+            {
+                member = System.Activator.CreateInstance(valueType);
+            }
+            innerDescriptor.Write(member, value);
+            wrapper." + JsonSchemaExtensions.UnionWrapperValueProperty + @" = member;
+        }
+    }";
     }
 }

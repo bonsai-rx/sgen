@@ -58,7 +58,9 @@ namespace Bonsai.Sgen
         private CodeArtifact GenerateClass(JsonSchema schema, string typeName)
         {
             var model = new CSharpClassTemplateModel(typeName, Settings, _resolver, schema, RootObject);
-            var template = new CSharpClassTemplate(model, _provider, _options, Settings);
+            CSharpCodeDomTemplate template = schema.TryGetUnionWrapperTag(out _)
+                ? new CSharpUnionWrapperTemplate(model, _provider, _options, Settings)
+                : new CSharpClassTemplate(model, _provider, _options, Settings);
             return new CSharpClassCodeArtifact(model, template);
         }
 
@@ -116,29 +118,40 @@ namespace Bonsai.Sgen
                               where classType != null
                               select classType).ToList();
             var discriminatorTypes = classTypes.Where(modelType => modelType.Model.Schema.DiscriminatorObject != null).ToList();
+            var serializableTypes = classTypes.Where(modelType => !modelType.Model.Schema.TryGetUnionWrapperTag(out _)).ToList();
+            var hasUnionWrappers = classTypes.Count > serializableTypes.Count;
             foreach (var type in discriminatorTypes)
             {
                 var matchTemplate = new CSharpTypeMatchTemplate(type, _provider, _options, Settings);
                 extraTypes.Add(GenerateClass(matchTemplate));
             }
-            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson) && classTypes.Count > 0)
+            if (hasUnionWrappers)
             {
-                var serializer = new CSharpJsonSerializerTemplate(classTypes, _provider, _options, Settings);
-                var deserializer = new CSharpJsonDeserializerTemplate(schema, classTypes, _provider, _options, Settings);
+                extraTypes.Add(GenerateClass(new CSharpUnionWrapperInterfaceTemplate(false, _provider, _options, Settings)));
+                extraTypes.Add(GenerateClass(new CSharpUnionWrapperInterfaceTemplate(true, _provider, _options, Settings)));
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson))
+                    extraTypes.Add(GenerateClass(new CSharpJsonUnionWrapperConverterTemplate(_provider, _options, Settings)));
+                if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet))
+                    extraTypes.Add(GenerateClass(new CSharpYamlUnionWrapperTemplate(_provider, _options, Settings)));
+            }
+            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.NewtonsoftJson) && serializableTypes.Count > 0)
+            {
+                var serializer = new CSharpJsonSerializerTemplate(serializableTypes, _provider, _options, Settings);
+                var deserializer = new CSharpJsonDeserializerTemplate(schema, serializableTypes, _provider, _options, Settings);
                 extraTypes.Add(GenerateClass(serializer));
                 extraTypes.Add(GenerateClass(deserializer));
             }
-            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet) && classTypes.Count > 0)
+            if (Settings.SerializerLibraries.HasFlag(SerializerLibraries.YamlDotNet) && serializableTypes.Count > 0)
             {
                 if (discriminatorTypes.Count > 0)
                 {
                     var discriminator = new CSharpYamlDiscriminatorTemplate(_provider, _options, Settings);
-                    var typeInspector = new CSharpYamlDiscriminatorTypeInspectorTemplate(_provider, _options, Settings);
+                    var typeInspector = new CSharpYamlDiscriminatorTypeInspectorTemplate(hasUnionWrappers, _provider, _options, Settings);
                     extraTypes.Add(GenerateClass(discriminator));
                     extraTypes.Add(GenerateClass(typeInspector));
                 }
-                var serializer = new CSharpYamlSerializerTemplate(classTypes, discriminatorTypes, _provider, _options, Settings);
-                var deserializer = new CSharpYamlDeserializerTemplate(schema, classTypes, discriminatorTypes, _provider, _options, Settings);
+                var serializer = new CSharpYamlSerializerTemplate(serializableTypes, discriminatorTypes, _provider, _options, Settings);
+                var deserializer = new CSharpYamlDeserializerTemplate(schema, serializableTypes, discriminatorTypes, hasUnionWrappers, _provider, _options, Settings);
                 extraTypes.Add(GenerateClass(serializer));
                 extraTypes.Add(GenerateClass(deserializer));
             }

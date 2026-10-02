@@ -305,12 +305,27 @@ namespace PersonAndDiscriminatedPets
         public override System.Linq.Expressions.Expression Build(System.Collections.Generic.IEnumerable<System.Linq.Expressions.Expression> arguments)
         {
             var typeMapping = Type;
+            var source = System.Linq.Enumerable.First(arguments);
             var returnType = typeMapping != null ? typeMapping.GetType().GetGenericArguments()[0] : typeof(Pet);
+            if (returnType == typeof(Pet) && !typeof(System.IObservable<Pet>).IsAssignableFrom(source.Type))
+            {
+                var elementType = source.Type.GetGenericArguments()[0];
+                var value = System.Linq.Expressions.Expression.Parameter(elementType, "value");
+                var conversion = System.Linq.Expressions.Expression.Lambda(
+                    System.Linq.Expressions.Expression.Convert(value, returnType),
+                    value);
+                return System.Linq.Expressions.Expression.Call(
+                    typeof(System.Reactive.Linq.Observable),
+                    "Select",
+                    new System.Type[] { elementType, returnType },
+                    source,
+                    conversion);
+            }
             return System.Linq.Expressions.Expression.Call(
                 typeof(MatchPet),
                 "Process",
                 new System.Type[] { returnType },
-                System.Linq.Enumerable.Single(arguments));
+                source);
         }
 
     
@@ -459,8 +474,8 @@ namespace PersonAndDiscriminatedPets
             {
                 var serializer = new YamlDotNet.Serialization.SerializerBuilder()
                     .WithTypeInspector(inspector => new YamlDiscriminatorTypeInspector(inspector))
-                      .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
-                      .Build();
+                    .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
+                    .Build();
                 return System.Reactive.Linq.Observable.Select(source, value => serializer.Serialize(value)); 
             });
         }
@@ -540,8 +555,8 @@ namespace PersonAndDiscriminatedPets
                     {
                         AddTypeDiscriminator<Pet>(o);
                     })
-                      .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
-                      .Build();
+                    .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
+                    .Build();
                 return System.Reactive.Linq.Observable.Select(source, value =>
                 {
                     var reader = new System.IO.StringReader(value);

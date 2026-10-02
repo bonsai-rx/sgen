@@ -1,4 +1,5 @@
-﻿using Basic.Reference.Assemblies;
+﻿using System.Reflection;
+using Basic.Reference.Assemblies;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -7,7 +8,7 @@ namespace Bonsai.Sgen.Tests
 {
     internal static class CompilerTestHelper
     {
-        public static void CompileFromSource(params string[] code)
+        public static byte[] CompileFromSource(params string[] code)
         {
             var options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp5);
             var syntaxTrees = Array.ConvertAll(code, text => CSharpSyntaxTree.ParseText(text, options));
@@ -36,6 +37,12 @@ namespace Bonsai.Sgen.Tests
                                      .ToList();
                 Assert.Fail(string.Join(Environment.NewLine, errorMessages));
             }
+            return memoryStream.ToArray();
+        }
+
+        public static Assembly CompileToAssembly(params string[] code)
+        {
+            return Assembly.Load(CompileFromSource(code));
         }
     }
 }

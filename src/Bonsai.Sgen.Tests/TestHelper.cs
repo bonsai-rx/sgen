@@ -16,7 +16,7 @@ namespace Bonsai.Sgen.Tests
             };
             schema = schema.WithCompatibleDefinitions(settings.TypeNameGenerator)
                            .WithResolvedAnyOfNullableProperty()
-                           .WithResolvedDiscriminatorInheritance();
+                           .WithResolvedDiscriminatorInheritance(settings);
 
             return new CSharpCodeDomGenerator(schema, settings);
         }

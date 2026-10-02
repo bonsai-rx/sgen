@@ -81,17 +81,6 @@ namespace Bonsai.Sgen
                 var nameGenerator = (CSharpTypeNameGenerator)settings.TypeNameGenerator;
                 settings.SerializerLibraries = (SerializerLibraries)parseResult.GetValue(serializerLibrariesOption);
 
-                schema = schema.WithCompatibleDefinitions(nameGenerator)
-                               .WithResolvedAnyOfNullableProperty()
-                               .WithResolvedDiscriminatorInheritance();
-                var generator = new CSharpCodeDomGenerator(schema, settings);
-
-                var generatorTypeName = parseResult.GetValue(generatorTypeNameOption);
-                if (string.IsNullOrEmpty(generatorTypeName) && schema.HasTypeNameTitle)
-                {
-                    generatorTypeName = schema.Title;
-                }
-
                 var generatorNamespace = parseResult.GetValue(generatorNamespaceOption);
                 if (string.IsNullOrEmpty(generatorNamespace))
                     generatorNamespace =
@@ -100,6 +89,17 @@ namespace Bonsai.Sgen
                         "DataSchema";
 
                 settings.Namespace = nameGenerator.GenerateNamespace(schema, generatorNamespace);
+                schema = schema.WithCompatibleDefinitions(nameGenerator)
+                               .WithResolvedAnyOfNullableProperty()
+                               .WithResolvedDiscriminatorInheritance(settings);
+                var generator = new CSharpCodeDomGenerator(schema, settings);
+
+                var generatorTypeName = parseResult.GetValue(generatorTypeNameOption);
+                if (string.IsNullOrEmpty(generatorTypeName) && schema.HasTypeNameTitle)
+                {
+                    generatorTypeName = schema.Title;
+                }
+
                 var code = generator.GenerateFile(generatorTypeName);
 
                 var outputFilePath = parseResult.GetValue(nameOption);
