@@ -1,4 +1,4 @@
-First, define the JSON Schema for our `Person` data type:
+First, define the JSON Schema for the `Person` type:
 
 [person.json](~/workflows/person.json)
 
@@ -15,7 +15,7 @@ First, define the JSON Schema for our `Person` data type:
 }
 ```
 
-Generate custom Bonsai extension code using `Bonsai.Sgen`:
+Then generate the extension code with `Bonsai.Sgen`:
 
 ```powershell
 dotnet bonsai.sgen person.json -o Extensions --serializer json
@@ -23,7 +23,7 @@ dotnet bonsai.sgen person.json -o Extensions --serializer json
 
 The generated code follows the naming conventions of C#, so the `first_name` property in the schema becomes `FirstName` in the generated `Person` type. Serialized data keeps the names declared in the schema.
 
-Use the generated operators directly in your Bonsai workflow:
+Use the generated operators directly in a workflow:
 
 :::workflow
 ![Person as BonsaiSgen](~/workflows/person-example-bonsai-sgen.bonsai)

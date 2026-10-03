@@ -32,7 +32,7 @@
       "$ref": "#/$defs/Person"
     },
     "pet": {
-      "oneOf": [
+      "anyOf": [
         {"$ref": "#/$defs/Pet"},
         {"type": "null"}
       ]
