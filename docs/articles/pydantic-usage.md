@@ -3,7 +3,7 @@
 JSON Schema files compatible with `Bonsai.Sgen` can be generated automatically from Python using the [Pydantic](https://docs.pydantic.dev/latest/) data validation library. This has several advantages:
 
 - Python is a more concise and well-known language than JSON Schema.
-- We can do object-oriented modelling directly, rather than having to tweak JSON Schema constraints.
+- We can do object-oriented modeling directly, rather than having to tweak JSON Schema constraints.
 - Pydantic models can be used to read and write JSON files directly into Python objects.
 
 ## Setup instructions
@@ -20,7 +20,7 @@ uv pip install pydantic
 
 A JSON Schema can be directly defined using [Pydantic models](https://docs.pydantic.dev/latest/concepts/models/) which fully specify all the constraints between the types in the schema. For example, the code below can be used to generate the entire schema for the [tagged unions](advanced-usage.md#tagged-unions) example:
 
-[person_and_discriminated_pets.py](~/workflows/person_and_discriminated_pets.py).
+[person_and_discriminated_pets.py](~/workflows/person_and_discriminated_pets.py)
 
 ```python
 import json
@@ -74,7 +74,8 @@ dotnet bonsai.sgen "person-and-discriminated-pets.json" -o Extensions --serializ
 
 Once the model classes are specified in Pydantic, we can create and manipulate model objects directly in Python, export them to a JSON file, or read a JSON file back into model objects.
 
-#### Serialize to JSON
+### Serialize to JSON
+
 ```python
 from pathlib import Path
 from person_and_discriminated_pets import PersonAndPet, Cat
@@ -83,7 +84,8 @@ data = PersonAndPet(owner="Avery", pet=Cat(age=2, can_meow=False))
 Path("data.json").write_text(data.model_dump_json(indent=2))
 ```
 
-#### Deserialize from JSON
+### Deserialize from JSON
+
 ```python
 from pathlib import Path
 from person_and_discriminated_pets import PersonAndPet

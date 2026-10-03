@@ -1,4 +1,4 @@
-# Data Definition
+# Data definition
 
 `Bonsai.Sgen` addresses the problem of defining and implementing custom data types in the Bonsai programming language. Let's explore this problem with a simple example.
 
@@ -6,16 +6,16 @@
 
 Suppose we want to create a new record-like object type that represents a `Person`:
 
-| Field Name | Type     | Description                  |
-|------------|----------|------------------------------|
-| age        | int      | The age of a person          |
-| first_name | string   | The first name of the person |
-| last_name  | string   | The last name of the person  |
-| dob        | datetime | Date of birth                |
+| Field name  | Type     | Description                      |
+|-------------|----------|----------------------------------|
+| Age         | int      | Number of full years since birth |
+| FirstName   | string   | Given name                       |
+| LastName    | string   | Family name                      |
+| DateOfBirth | DateTime | When the person was born         |
 
 Since there is currently no special syntax to declare object types directly in Bonsai, we need to leverage indirect approaches to define our new record type. We start by exploring the previously available options below, along with their limitations, and finally introduce a third, more powerful, alternative.
 
-## Data Object Initializers
+## Anonymous types
 
 One powerful feature of [`ExpressionTransform`](xref:Bonsai.Scripting.Expressions.ExpressionTransform) operators is support for writing [Data Object Initializers](xref:Bonsai.Scripting.Expressions.ExpressionTransform#data-object-initializers):
 
@@ -29,15 +29,15 @@ new(
   Item1 as Age,
   Item2 as FirstName,
   Item3 as LastName,
-  Item4 as DOB
+  Item4 as DateOfBirth
 )
 ```
 
 A data object initializer expression will create a new anonymous record type in the current workflow context, but unfortunately this comes with several limitations.
 
-First, the type has no name, so we do not know whether it refers to the `Person` concept, or any other concept. Furthermore, having no name means it is not possible to create any objects requiring a named reference to a type, for exampling when creating [Subject Sources](https://bonsai-rx.org/docs/articles/subjects.html#source-subjects). Finally, this approach requires the use of scripting anywhere we need to create new objects.
+First, the type has no name, so we do not know whether it refers to the `Person` concept, or any other concept. Furthermore, having no name means it is not possible to create any objects requiring a named reference to a type, for example when creating [Subject Sources](https://bonsai-rx.org/docs/articles/subjects.html#source-subjects). Finally, this approach requires the use of scripting anywhere we need to create new objects.
 
-## Custom Scripting Extension
+## Hand-written types
 
 A more powerful alternative is to leverage C# directly to define our type class, by using custom [Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html):
 
@@ -47,7 +47,7 @@ public class Person
     public int Age;
     public string FirstName;
     public string LastName;
-    public DateTime DOB;
+    public DateTime DateOfBirth;
 }
 ```
 
@@ -63,7 +63,7 @@ public class CreatePerson : Source<Person>
     public int Age { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
-    public DateTime DOB { get; set; }
+    public DateTime DateOfBirth { get; set; }
 
     public override IObservable<Person> Generate()
     {
@@ -72,7 +72,7 @@ public class CreatePerson : Source<Person>
             Age = Age,
             FirstName = FirstName,
             LastName = LastName,
-            DOB = DOB
+            DateOfBirth = DateOfBirth
         });
     }
 }
@@ -88,7 +88,7 @@ As projects increase in complexity, writing such boilerplate code can quickly be
 
 `Bonsai.Sgen` provides a new, and much more flexible, solution to this problem by leveraging [JSON Schema](https://json-schema.org/) directly as a data definition language in Bonsai.
 
-### How to Use
+### How to use
 
 [!INCLUDE [](example-person.md)]
 
@@ -102,7 +102,7 @@ Although initially this form may seem less direct and more complicated than even
 
 With `Bonsai.Sgen` you can focus on the specification of the data structure itself, rather than on the details of boilerplate code. Furthermore, you don't even need to write the schema by hand directly in JSON, since you can use any language supporting JSON Schemas. For example, you can easily [write a full data model in Python](pydantic-usage.md#model-definition) and use those classes directly to generate a JSON Schema for Bonsai.
 
-### Saving and Loading
+### Saving and loading
 
 `Bonsai.Sgen` automatically generates [serialization and deserialization operators](basic-usage.md#serialization-and-deserialization):
 

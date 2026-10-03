@@ -10,10 +10,10 @@
           "default": "cat",
           "type": "string"
         },
-        "Name": {
+        "name": {
           "type": "string"
         },
-        "CanMeow": {
+        "can_meow": {
           "type": "boolean"
         }
       }
@@ -23,13 +23,13 @@
       "type": "object",
       "x-sgen-typename": "PersonAndDog.Dog",
       "properties": {
-        "Name": {
+        "name": {
           "type": "string"
         },
-        "Breed": {
+        "breed": {
           "type": "string"
         },
-        "Age": {
+        "age": {
           "type": "integer"
         }
       }

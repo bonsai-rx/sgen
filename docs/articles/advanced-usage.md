@@ -27,9 +27,9 @@ Running `Bonsai.Sgen` on this schema generates the following type signature for 
 public object FooProperty
 ```
 
-While `oneOf` is supported, statically typed languages like C# require the exact type at compile time. Thus, the property is "up-cast" to `object`, and you must down-cast it to the correct type at runtime.
+While `oneOf` is supported, statically typed languages like C# require the exact type at compile time. Thus, the property is upcast to `object`, and you must downcast it to the correct type at runtime.
 
-## Tagged-Unions
+## Tagged unions
 
 Union types can be made type-aware by using [`tagged unions`](https://en.wikipedia.org/wiki/Tagged_union) (or `discriminated unions`). The syntax for tagged unions is not part of the JSON Schema specification, however it is supported by the [OpenAPI standard](https://swagger.io/docs/specification/v3_0/data-models/inheritance-and-polymorphism/#discriminator), which is a superset of JSON Schema. The key idea behind tagged unions is to add a `discriminator` field to the schema that specifies the property that will be used to determine the type of the object at runtime.
 
@@ -53,9 +53,9 @@ For example, a `Pet` object that can be either a `Dog` or a `Cat` can be represe
 }
 ```
 
-Given this schema, `Bonsai.Sgen` will generate a root type `Pet` that will be specialised by the `Dog` and `Cat` types (since in the worst case scenario, the discriminated property must be shared). The `Pet` type will have a `pet_type` property that will be used to downcast to the proper type at runtime. At this point we can open our example in `Bonsai` and see how the `Pet` type is represented in the workflow.
+Given this schema, `Bonsai.Sgen` will generate a base type `Pet` from which the `Dog` and `Cat` types derive. None of these types has a `pet_type` property. Instead, the generated serializers write the `pet_type` tag of each object and read it back to create an object of the matching type. At this point we can open our example in Bonsai and see how the `Pet` type is represented in the workflow.
 
-As you can see below, we still get a `Pet` type. Better than `object`, but still not a `Dog` or `Cat` type. Fortunately, `Bonsai.Sgen` will generate an operator that can be used to filter and downcast the `Pet` objects to the correct type at runtime. These are called `Match<T>` operators. `MatchPet` can be used to select the desired target type which will allow us access to the properties of the `Dog` or `Cat` subtypes. Conversely, we can also upcast a `Dog` or `Cat` to a `Pet` by leaving the `MatchPet` operator's `Type` property empty.
+As you can see below, we still get a `Pet` type. Better than `object`, but still not a `Dog` or `Cat` type. Fortunately, `Bonsai.Sgen` will generate an operator that can be used to filter and downcast the `Pet` objects to the correct type at runtime. Each union gets its own match operator, such as `MatchPet` for the `Pet` union. This operator can be used to select the desired target type which will allow us access to the properties of the `Dog` or `Cat` subtypes. Conversely, we can also upcast a `Dog` or `Cat` to a `Pet` by leaving the `MatchPet` operator's `Type` property empty.
 
 Match operators also accept a sequence of any other type, such as `object`, and keep only the elements matching the selected type. An input type unrelated to the union, such as a type with a hand-written conversion to `Pet`, is first converted to `Pet`. Selecting a type that no input element could ever match makes the workflow fail to build.
 
@@ -83,9 +83,9 @@ For example, the `Dog` member below refers to the `Dog` type generated from [per
   "type": "object",
   "x-sgen-typename": "PersonAndDog.Dog",
   "properties": {
-    "Name": { "type": "string" },
-    "Breed": { "type": "string" },
-    "Age": { "type": "integer" }
+    "name": { "type": "string" },
+    "breed": { "type": "string" },
+    "age": { "type": "integer" }
   }
 },
 "Pet": {
@@ -119,7 +119,7 @@ public partial class Pet
 A `Dog` is serialized with its `pet_type` discriminator tag next to its own properties, in the same flat format as a `Cat`:
 
 ```json
-{ "owner": "Ana", "pet": { "pet_type": "dog", "Name": "Rex", "Breed": "Collie", "Age": 3 } }
+{ "owner": "Ana", "pet": { "pet_type": "dog", "name": "Rex", "breed": "Collie", "age": 3 } }
 ```
 
 In a workflow, a `MatchPet` operator with its `Type` set to `Dog` specifies a sequence that keeps only the `PetDog` wrappers of the `Pet` sequence and emits the `Dog` object held in each of them. For a sequence of `object`, it also keeps any plain `Dog` values. The implicit conversion shown above wraps a `Dog` in a `PetDog` whenever it is assigned to a property of type `Pet`.

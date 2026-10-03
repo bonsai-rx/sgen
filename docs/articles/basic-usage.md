@@ -8,7 +8,7 @@
 
 ## Single object
 
-In this first example we recall how to model the single record type `Person` defined in the [Data Definition](data-definition.md) section.
+In this first example we recall how to model the single record type `Person` defined in the [Data definition](data-definition.md) section.
 
 [!INCLUDE [](example-person.md)]
 
@@ -26,19 +26,19 @@ The previous example demonstrates modeling a single record. In practice, project
       "title": "Person",
       "type": "object",
       "properties": {
-        "Age": { "type": "integer" },
-        "FirstName": { "type": "string" },
-        "LastName": { "type": "string" },
-        "DOB": { "type": "string", "format": "date-time" }
+        "age": { "type": "integer" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "date_of_birth": { "type": "string", "format": "date-time" }
       }
     },
     "Dog": {
       "title": "Dog",
       "type": "object",
       "properties": {
-        "Name": { "type": "string" },
-        "Breed": { "type": "string" },
-        "Age": { "type": "integer" }
+        "name": { "type": "string" },
+        "breed": { "type": "string" },
+        "age": { "type": "integer" }
       }
     }
   },
@@ -61,9 +61,9 @@ dotnet bonsai.sgen person-and-dog.json -o Extensions --serializer yaml
 A few things worth noting in this example:
 
 - The schema file contains two definitions: `Person` and `Dog` that give rise to two operators (`Person` and `Dog`) in the generated code.
-- A third definition `PersonAndPet` is used to combine the two objects into a single record.
-- The `--serializer` flag is used to indicate we want to generate YAML [serialization and deserialization operators](#serialization-and-deserialization) operators for these record types.
-- The namespace of the classes in the generated file is different from the previous example. By default, the namespace is generated from the name of the JSON schema file. This is useful to prevent name clashes between different schemas (e.g. `PersonAndDog.Person` and `Person` from the previous example).
+- The schema root, titled `PersonAndPet`, combines the two objects into a single record.
+- The `--serializer` flag is used to indicate we want to generate YAML [serialization and deserialization operators](#serialization-and-deserialization) for these record types.
+- The namespace of the classes in the generated file is different from the previous example. By default, the namespace is generated from the name of the JSON schema file. This is useful to prevent name clashes between different schemas (e.g. `PersonAndDog.Person` and `Person.Person` from the previous example).
 
 > [!TIP]
 > The `--namespace` flag can also be used to specify the namespace of the generated code explicitly.
@@ -78,11 +78,9 @@ The real power of `Bonsai.Sgen` comes when dealing with more complex data struct
 
 ## Enums
 
-`Bonsai.Sgen` also supports the generation of enums using the `enum` type in the JSON Schema:
+`Bonsai.Sgen` also supports the generation of enums using the [`enum`](https://json-schema.org/understanding-json-schema/reference/enum) keyword in the JSON Schema. We can replace the `Dog` object in the previous example with a `Pet` enum:
 
-We can replace the `Pet` object in the previous example with an [`enum`](https://json-schema.org/understanding-json-schema/reference/enum):
-
-[person-and-pet-enum.json](~/workflows/person-and-pet-enum.json).
+[person-and-pet-enum.json](~/workflows/person-and-pet-enum.json)
 
 ```json
 (...)
@@ -101,7 +99,7 @@ We can replace the `Pet` object in the previous example with an [`enum`](https:/
 }
 ```
 
-In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us/dotnet/api/system.enum?view=net-9.0) types:
+In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us/dotnet/api/system.enum) types:
 
 :::workflow
 ![Person and Pets](~/workflows/person-and-pet-enum.bonsai)
@@ -132,11 +130,21 @@ In Bonsai, they can be manipulated as [`Enum`](https://learn.microsoft.com/en-us
 }
 ```
 
-JSON Schema `array` will be rendered as [`List<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1?view=net-9.0) in the generated code and can be manipulated (and created) as such.
+JSON Schema `array` will be rendered as [`List<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1) in the generated code and can be manipulated (and created) as such.
 
 :::workflow
 ![Person and Pets](~/workflows/person-and-pets-enum.bonsai)
 :::
+
+## Dates and times
+
+JSON Schema represents dates and times as strings with the `date` or `date-time` format:
+
+```json
+"date_of_birth": { "type": "string", "format": "date-time" }
+```
+
+Both formats generate a [`DateTimeOffset`](https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset) property. A `date-time` value follows [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339), which requires the offset from UTC that `DateTimeOffset` stores. A `date` value has no offset, but .NET Framework has no type that holds only a date, so the generated property uses `DateTimeOffset` as well. A date stored as a `DateTime` converts implicitly to `DateTimeOffset`.
 
 ## Nullable types
 
@@ -163,7 +171,7 @@ For reference types, the generated code will not render a nullable type since re
 
 JSON Schema supports the [`required`](https://json-schema.org/learn/getting-started-step-by-step#define-required-properties) keyword to specify which fields are required. By default, all fields are optional. This can be useful to enforce the presence of certain fields in the object at deserialization time. However, `Bonsai.Sgen` will not generate any code to enforce this requirement during object construction, only at deserialization. It is up to you to ensure the object is correctly populated before using it.
 
-> [!Note]
+> [!NOTE]
 > Some confusion may arise about the distinction between `null` and `required`. This is all the more confusing since different languages and libraries may refer to these concepts in different ways. For the sake of this tool, the following definitions are used:
 >
 > - `nullable` means the field can be `null` or type `T`.
@@ -172,9 +180,9 @@ JSON Schema supports the [`required`](https://json-schema.org/learn/getting-star
 > - A field can be `not required` and `nullable`. This does NOT necessarily mean the default value of the field is `null`. Rather, this declaration specifies the field can accept `null` values, and that the object provides a default value, but on its own says nothing about what that default value might be.
 > - A field can be `not required` and `not nullable`. This means the object must provide a default value, and this value cannot be `null`.
 
-## Serialization and Deserialization
+## Serialization and deserialization
 
-One of the biggest perks of using JSON Schema to represent our objects is the guarantee that all records are (de)serializable. This means we can go from a text-based format (great for specification and logging) to a C# type seamlessly, and vice-versa. `Bonsai.Sgen` will optionally generate (de)serialization operators for all objects in the schema if the `--serializer` property is not `None`. Currently, two formats are supported out of the box: `json` (via [`NewtonsoftJson`](https://github.com/JamesNK/Newtonsoft.Json)) and `yaml` (via [`YamlDotNet`](https://github.com/aaubry/YamlDotNet)).
+One of the biggest perks of using JSON Schema to represent our objects is the guarantee that all records are (de)serializable. This means we can go from a text-based format (great for specification and logging) to a C# type seamlessly, and vice-versa. `Bonsai.Sgen` will optionally generate (de)serialization operators for all objects in the schema when the `--serializer` option is specified. Currently, two formats are supported out of the box: `json` (via [`Newtonsoft.Json`](https://github.com/JamesNK/Newtonsoft.Json)) and `yaml` (via [`YamlDotNet`](https://github.com/aaubry/YamlDotNet)).
 
 The two operations are afforded via the `SerializeToYaml` (or `SerializeToJson`) and `DeserializeFromYaml` (or `DeserializeFromJson`) operators, respectively.
 
@@ -185,11 +193,19 @@ The two operations are afforded via the `SerializeToYaml` (or `SerializeToJson`)
 ![(de)serialization](~/workflows/serialization-example.bonsai)
 :::
 
-> [!Tip]
-> Remember to add the necessary package references to your `Extensions.csproj` file depending on the serializer you want to use!
-> ```xml
-> <PackageReference Include="YamlDotNet" Version="16.3.0" />
-> ```
-> ```xml
-> <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-> ```
+### Package references
+
+The generated code depends on the library of the chosen serializer, so the `Extensions.csproj` file needs the matching package reference:
+
+```xml
+<PackageReference Include="YamlDotNet" Version="16.3.0" />
+```
+
+```xml
+<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+```
+
+The Bonsai environment needs the same package. `YamlDotNet` is already included with the Bonsai editor, whereas `Newtonsoft.Json` has to be installed from the package manager.
+
+> [!TIP]
+> The package manager lists only Bonsai packages by default. Check "Show advanced" to search for other packages, such as `Newtonsoft.Json`.
