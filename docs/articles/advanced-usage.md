@@ -57,6 +57,8 @@ Given this schema, `Bonsai.Sgen` will generate a root type `Pet` that will be sp
 
 As you can see below, we still get a `Pet` type. Better than `object`, but still not a `Dog` or `Cat` type. Fortunately, `Bonsai.Sgen` will generate an operator that can be used to filter and downcast the `Pet` objects to the correct type at runtime. These are called `Match<T>` operators. `MatchPet` can be used to select the desired target type which will allow us access to the properties of the `Dog` or `Cat` subtypes. Conversely, we can also upcast a `Dog` or `Cat` to a `Pet` by leaving the `MatchPet` operator's `Type` property empty.
 
+Match operators also accept a sequence of any other type, such as `object`, and keep only the elements matching the selected type. An input type unrelated to the union, such as a type with a hand-written conversion to `Pet`, is first converted to `Pet`. Selecting a type that no input element could ever match makes the workflow fail to build.
+
 :::workflow
 ![Discriminated Unions](~/workflows/person-pet-discriminated-union.bonsai)
 :::
@@ -120,7 +122,7 @@ A `Dog` is serialized with its `pet_type` discriminator tag next to its own prop
 { "owner": "Ana", "pet": { "pet_type": "dog", "Name": "Rex", "Breed": "Collie", "Age": 3 } }
 ```
 
-In a workflow, a `MatchPet` operator with its `Type` set to `Dog` specifies a sequence that keeps only the `PetDog` wrappers of the `Pet` sequence and emits the `Dog` object held in each of them. The implicit conversion shown above wraps a `Dog` in a `PetDog` whenever it is assigned to a property of type `Pet`.
+In a workflow, a `MatchPet` operator with its `Type` set to `Dog` specifies a sequence that keeps only the `PetDog` wrappers of the `Pet` sequence and emits the `Dog` object held in each of them. For a sequence of `object`, it also keeps any plain `Dog` values. The implicit conversion shown above wraps a `Dog` in a `PetDog` whenever it is assigned to a property of type `Pet`.
 
 Wrapper types are internal to the generated code, although a wrapped member still appears in visualizers under the name of its wrapper, such as `PetDog { Value = Dog { Name = Rex, Breed = Collie, Age = 3 } }`. A custom operator written in C# can read the member held by a wrapper through the generated `IUnionWrapper<T>` interface, for example by testing a `Pet` with `as IUnionWrapper<PersonAndDog.Dog>`.
 
@@ -163,4 +165,5 @@ In Bonsai, use the `Add` operator to sum `Cat` objects:
 ## Supported annotations
 
 - `x-abstract`: Marks a class as abstract, preventing it from being generated as an operator in Bonsai.
+- `x-enumNames`: Specifies the names of the generated enum members, in the same order as the values listed in `enum`.
 - `x-sgen-typename`: Specifies the fully qualified type name of a definition. A definition whose name is inside the generated namespace is generated under that name. A definition whose name is outside it refers to an existing type, which is not generated, so a type generated from one schema can be used by another.

@@ -1,4 +1,7 @@
-﻿using System.Reactive.Linq;
+﻿using System.Linq.Expressions;
+using System.Reactive.Linq;
+using System.Reflection;
+using Bonsai.Expressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NJsonSchema;
 
@@ -215,6 +218,49 @@ namespace Bonsai.Sgen.Tests
             Assert.IsFalse(code.Contains("class MatchPet") || code.Contains("class MatchStray"), "Unexpected match operator generated for property.");
             AssertDiscriminatorAttribute(code, serializerLibraries, "kind");
             CompilerTestHelper.CompileFromSource(code);
+        }
+
+        static Assembly CompileDiscriminatorSchema()
+        {
+            var derivedSchemas = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog", "Cat");
+            var discriminator = SchemaTestHelper.CreateDiscriminatorSchema("kind", derivedSchemas);
+            var schema = SchemaTestHelper.CreateContainerSchema(derivedSchemas.Prepend(new("Animal", discriminator)));
+            var generator = TestHelper.CreateGenerator(schema);
+            return CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+        }
+
+        [TestMethod]
+        [DataRow("Dog", "Dog")]
+        [DataRow(null, "Dog,Cat")]
+        public async Task GenerateFromDiscriminatorSchema_MatchOperatorFiltersObjectSequence(string? typeName, string expectedTypeNames)
+        {
+            var assembly = CompileDiscriminatorSchema();
+            var match = (ExpressionBuilder)Activator.CreateInstance(SerializerTestHelper.GetGeneratedType(assembly, "MatchAnimal"))!;
+            if (typeName != null) WorkflowTestHelper.SetTypeMapping(match, typeName);
+
+            var source = WorkflowTestHelper.ToObservable(
+                typeof(object),
+                Expression.New(SerializerTestHelper.GetGeneratedType(assembly, "Dog")),
+                Expression.New(SerializerTestHelper.GetGeneratedType(assembly, "Cat")),
+                Expression.Constant("unrelated"));
+            var result = await WorkflowTestHelper.BuildObservable<object>(source, match).ToArray();
+            Assert.AreEqual(expectedTypeNames, string.Join(",", result.Select(value => value.GetType().Name)), "Match operator must keep only the elements matching its type.");
+        }
+
+        [TestMethod]
+        [DataRow("Dog", "Cat")]
+        [DataRow("Dog", "Int32")]
+        public void GenerateFromDiscriminatorSchema_MatchOperatorRejectsImpossibleMatch(string typeName, string inputTypeName)
+        {
+            var assembly = CompileDiscriminatorSchema();
+            var inputType = inputTypeName == nameof(Int32) ? typeof(int) : SerializerTestHelper.GetGeneratedType(assembly, inputTypeName);
+            var match = (ExpressionBuilder)Activator.CreateInstance(SerializerTestHelper.GetGeneratedType(assembly, "MatchAnimal"))!;
+            WorkflowTestHelper.SetTypeMapping(match, typeName);
+
+            var source = WorkflowTestHelper.Return(inputType, Expression.Default(inputType));
+            var exception = Assert.ThrowsException<WorkflowBuildException>(
+                () => WorkflowTestHelper.BuildObservable<object>(source, match));
+            StringAssert.Contains(exception.GetBaseException().Message, inputType.Name, "Match operator must reject an input that cannot match its type.");
         }
 
         [TestMethod]

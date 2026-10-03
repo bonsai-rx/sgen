@@ -306,21 +306,35 @@ namespace PersonAndDiscriminatedPets
         {
             var typeMapping = Type;
             var source = System.Linq.Enumerable.First(arguments);
+            var inputType = source.Type.GetGenericArguments()[0];
+            var elementType = inputType;
             var returnType = typeMapping != null ? typeMapping.GetType().GetGenericArguments()[0] : typeof(Pet);
-            if (returnType == typeof(Pet) && !typeof(System.IObservable<Pet>).IsAssignableFrom(source.Type))
+            if (!elementType.IsInterface && !elementType.IsAssignableFrom(typeof(Pet)) && !typeof(Pet).IsAssignableFrom(elementType))
             {
-                var elementType = source.Type.GetGenericArguments()[0];
                 var value = System.Linq.Expressions.Expression.Parameter(elementType, "value");
-                var conversion = System.Linq.Expressions.Expression.Lambda(
-                    System.Linq.Expressions.Expression.Convert(value, returnType),
-                    value);
-                return System.Linq.Expressions.Expression.Call(
+                var conversion = System.Linq.Expressions.Expression.Convert(value, typeof(Pet));
+                source = System.Linq.Expressions.Expression.Call(
                     typeof(System.Reactive.Linq.Observable),
                     "Select",
-                    new System.Type[] { elementType, returnType },
+                    new System.Type[] { elementType, typeof(Pet) },
                     source,
-                    conversion);
+                    System.Linq.Expressions.Expression.Lambda(conversion, value));
+                elementType = typeof(Pet);
             }
+
+            if (returnType.IsAssignableFrom(elementType))
+            {
+                return System.Linq.Expressions.Expression.Convert(
+                    source,
+                    typeof(System.IObservable<>).MakeGenericType(returnType));
+            }
+
+            if (!elementType.IsInterface && !elementType.IsAssignableFrom(returnType))
+            {
+                throw new System.InvalidOperationException(
+                    "The input type '" + inputType + "' can never match the type '" + returnType + "'.");
+            }
+
             return System.Linq.Expressions.Expression.Call(
                 typeof(MatchPet),
                 "Process",
@@ -329,12 +343,12 @@ namespace PersonAndDiscriminatedPets
         }
 
     
-        private static System.IObservable<TResult> Process<TResult>(System.IObservable<Pet> source)
+        private static System.IObservable<TResult> Process<TResult>(System.IObservable<object> source)
             where TResult : Pet
         {
             return System.Reactive.Linq.Observable.Create<TResult>(observer =>
             {
-                var sourceObserver = System.Reactive.Observer.Create<Pet>(
+                var sourceObserver = System.Reactive.Observer.Create<object>(
                     value =>
                     {
                         var match = value as TResult;

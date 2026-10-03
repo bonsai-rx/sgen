@@ -13,6 +13,12 @@ namespace Bonsai.Sgen.Tests
             return Expression.Call(typeof(Observable), nameof(Observable.Return), [type], Expression.Convert(value, type));
         }
 
+        public static Expression ToObservable(Type type, params Expression[] values)
+        {
+            var array = Expression.NewArrayInit(type, values.Select(value => Expression.Convert(value, type)));
+            return Expression.Call(typeof(Observable), nameof(Observable.ToObservable), [type], array);
+        }
+
         public static void SetTypeMapping(ExpressionBuilder builder, string typeName)
         {
             var property = TypeDescriptor.GetProperties(builder)["Type"]!;
