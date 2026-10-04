@@ -132,6 +132,9 @@ Wrapper types are internal to the generated code, although a wrapped member stil
 > - A wrapper type name that clashes with an existing type. Rename the discriminator tag of that member.
 > - A wrapped member with an ordinary property named like the discriminator, since its value would be lost. Declare the property as a constant or rename it.
 
+> [!TIP]
+> To use a tagged union in another schema, define the union again in that schema and refer to its members through `x-sgen-typename`, rather than referring to the union type itself. A union type from another schema currently round-trips only with the JSON serializer, since the YAML serializer of a schema handles only the unions defined in that schema.
+
 ## Extending generated code with `partial` classes
 
 Generated classes are declared [`partial`](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/partial-classes-and-methods), so they can be extended without changing the generated code. Place the extending `.cs` file in the [`Extensions`](https://bonsai-rx.org/docs/articles/scripting-extensions.html) folder of the project.
