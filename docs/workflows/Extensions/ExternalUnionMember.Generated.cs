@@ -30,8 +30,8 @@ namespace ExternalUnionMember
             _canMeow = other._canMeow;
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("Name")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="Name")]
+        [Newtonsoft.Json.JsonPropertyAttribute("name")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="name")]
         public string Name
         {
             get
@@ -44,8 +44,8 @@ namespace ExternalUnionMember
             }
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("CanMeow")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="CanMeow")]
+        [Newtonsoft.Json.JsonPropertyAttribute("can_meow")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="can_meow")]
         public bool CanMeow
         {
             get

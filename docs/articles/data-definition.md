@@ -1,23 +1,23 @@
-# Data Definition
+# Data definition
 
-`Bonsai.Sgen` addresses the problem of defining and implementing custom data types in the Bonsai programming language. Let's explore this problem with a simple example.
+`Bonsai.Sgen` addresses the problem of defining custom data types in Bonsai. This article introduces the problem through a simple example.
 
 ## Introduction
 
-Suppose we want to create a new record-like object type that represents a `Person`:
+Consider a new record type `Person` with the following fields:
 
-| Field Name | Type     | Description                  |
-|------------|----------|------------------------------|
-| age        | int      | The age of a person          |
-| first_name | string   | The first name of the person |
-| last_name  | string   | The last name of the person  |
-| dob        | datetime | Date of birth                |
+| Field name  | Type     | Description                      |
+|-------------|----------|----------------------------------|
+| Age         | int      | Number of full years since birth |
+| FirstName   | string   | Given name                       |
+| LastName    | string   | Family name                      |
+| DateOfBirth | DateTime | When the person was born         |
 
-Since there is currently no special syntax to declare object types directly in Bonsai, we need to leverage indirect approaches to define our new record type. We start by exploring the previously available options below, along with their limitations, and finally introduce a third, more powerful, alternative.
+Bonsai has no syntax to declare object types directly, so a new record type has to be defined indirectly. The sections below describe two existing approaches and their limitations, followed by a third approach based on JSON Schema.
 
-## Data Object Initializers
+## Anonymous types
 
-One powerful feature of [`ExpressionTransform`](xref:Bonsai.Scripting.Expressions.ExpressionTransform) operators is support for writing [Data Object Initializers](xref:Bonsai.Scripting.Expressions.ExpressionTransform#data-object-initializers):
+The [`ExpressionTransform`](xref:Bonsai.Scripting.Expressions.ExpressionTransform) operator supports [Data Object Initializers](xref:Bonsai.Scripting.Expressions.ExpressionTransform#data-object-initializers), which combine several values into a new object:
 
 :::workflow
 ![Person as DynamicClass](~/workflows/person-example-dynamic-class.bonsai)
@@ -29,17 +29,17 @@ new(
   Item1 as Age,
   Item2 as FirstName,
   Item3 as LastName,
-  Item4 as DOB
+  Item4 as DateOfBirth
 )
 ```
 
-A data object initializer expression will create a new anonymous record type in the current workflow context, but unfortunately this comes with several limitations.
+The expression creates a new anonymous record type in the context of the workflow. This approach has several limitations.
 
-First, the type has no name, so we do not know whether it refers to the `Person` concept, or any other concept. Furthermore, having no name means it is not possible to create any objects requiring a named reference to a type, for exampling when creating [Subject Sources](https://bonsai-rx.org/docs/articles/subjects.html#source-subjects). Finally, this approach requires the use of scripting anywhere we need to create new objects.
+First, the type has no name, so nothing identifies it as a `Person` rather than any other concept. Without a name, the type also cannot be used where a named reference to a type is required, such as when creating [Subject Sources](https://bonsai-rx.org/docs/articles/subjects.html#source-subjects). Finally, every place that creates a new object needs its own script.
 
-## Custom Scripting Extension
+## Hand-written types
 
-A more powerful alternative is to leverage C# directly to define our type class, by using custom [Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html):
+A more flexible alternative is to write the type as a C# class with [Scripting Extensions](https://bonsai-rx.org/docs/articles/scripting-extensions.html):
 
 ```csharp
 public class Person
@@ -47,11 +47,11 @@ public class Person
     public int Age;
     public string FirstName;
     public string LastName;
-    public DateTime DOB;
+    public DateTime DateOfBirth;
 }
 ```
 
-This approach is much more flexible, as it allows composing our record using arbitrary C# types. It also supports nesting and even defining custom operators and functions on the new type. However, even for simple types we will need to write additional code to allow this type to be directly created and manipulated inside a Bonsai workflow:
+Writing the type in C# gives access to the whole language, so the class can compose any C# types, nest other records, and even define its own operators and functions. However, even a simple type needs additional code before it can be created and manipulated directly in a workflow:
 
 ```csharp
 using Bonsai;
@@ -63,7 +63,7 @@ public class CreatePerson : Source<Person>
     public int Age { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
-    public DateTime DOB { get; set; }
+    public DateTime DateOfBirth { get; set; }
 
     public override IObservable<Person> Generate()
     {
@@ -72,37 +72,29 @@ public class CreatePerson : Source<Person>
             Age = Age,
             FirstName = FirstName,
             LastName = LastName,
-            DOB = DOB
+            DateOfBirth = DateOfBirth
         });
     }
 }
 ```
 
-Essentially we are augmenting the class with a source operator that creates a new instance of the record type with the parameters specified in the class properties. Because the record class is now a regular Bonsai operator, it will show up in the editor toolbox and can be placed and configured in the workflow as usual.
+The `CreatePerson` source operator creates a new `Person` from the values of its properties. Because it is a regular operator, it appears in the editor toolbox and can be placed and configured in the workflow as usual.
 
-While this might be enough to work around the need for the single odd type in our project, it doesn't scale well to model other common requirements for domain-specific record types, such as support for type hierarchies, serialization, or polymorphism, all of which would require additional boilerplate code on top of our simple type.
+This may be enough for an occasional type in a project, but it does not scale to other common requirements of domain-specific record types, such as type hierarchies, serialization, or polymorphism. Each of these requires additional boilerplate code on top of the type itself.
 
-As projects increase in complexity, writing such boilerplate code can quickly become cumbersome and error prone.
+As a project grows, writing this boilerplate code quickly becomes cumbersome and error prone.
 
 ## JSON Schema
 
-`Bonsai.Sgen` provides a new, and much more flexible, solution to this problem by leveraging [JSON Schema](https://json-schema.org/) directly as a data definition language in Bonsai.
+The third approach describes the record type in [JSON Schema](https://json-schema.org/), a standard data definition language. `Bonsai.Sgen` then generates a C# class modeling the record, together with the operators to create and manipulate it, so none of the boilerplate code has to be written by hand.
 
-### How to Use
+JSON Schema gives Bonsai a way to declare types without a syntax of its own, by building on an established standard. The schema can be written by hand or exported from a model in another language, such as [Python classes defined with Pydantic](pydantic-usage.md#model-definition). The same model can then read the configuration files a workflow loads and the records it saves, so an experiment and its analysis share one definition of the data. The cost is an extra step, since the schema lives in its own file and the code has to be generated again whenever the schema changes.
+
+### How to use
 
 [!INCLUDE [](example-person.md)]
 
-### Advantages
-
-Although initially this form may seem less direct and more complicated than even the C# type definition, there are a number of advantages immediately falling out from using JSON Schema as our data definition language:
-
-1. Custom Bonsai operator code can be automatically generated from the JSON Schema.
-2. Data objects backed by JSON Schemas can be used to read and write JSON files with validation guarantees.
-3. Both JSON files and JSON Schemas are interoperable with any other language.
-
-With `Bonsai.Sgen` you can focus on the specification of the data structure itself, rather than on the details of boilerplate code. Furthermore, you don't even need to write the schema by hand directly in JSON, since you can use any language supporting JSON Schemas. For example, you can easily [write a full data model in Python](pydantic-usage.md#model-definition) and use those classes directly to generate a JSON Schema for Bonsai.
-
-### Saving and Loading
+### Saving and loading
 
 `Bonsai.Sgen` automatically generates [serialization and deserialization operators](basic-usage.md#serialization-and-deserialization):
 
@@ -110,4 +102,4 @@ With `Bonsai.Sgen` you can focus on the specification of the data structure itse
 ![(de)serialization](~/workflows/simple-serialization-example.bonsai)
 :::
 
-This means you immediately gain the ability to use data objects as configuration files you load into your workflow, or as data records that you save with your experiment. Because all data will be backed by a schema, all these records can be immediately accessed by Python or any other language, saving you even more time setting up data processing pipelines.
+Data objects can then serve as configuration files loaded into a workflow, or as data records saved with an experiment. JSON suits data records, written to a single file or one record per line as [JSON Lines](https://jsonlines.org/), while YAML suits configuration files written by hand.

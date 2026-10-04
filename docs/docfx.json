@@ -78,6 +78,7 @@
     },
     "xref": [
       "https://bonsai-rx.org/docs/xrefmap.yml",
+      "https://bonsai-rx.org/expression-scripting/xrefmap.yml",
       "https://horizongir.github.io/reactive/xrefmap.yml"
     ]
   }

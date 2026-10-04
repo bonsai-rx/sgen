@@ -30,7 +30,7 @@
 Item1 as Age,
 Item2 as FirstName,
 Item3 as LastName,
-Item4 as DOB
+Item4 as DateOfBirth
 )</scr:Expression>
       </Expression>
     </Nodes>

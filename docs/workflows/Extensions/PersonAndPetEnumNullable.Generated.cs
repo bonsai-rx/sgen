@@ -21,7 +21,7 @@ namespace PersonAndPetEnumNullable
     
         private string _lastName;
     
-        private System.DateTimeOffset _dOB;
+        private System.DateTimeOffset _dateOfBirth;
     
         public Person()
         {
@@ -32,10 +32,10 @@ namespace PersonAndPetEnumNullable
             _age = other._age;
             _firstName = other._firstName;
             _lastName = other._lastName;
-            _dOB = other._dOB;
+            _dateOfBirth = other._dateOfBirth;
         }
     
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="Age")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="age")]
         public int Age
         {
             get
@@ -48,7 +48,7 @@ namespace PersonAndPetEnumNullable
             }
         }
     
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="FirstName")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="first_name")]
         public string FirstName
         {
             get
@@ -61,7 +61,7 @@ namespace PersonAndPetEnumNullable
             }
         }
     
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="LastName")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="last_name")]
         public string LastName
         {
             get
@@ -75,32 +75,32 @@ namespace PersonAndPetEnumNullable
         }
     
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="DOB")]
-        public System.DateTimeOffset DOB
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="date_of_birth")]
+        public System.DateTimeOffset DateOfBirth
         {
             get
             {
-                return _dOB;
+                return _dateOfBirth;
             }
             set
             {
-                _dOB = value;
+                _dateOfBirth = value;
             }
         }
     
         [YamlDotNet.Serialization.YamlIgnoreAttribute()]
         [System.ComponentModel.BrowsableAttribute(false)]
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
-        [System.Xml.Serialization.XmlElementAttribute("DOB")]
-        public string DOBXml
+        [System.Xml.Serialization.XmlElementAttribute("DateOfBirth")]
+        public string DateOfBirthXml
         {
             get
             {
-                return _dOB.ToString("o");
+                return _dateOfBirth.ToString("o");
             }
             set
             {
-                _dOB = System.DateTimeOffset.Parse(value);
+                _dateOfBirth = System.DateTimeOffset.Parse(value);
             }
         }
     
@@ -119,7 +119,7 @@ namespace PersonAndPetEnumNullable
             stringBuilder.Append("Age = " + _age + ", ");
             stringBuilder.Append("FirstName = " + _firstName + ", ");
             stringBuilder.Append("LastName = " + _lastName + ", ");
-            stringBuilder.Append("DOB = " + _dOB);
+            stringBuilder.Append("DateOfBirth = " + _dateOfBirth);
             return true;
         }
     

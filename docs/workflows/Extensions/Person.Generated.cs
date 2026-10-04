@@ -21,7 +21,7 @@ namespace Person
     
         private string _lastName;
     
-        private System.DateTimeOffset _dOB;
+        private System.DateTimeOffset _dateOfBirth;
     
         public Person()
         {
@@ -32,10 +32,10 @@ namespace Person
             _age = other._age;
             _firstName = other._firstName;
             _lastName = other._lastName;
-            _dOB = other._dOB;
+            _dateOfBirth = other._dateOfBirth;
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("Age")]
+        [Newtonsoft.Json.JsonPropertyAttribute("age")]
         public int Age
         {
             get
@@ -48,7 +48,7 @@ namespace Person
             }
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("FirstName")]
+        [Newtonsoft.Json.JsonPropertyAttribute("first_name")]
         public string FirstName
         {
             get
@@ -61,7 +61,7 @@ namespace Person
             }
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("LastName")]
+        [Newtonsoft.Json.JsonPropertyAttribute("last_name")]
         public string LastName
         {
             get
@@ -75,32 +75,32 @@ namespace Person
         }
     
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("DOB")]
-        public System.DateTimeOffset DOB
+        [Newtonsoft.Json.JsonPropertyAttribute("date_of_birth")]
+        public System.DateTimeOffset DateOfBirth
         {
             get
             {
-                return _dOB;
+                return _dateOfBirth;
             }
             set
             {
-                _dOB = value;
+                _dateOfBirth = value;
             }
         }
     
         [Newtonsoft.Json.JsonIgnoreAttribute()]
         [System.ComponentModel.BrowsableAttribute(false)]
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
-        [System.Xml.Serialization.XmlElementAttribute("DOB")]
-        public string DOBXml
+        [System.Xml.Serialization.XmlElementAttribute("DateOfBirth")]
+        public string DateOfBirthXml
         {
             get
             {
-                return _dOB.ToString("o");
+                return _dateOfBirth.ToString("o");
             }
             set
             {
-                _dOB = System.DateTimeOffset.Parse(value);
+                _dateOfBirth = System.DateTimeOffset.Parse(value);
             }
         }
     
@@ -119,7 +119,7 @@ namespace Person
             stringBuilder.Append("Age = " + _age + ", ");
             stringBuilder.Append("FirstName = " + _firstName + ", ");
             stringBuilder.Append("LastName = " + _lastName + ", ");
-            stringBuilder.Append("DOB = " + _dOB);
+            stringBuilder.Append("DateOfBirth = " + _dateOfBirth);
             return true;
         }
     

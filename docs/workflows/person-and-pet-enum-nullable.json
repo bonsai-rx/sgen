@@ -5,16 +5,16 @@
       "title": "Person",
       "type": "object",
       "properties": {
-        "Age": {
+        "age": {
           "type": "integer"
         },
-        "FirstName": {
+        "first_name": {
           "type": "string"
         },
-        "LastName": {
+        "last_name": {
           "type": "string"
         },
-        "DOB": {
+        "date_of_birth": {
           "type": "string",
           "format": "date-time"
         }
@@ -32,7 +32,7 @@
       "$ref": "#/$defs/Person"
     },
     "pet": {
-      "oneOf": [
+      "anyOf": [
         {"$ref": "#/$defs/Pet"},
         {"type": "null"}
       ]
