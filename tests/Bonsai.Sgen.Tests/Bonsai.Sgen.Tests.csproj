@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Bonsai.Sgen\Bonsai.Sgen.csproj" />
+    <ProjectReference Include="..\..\src\Bonsai.Sgen\Bonsai.Sgen.csproj" />
   </ItemGroup>
 
 </Project>
