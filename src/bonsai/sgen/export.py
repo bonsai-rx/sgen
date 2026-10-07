@@ -5,24 +5,28 @@ from os import PathLike
 from pathlib import Path
 from types import ModuleType
 
-from pydantic import BaseModel
-from pydantic.json_schema import JsonSchemaValue, models_json_schema
+from pydantic import BaseModel, TypeAdapter
+from pydantic.json_schema import JsonSchemaValue
+from typing_extensions import TypeAliasType
 
-from .schema import TYPENAME_KEY, SchemaModel, SchemaUnion, get_typename
+from .schema import TYPENAME_KEY, SchemaModel, SchemaUnion, _alias_marker, get_typename
 
 
-def schema_types(module: ModuleType) -> list[type[BaseModel]]:
-    """Returns the models and unions defined in a module, in declaration order."""
+def schema_types(module: ModuleType) -> list[type[BaseModel] | TypeAliasType]:
+    """Returns the models, unions and union aliases defined in a module, in declaration order."""
     return [
         value
         for value in vars(module).values()
-        if isinstance(value, type)
-        and issubclass(value, SchemaModel | SchemaUnion)
+        if (
+            isinstance(value, type)
+            and issubclass(value, SchemaModel | SchemaUnion)
+            or _alias_marker(value) is not None
+        )
         and value.__module__ == module.__name__
     ]
 
 
-def export_schema(*models: type[BaseModel]) -> JsonSchemaValue:
+def export_schema(*models: type[BaseModel] | TypeAliasType) -> JsonSchemaValue:
     """Returns a schema document defining the specified models and every type they refer to.
 
     The document has no root type, only definitions, including those of types from other
@@ -30,13 +34,18 @@ def export_schema(*models: type[BaseModel]) -> JsonSchemaValue:
     being generated, and refers to any other types by their type names. A definition without
     a type name would lead to a duplicate type in every namespace referring to it.
 
+    Union aliases annotated with `SchemaAlias` can be specified alongside models, so that a
+    union is defined even if no model in its namespace refers to it.
+
     Raises:
         TypeError: If a definition has no type name, such as a plain pydantic model or
             enumeration.
     """
     if not models:
         raise ValueError("No models to export.")
-    _, schema = models_json_schema([(model, "validation") for model in models])
+    _, schema = TypeAdapter.json_schemas(
+        [(index, "validation", TypeAdapter(model)) for index, model in enumerate(models)]
+    )
     unnamed = [key for key, definition in schema["$defs"].items() if TYPENAME_KEY not in definition]
     if unnamed:
         raise TypeError(
@@ -47,7 +56,7 @@ def export_schema(*models: type[BaseModel]) -> JsonSchemaValue:
     return schema
 
 
-def write_schema(directory: str | PathLike[str], *models: type[BaseModel]) -> Path:
+def write_schema(directory: str | PathLike[str], *models: type[BaseModel] | TypeAliasType) -> Path:
     """Writes the schema of models in a single namespace to a file.
 
     The schema file is named after the namespace. Bonsai.Sgen derives both the namespace and

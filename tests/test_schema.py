@@ -19,6 +19,7 @@ from bonsai.sgen import (
     SchemaUnion,
     SgenWarning,
     export_schema,
+    get_typename,
     schema_types,
     write_schema,
 )
@@ -55,8 +56,11 @@ Reptile = TypeAliasType(
 )
 """A reptile, with a member that is not a schema model."""
 
+Plain = TypeAliasType("Plain", derived.Cat | derived.Hamster)
+"""A union alias not marked for generation."""
 
-def _definitions(*models: type[BaseModel]) -> dict:
+
+def _definitions(*models: type[BaseModel] | TypeAliasType) -> dict:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", SgenWarning)
         return export_schema(*models)["$defs"]
@@ -446,6 +450,7 @@ def test_alias_union_type_statement():
     )
     definitions = _definitions(namespace["Den"])
     assert definitions["Litter"]["x-sgen-typename"] == "TestHelper.Schema.Litter"
+    assert get_typename(namespace["Litter"]) == "TestHelper.Schema.Litter"
 
 
 def test_inline_union_raises():
@@ -461,6 +466,37 @@ def test_inline_union_raises():
 def test_schema_types_in_declaration_order():
     """The schema types of a module are those defined in it, in declaration order."""
     assert schema_types(owners) == [owners.Household, owners.Resident, owners.Shelter]
+
+
+def test_schema_types_include_marked_aliases():
+    """The schema types of a module include the aliases marked for generation."""
+    aliases = [value for value in schema_types(derived) if not isinstance(value, type)]
+    assert aliases == [derived.Companion, derived.Flock]
+    assert Plain not in schema_types(sys.modules[__name__])
+
+
+def test_union_alias_typename():
+    """The type name of a union alias is derived from the namespace of its module."""
+    assert get_typename(derived.Companion) == "TestHelper.Derived.Companion"
+    assert get_typename(Pack) == "Kennel.Pack"
+
+
+def test_unmarked_alias_typename_raises():
+    """A type alias without the alias marker has no type name."""
+    with pytest.raises(TypeError, match="Plain is not annotated with SchemaAlias"):
+        get_typename(Plain)
+
+
+def test_export_union_alias():
+    """A union alias can be exported without a model referring to it."""
+    definitions = _definitions(derived.Flock)
+    assert set(definitions) == {"Flock", "Parrot", "Goldfish"}
+    assert definitions["Flock"]["x-sgen-typename"] == "TestHelper.Derived.Flock"
+
+
+def test_write_schema_union_alias(tmp_path):
+    """A schema of a union alias is written to a file named after its namespace."""
+    assert write_schema(tmp_path, derived.Flock).name == "TestHelper.Derived.json"
 
 
 def test_write_schema_named_after_namespace(tmp_path):

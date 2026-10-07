@@ -21,6 +21,7 @@ from pydantic.alias_generators import to_pascal
 from pydantic.fields import FieldInfo
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema, core_schema
+from typing_extensions import TypeAliasType
 
 TYPENAME_KEY = "x-sgen-typename"
 """Annotation binding a schema definition to the fully qualified name of a type."""
@@ -45,20 +46,30 @@ class SgenWarning(UserWarning):
     """Warns that Bonsai.Sgen may not handle the exported schema correctly."""
 
 
-def get_typename(cls: type) -> str:
+def get_typename(schema_type: type | TypeAliasType) -> str:
     """Returns the fully qualified name of the type generated for a schema type.
 
-    The name is the one specified explicitly for the class, or else the class name in the
-    namespace declared by the `SGEN_NAMESPACE` attribute of its module. Only the class
+    The name is the one specified explicitly for the class or union alias, or else its name
+    in the namespace declared by the `SGEN_NAMESPACE` attribute of its module. Only the class
     itself is consulted, so a subclass can never inherit the type name of its parent.
 
     Raises:
-        TypeError: If the class has no explicit name and its module declares no namespace.
+        TypeError: If the type has no explicit name and its module declares no namespace,
+            or is a type alias not annotated with `SchemaAlias`.
     """
-    typename = vars(cls).get(_TYPENAME_ATTRIBUTE)
-    if typename is not None:
-        return typename
-    return _module_typename(cls.__qualname__, cls.__name__, cls.__module__)
+    if isinstance(schema_type, type):
+        typename = vars(schema_type).get(_TYPENAME_ATTRIBUTE)
+        if typename is not None:
+            return typename
+        name = schema_type.__name__
+        return _module_typename(schema_type.__qualname__, name, schema_type.__module__)
+    marker = _alias_marker(schema_type)
+    if marker is None:
+        raise TypeError(f"Type alias {schema_type.__name__} is not annotated with SchemaAlias.")
+    if marker.sgen_typename is not None:
+        return marker.sgen_typename
+    name = schema_type.__name__
+    return _module_typename(name, name, schema_type.__module__ or "")
 
 
 def _module_typename(qualname: str, name: str, module_name: str) -> str:
@@ -87,10 +98,19 @@ def _bind_typename(cls: type, json_schema: JsonSchemaValue, handler: GetJsonSche
     return typename
 
 
+def _alias_marker(alias: Any) -> "SchemaAlias | None":
+    if not isinstance(alias, _ALIAS_TYPES):
+        return None
+    value = alias.__value__
+    if get_origin(value) is not Annotated:
+        return None
+    return next((item for item in get_args(value)[1:] if isinstance(item, SchemaAlias)), None)
+
+
 def _referenced_unions(annotation: Any) -> Iterator[str]:
     if isinstance(annotation, _ALIAS_TYPES):
-        if any(isinstance(item, SchemaAlias) for item in get_args(annotation.__value__)[1:]):
-            yield _alias_typename(annotation)
+        if _alias_marker(annotation) is not None:
+            yield get_typename(annotation)
         return
     origin = get_origin(annotation)
     if origin is None:
@@ -99,13 +119,6 @@ def _referenced_unions(annotation: Any) -> Iterator[str]:
         return
     for argument in get_args(annotation):
         yield from _referenced_unions(argument)
-
-
-def _alias_typename(alias: Any) -> str:
-    marker = next(item for item in get_args(alias.__value__)[1:] if isinstance(item, SchemaAlias))
-    if marker.sgen_typename is not None:
-        return marker.sgen_typename
-    return _module_typename(alias.__name__, alias.__name__, alias.__module__)
 
 
 def _is_discriminator(metadata: Any) -> bool:
