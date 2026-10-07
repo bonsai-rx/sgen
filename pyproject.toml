@@ -43,3 +43,6 @@ include = ["src/bonsai", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.docfx-tools]
+inventories = ["https://docs.pydantic.dev/latest/objects.inv"]

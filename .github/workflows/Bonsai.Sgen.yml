@@ -23,8 +23,8 @@ on:
     types: [published]
   workflow_dispatch:
     inputs:
-      publish-docs-website:
-        description: "Publish docs website to GitHub Pages?"
+      publish-documentation:
+        description: "Publish documentation to GitHub Pages?"
         default: "false"
 env:
   DOTNET_NOLOGO: true
@@ -232,6 +232,16 @@ jobs:
       - name: Set up .NET tools
         run: dotnet tool restore
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          enable-cache: true
+
+      # ----------------------------------------------------------------------- Configure build
+      - name: Configure build
+        id: configure-build
+        uses: bonsai-rx/configure-build@v3
+
       # ----------------------------------------------------------------------- Restore
       - name: Restore
         run: dotnet restore
@@ -240,6 +250,9 @@ jobs:
       - name: Build metadata
         id: build-metadata
         run: dotnet docfx metadata docs/docfx.json --noRestore
+
+      - name: Build Python API metadata
+        run: uv run --locked docs/bonsai-docfx/scripts/generate-python-api.py
 
       # ----------------------------------------------------------------------- Build documentation
       - name: Build documentation
@@ -467,8 +480,8 @@ jobs:
     if: |
       !cancelled() && !failure() && needs.build-documentation.result == 'success'
       && (github.event_name == 'release'
-      || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish-docs-website == 'true')
-      || (github.event_name == 'push' && vars.CONTINUOUS_DOCUMENTATION)
+        || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish-documentation == 'true')
+        || (vars.CONTINUOUS_DOCUMENTATION && github.event_name != 'pull_request')
       )
     steps:
       # ----------------------------------------------------------------------- Download documentation website components

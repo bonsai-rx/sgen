@@ -222,7 +222,13 @@ class DiscriminatedUnion:
     """
 
     def __init__(self, property_name: str, *, qualified: bool = False):
-        """Declares the property carrying the tag, and whether tags are qualified."""
+        """Declares the property carrying the tag, and whether tags are qualified.
+
+        Args:
+            property_name: The property carrying the tag of each union member.
+            qualified: True to tag each union member with its fully qualified type name;
+                otherwise with its class name.
+        """
         self.property_name = property_name
         self.qualified = qualified
         self._tags: dict[str, type] | None = None
