@@ -42,6 +42,11 @@ CASES: dict[str, BaseModel] = {
     "duration": derived.Visit(
         start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC), duration=timedelta(seconds=90)
     ),
+    "alias-union": derived.Home(
+        companion=CAT,
+        companions=[derived.Hamster(name="Hammy")],
+        flock=derived.Parrot(name="Polly", words=12),
+    ),
     "union-from-other-namespace": owners.Household(animal=derived.Animal(DOG)),
     "redefined-union": owners.Shelter(resident=owners.Resident(DOG)),
 }

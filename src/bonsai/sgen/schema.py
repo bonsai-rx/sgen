@@ -2,11 +2,13 @@
 
 import sys
 import types
+import typing
 import warnings
 from collections.abc import Iterator
 from enum import Enum
 from typing import Annotated, Any, Union, get_args, get_origin
 
+import typing_extensions
 from pydantic import (
     BaseModel,
     Discriminator,
@@ -32,6 +34,12 @@ NAMESPACE_ATTRIBUTE = "SGEN_NAMESPACE"
 _TYPENAME_ATTRIBUTE = "__sgen_typename__"
 """Class attribute holding the type name specified explicitly for a type defined elsewhere."""
 
+_ALIAS_TYPES = (
+    typing_extensions.TypeAliasType,
+    getattr(typing, "TypeAliasType", typing_extensions.TypeAliasType),
+)
+"""Classes of type aliases declared with `TypeAliasType` or the `type` statement."""
+
 
 class SgenWarning(UserWarning):
     """Warns that Bonsai.Sgen may not handle the exported schema correctly."""
@@ -50,14 +58,18 @@ def get_typename(cls: type) -> str:
     typename = vars(cls).get(_TYPENAME_ATTRIBUTE)
     if typename is not None:
         return typename
-    namespace = getattr(sys.modules.get(cls.__module__), NAMESPACE_ATTRIBUTE, None)
+    return _module_typename(cls.__qualname__, cls.__name__, cls.__module__)
+
+
+def _module_typename(qualname: str, name: str, module_name: str) -> str:
+    namespace = getattr(sys.modules.get(module_name), NAMESPACE_ATTRIBUTE, None)
     if namespace is None:
         raise TypeError(
-            f"{cls.__qualname__} has no type name, since module {cls.__module__} does not "
+            f"{qualname} has no type name, since module {module_name} does not "
             f"declare {NAMESPACE_ATTRIBUTE}. Declare it in the module, or pass "
             "sgen_typename for a type defined elsewhere."
         )
-    return f"{namespace}.{cls.__name__}"
+    return f"{namespace}.{name}"
 
 
 def _namespace(typename: str) -> str:
@@ -75,14 +87,25 @@ def _bind_typename(cls: type, json_schema: JsonSchemaValue, handler: GetJsonSche
     return typename
 
 
-def _referenced_types(annotation: Any) -> Iterator[type]:
+def _referenced_unions(annotation: Any) -> Iterator[str]:
+    if isinstance(annotation, _ALIAS_TYPES):
+        if any(isinstance(item, SchemaAlias) for item in get_args(annotation.__value__)[1:]):
+            yield _alias_typename(annotation)
+        return
     origin = get_origin(annotation)
     if origin is None:
-        if isinstance(annotation, type):
-            yield annotation
+        if isinstance(annotation, type) and issubclass(annotation, SchemaUnion):
+            yield get_typename(annotation)
         return
     for argument in get_args(annotation):
-        yield from _referenced_types(argument)
+        yield from _referenced_unions(argument)
+
+
+def _alias_typename(alias: Any) -> str:
+    marker = next(item for item in get_args(alias.__value__)[1:] if isinstance(item, SchemaAlias))
+    if marker.sgen_typename is not None:
+        return marker.sgen_typename
+    return _module_typename(alias.__name__, alias.__name__, alias.__module__)
 
 
 def _is_discriminator(metadata: Any) -> bool:
@@ -102,6 +125,18 @@ def _union_members(annotation: Any) -> tuple[Any, ...]:
     if get_origin(annotation) in (Union, types.UnionType):
         return get_args(annotation)
     return (annotation,)
+
+
+def _check_union_members(name: str, annotation: Any) -> None:
+    members = _union_members(annotation)
+    if len(members) < 2:
+        raise TypeError(
+            f"Union {name} has a single member, which generated code "
+            "represents as the member itself rather than as a union."
+        )
+    for member in members:
+        if not (isinstance(member, type) and issubclass(member, SchemaModel)):
+            raise TypeError(f"Union {name} member {member!r} is not a SchemaModel.")
 
 
 class SchemaModel(BaseModel):
@@ -161,18 +196,16 @@ class SchemaModel(BaseModel):
             prop = properties.get(key)
             if field.description and prop is not None and "description" not in prop:
                 prop["description"] = field.description
-            for referenced in _referenced_types(field.annotation):
-                if issubclass(referenced, SchemaUnion):
-                    union_typename = get_typename(referenced)
-                    if _namespace(union_typename) != _namespace(typename):
-                        warnings.warn(
-                            f"{cls.__qualname__}.{name} refers to union {union_typename} from "
-                            "another namespace, which the generated YAML serializer cannot "
-                            f"read or write. Redefine the union in {_namespace(typename)} over "
-                            "the same members.",
-                            SgenWarning,
-                            stacklevel=2,
-                        )
+            for union_typename in _referenced_unions(field.annotation):
+                if _namespace(union_typename) != _namespace(typename):
+                    warnings.warn(
+                        f"{cls.__qualname__}.{name} refers to union {union_typename} from "
+                        "another namespace, which the generated YAML serializer cannot "
+                        f"read or write. Redefine the union in {_namespace(typename)} over "
+                        "the same members.",
+                        SgenWarning,
+                        stacklevel=2,
+                    )
         return json_schema
 
 
@@ -308,21 +341,13 @@ class SchemaUnion(RootModel[Any]):
         """
         super().__pydantic_init_subclass__(**kwargs)
         field = cls.model_fields["root"]
-        members = _union_members(field.annotation)
         tagged = any(isinstance(item, DiscriminatedUnion) for item in field.metadata)
         if not tagged and not isinstance(field.discriminator, str):
             raise TypeError(
                 f"Union {cls.__qualname__} is not discriminated. Annotate its root with "
                 "Field(discriminator=...) referring to a constant tag, or with DiscriminatedUnion."
             )
-        if len(members) < 2:
-            raise TypeError(
-                f"Union {cls.__qualname__} has a single member, which generated code "
-                "represents as the member itself rather than as a union."
-            )
-        for member in members:
-            if not (isinstance(member, type) and issubclass(member, SchemaModel)):
-                raise TypeError(f"Union {cls.__qualname__} member {member!r} is not a SchemaModel.")
+        _check_union_members(cls.__qualname__, field.annotation)
 
     @classmethod
     def __get_pydantic_json_schema__(
@@ -331,4 +356,62 @@ class SchemaUnion(RootModel[Any]):
         """Binds the definition of the union to its type name."""
         json_schema = handler(core_schema)
         _bind_typename(cls, json_schema, handler)
+        return json_schema
+
+
+class SchemaAlias:
+    """Marks a type alias of a discriminated union generated by Bonsai.Sgen.
+
+    Annotate the value of a type alias with an instance, as in
+    `type Animal = Annotated[Cat | Dog, Field(discriminator="kind"), SchemaAlias()]`, or the
+    equivalent `TypeAliasType` before Python 3.12. Unlike a `SchemaUnion`, a field
+    annotated with the alias holds the member instance itself. The members are discriminated
+    and checked as in `SchemaUnion`, and the type name of the union is the alias name in the
+    namespace declared by the module of the alias.
+    """
+
+    def __init__(self, *, sgen_typename: str | None = None):
+        """Declares the type name of the union, if it is defined elsewhere.
+
+        Args:
+            sgen_typename: The fully qualified type name of a union defined elsewhere.
+        """
+        self.sgen_typename = sgen_typename
+
+    def __get_pydantic_core_schema__(
+        self, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        """Ensures the alias is a union that can be generated.
+
+        Raises:
+            TypeError: If the alias is not a union, or has a member that is not a
+                `SchemaModel`.
+        """
+        if get_origin(source_type) not in (Union, types.UnionType):
+            raise TypeError(
+                f"SchemaAlias supports only aliases of discriminated unions, not {source_type!r}."
+            )
+        _check_union_members(repr(source_type), source_type)
+        return handler(source_type)
+
+    def __get_pydantic_json_schema__(
+        self, core_schema: CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        """Binds the definition of the union to its type name.
+
+        Raises:
+            TypeError: If the marker does not annotate the value of a type alias, or the
+                union is not discriminated.
+        """
+        json_schema = handler(core_schema)
+        definition = handler.resolve_ref_schema(json_schema)
+        module_name, _, name = str(core_schema.get("ref", "")).partition(":")[0].rpartition(".")
+        if not module_name:
+            raise TypeError("SchemaAlias must annotate the value of a type alias.")
+        if "discriminator" not in definition:
+            raise TypeError(
+                f"Union {name} is not discriminated. Annotate its members with "
+                "Field(discriminator=...) referring to a constant tag, or with DiscriminatedUnion."
+            )
+        definition[TYPENAME_KEY] = self.sgen_typename or _module_typename(name, name, module_name)
         return json_schema

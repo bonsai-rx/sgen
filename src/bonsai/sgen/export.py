@@ -41,7 +41,8 @@ def export_schema(*models: type[BaseModel]) -> JsonSchemaValue:
     if unnamed:
         raise TypeError(
             f"Missing type names for {', '.join(sorted(unnamed))}. Declare these types as "
-            "subclasses of SchemaModel, SchemaEnum or SchemaUnion."
+            "subclasses of SchemaModel, SchemaEnum or SchemaUnion, or as type aliases "
+            "annotated with SchemaAlias."
         )
     return schema
 

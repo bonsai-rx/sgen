@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 from typing import Annotated, Literal
 
 from pydantic import Field
+from typing_extensions import TypeAliasType
 
-from bonsai.sgen import DiscriminatedUnion, SchemaEnum, SchemaModel, SchemaUnion
+from bonsai.sgen import DiscriminatedUnion, SchemaAlias, SchemaEnum, SchemaModel, SchemaUnion
 
 from . import base
 
@@ -71,6 +72,25 @@ class Creature(SchemaUnion):
     """A creature, tagged by the union rather than by its members."""
 
     root: Annotated[Parrot | Goldfish, DiscriminatedUnion("species")]
+
+
+Companion = TypeAliasType(
+    "Companion", Annotated[Cat | Hamster, Field(discriminator="kind"), SchemaAlias()]
+)
+"""A companion, declared as a type alias rather than as a model."""
+
+Flock = TypeAliasType(
+    "Flock", Annotated[Parrot | Goldfish, DiscriminatedUnion("species"), SchemaAlias()]
+)
+"""A flock, declared as a type alias tagged by the union rather than by its members."""
+
+
+class Home(SchemaModel):
+    """A home, referring to unions declared as type aliases."""
+
+    companion: Companion
+    companions: list[Companion] = []
+    flock: Flock | None = None
 
 
 class Palette(SchemaModel):

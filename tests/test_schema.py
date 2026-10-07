@@ -1,6 +1,7 @@
 """Tests for schemas exported from the base classes."""
 
 import json
+import sys
 import warnings
 from enum import Enum
 from typing import Annotated, Generic, Literal, TypeVar
@@ -8,9 +9,11 @@ from typing import Annotated, Generic, Literal, TypeVar
 import pytest
 from models import base, derived, late, owners, unnamed
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from typing_extensions import TypeAliasType
 
 from bonsai.sgen import (
     DiscriminatedUnion,
+    SchemaAlias,
     SchemaEnum,
     SchemaModel,
     SchemaUnion,
@@ -23,6 +26,34 @@ from bonsai.sgen import (
 SGEN_NAMESPACE = "TestHelper.Schema"
 
 T = TypeVar("T")
+
+
+class Turtle(BaseModel):
+    """A turtle, which is not a schema model."""
+
+    kind: Literal["turtle"] = "turtle"
+
+
+Pack = TypeAliasType(
+    "Pack",
+    Annotated[
+        derived.Cat | base.Dog,
+        Field(discriminator="kind"),
+        SchemaAlias(sgen_typename="Kennel.Pack"),
+    ],
+)
+"""A pack, declaring the type name of the union explicitly."""
+
+Mixed = TypeAliasType("Mixed", Annotated[derived.Cat | derived.Parrot, SchemaAlias()])
+"""A mixture, whose members are not discriminated."""
+
+Flight = TypeAliasType("Flight", Annotated[list[derived.Parrot], SchemaAlias()])
+"""A flight of parrots, which is a list rather than a union."""
+
+Reptile = TypeAliasType(
+    "Reptile", Annotated[derived.Cat | Turtle, Field(discriminator="kind"), SchemaAlias()]
+)
+"""A reptile, with a member that is not a schema model."""
 
 
 def _definitions(*models: type[BaseModel]) -> dict:
@@ -300,6 +331,121 @@ def test_union_plain_member_raises():
             """A reptile."""
 
             root: Annotated[derived.Cat | Turtle, Field(discriminator="kind")]
+
+
+def test_alias_union_named_and_mapped():
+    """A union declared as a type alias is defined once under the name of the alias."""
+    definition = _definitions(derived.Home)["Companion"]
+    assert definition["x-sgen-typename"] == "TestHelper.Derived.Companion"
+    assert definition["discriminator"] == {
+        "propertyName": "kind",
+        "mapping": {"cat": "#/$defs/Cat", "hamster": "#/$defs/Hamster"},
+    }
+
+
+def test_alias_union_tags_mapped():
+    """Tags assigned by a union declared as a type alias are mapped to its members."""
+    definition = _definitions(derived.Home)["Flock"]
+    assert definition["x-sgen-typename"] == "TestHelper.Derived.Flock"
+    assert definition["discriminator"] == {
+        "propertyName": "species",
+        "mapping": {"Parrot": "#/$defs/Parrot", "Goldfish": "#/$defs/Goldfish"},
+    }
+
+
+def test_alias_union_holds_member():
+    """A field annotated with a union alias holds the member itself."""
+    home = derived.Home.model_validate({"companion": {"kind": "hamster", "name": "Hammy"}})
+    assert type(home.companion) is derived.Hamster
+
+
+def test_alias_union_explicit_typename():
+    """A union alias can refer to a union defined elsewhere."""
+
+    class Sled(SchemaModel):
+        """A vehicle on runners for traveling over snow."""
+
+        pack: Pack
+
+    assert _definitions(Sled)["Pack"]["x-sgen-typename"] == "Kennel.Pack"
+
+
+def test_alias_union_from_other_namespace_warns():
+    """Referring to a union alias from another namespace warns of the YAML gap."""
+
+    class Visitor(SchemaModel):
+        """A visitor."""
+
+        companion: derived.Companion
+
+    with pytest.warns(SgenWarning, match="TestHelper.Derived.Companion from another namespace"):
+        export_schema(Visitor)
+
+
+def test_alias_union_without_discriminator_raises():
+    """A union alias whose members are not discriminated by a tag raises on export."""
+
+    class Menagerie(SchemaModel):
+        """A collection of animals of different kinds."""
+
+        mixed: Mixed
+
+    with pytest.raises(TypeError, match="Union Mixed is not discriminated"):
+        export_schema(Menagerie)
+
+
+def test_alias_non_union_raises():
+    """An alias marked for generation must be a union, raising on definition of a model."""
+    with pytest.raises(TypeError, match="supports only aliases of discriminated unions"):
+
+        class Perch(SchemaModel):
+            """A perch."""
+
+            flight: Flight
+
+
+def test_alias_union_plain_member_raises():
+    """A member of a union alias must be a schema model."""
+    with pytest.raises(TypeError, match="not a SchemaModel"):
+
+        class Terrarium(SchemaModel):
+            """A terrarium."""
+
+            reptile: Reptile
+
+
+def test_alias_marker_outside_alias_raises():
+    """The alias marker raises on export when it annotates anything but a type alias."""
+
+    class Basket(SchemaModel):
+        """A basket."""
+
+        animal: Annotated[derived.Cat | derived.Hamster, SchemaAlias()]
+
+    with pytest.raises(TypeError, match="must annotate the value of a type alias"):
+        export_schema(Basket)
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="the type statement requires Python 3.12")
+def test_alias_union_type_statement():
+    """A union declared with the type statement is defined under the name of the alias."""
+    namespace = {
+        "__name__": __name__,
+        "Annotated": Annotated,
+        "Field": Field,
+        "SchemaAlias": SchemaAlias,
+        "SchemaModel": SchemaModel,
+        "derived": derived,
+    }
+    exec(
+        "type Litter = Annotated[derived.Cat | derived.Hamster, "
+        "Field(discriminator='kind'), SchemaAlias()]\n"
+        "class Den(SchemaModel):\n"
+        "    litter: Litter\n",
+        namespace,
+    )
+    definitions = _definitions(namespace["Den"])
+    assert definitions["Litter"]["x-sgen-typename"] == "TestHelper.Schema.Litter"
 
 
 def test_inline_union_raises():
