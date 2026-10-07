@@ -6,7 +6,7 @@ import typing
 import warnings
 from collections.abc import Iterator
 from enum import Enum
-from typing import Annotated, Any, Union, get_args, get_origin
+from typing import Annotated, Any, TypeAlias, Union, get_args, get_origin
 
 import typing_extensions
 from pydantic import (
@@ -21,7 +21,6 @@ from pydantic.alias_generators import to_pascal
 from pydantic.fields import FieldInfo
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema, core_schema
-from typing_extensions import TypeAliasType
 
 TYPENAME_KEY = "x-sgen-typename"
 """Annotation binding a schema definition to the fully qualified name of a type."""
@@ -35,18 +34,21 @@ NAMESPACE_ATTRIBUTE = "SGEN_NAMESPACE"
 _TYPENAME_ATTRIBUTE = "__sgen_typename__"
 """Class attribute holding the type name specified explicitly for a type defined elsewhere."""
 
-_ALIAS_TYPES = (
-    typing_extensions.TypeAliasType,
-    getattr(typing, "TypeAliasType", typing_extensions.TypeAliasType),
-)
-"""Classes of type aliases declared with `TypeAliasType` or the `type` statement."""
+if sys.version_info >= (3, 12):
+    SchemaType: TypeAlias = type[BaseModel] | typing_extensions.TypeAliasType | typing.TypeAliasType
+    """A model, union or union alias from which a schema can be exported."""
+
+    _ALIAS_TYPES = (typing_extensions.TypeAliasType, typing.TypeAliasType)
+else:
+    SchemaType: TypeAlias = type[BaseModel] | typing_extensions.TypeAliasType
+    _ALIAS_TYPES = (typing_extensions.TypeAliasType,)
 
 
 class SgenWarning(UserWarning):
     """Warns that Bonsai.Sgen may not handle the exported schema correctly."""
 
 
-def get_typename(schema_type: type | TypeAliasType) -> str:
+def get_typename(schema_type: type | SchemaType) -> str:
     """Returns the fully qualified name of the type generated for a schema type.
 
     The name is the one specified explicitly for the class or union alias, or else its name

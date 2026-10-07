@@ -16,6 +16,7 @@ from bonsai.sgen import (
     SchemaAlias,
     SchemaEnum,
     SchemaModel,
+    SchemaType,
     SchemaUnion,
     SgenWarning,
     export_schema,
@@ -60,7 +61,7 @@ Plain = TypeAliasType("Plain", derived.Cat | derived.Hamster)
 """A union alias not marked for generation."""
 
 
-def _definitions(*models: type[BaseModel] | TypeAliasType) -> dict:
+def _definitions(*models: SchemaType) -> dict:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", SgenWarning)
         return export_schema(*models)["$defs"]

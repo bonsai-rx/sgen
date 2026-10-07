@@ -5,14 +5,20 @@ from os import PathLike
 from pathlib import Path
 from types import ModuleType
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 from pydantic.json_schema import JsonSchemaValue
-from typing_extensions import TypeAliasType
 
-from .schema import TYPENAME_KEY, SchemaModel, SchemaUnion, _alias_marker, get_typename
+from .schema import (
+    TYPENAME_KEY,
+    SchemaModel,
+    SchemaType,
+    SchemaUnion,
+    _alias_marker,
+    get_typename,
+)
 
 
-def schema_types(module: ModuleType) -> list[type[BaseModel] | TypeAliasType]:
+def schema_types(module: ModuleType) -> list[SchemaType]:
     """Returns the models, unions and union aliases defined in a module, in declaration order."""
     return [
         value
@@ -26,7 +32,7 @@ def schema_types(module: ModuleType) -> list[type[BaseModel] | TypeAliasType]:
     ]
 
 
-def export_schema(*models: type[BaseModel] | TypeAliasType) -> JsonSchemaValue:
+def export_schema(*models: SchemaType) -> JsonSchemaValue:
     """Returns a schema document defining the specified models and every type they refer to.
 
     The document has no root type, only definitions, including those of types from other
@@ -56,7 +62,7 @@ def export_schema(*models: type[BaseModel] | TypeAliasType) -> JsonSchemaValue:
     return schema
 
 
-def write_schema(directory: str | PathLike[str], *models: type[BaseModel] | TypeAliasType) -> Path:
+def write_schema(directory: str | PathLike[str], *models: SchemaType) -> Path:
     """Writes the schema of models in a single namespace to a file.
 
     The schema file is named after the namespace. Bonsai.Sgen derives both the namespace and
