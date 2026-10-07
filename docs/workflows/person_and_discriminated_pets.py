@@ -1,33 +1,35 @@
-import json
 from pathlib import Path
-from typing import Annotated, Literal, Optional, Union
-from pydantic import BaseModel, Field, RootModel
+from typing import Annotated, Literal
+
+from pydantic import Field
+
+from bonsai.sgen import SchemaModel, SchemaUnion, write_schema
+
+SGEN_NAMESPACE = "PersonAndDiscriminatedPets"
 
 
-class PetBase(BaseModel):
-    pet_type: str
-    age: Optional[int] = Field(default=None)
+class PetBase(SchemaModel):
+    age: int | None = None
 
 
 class Cat(PetBase):
-    pet_type: Literal["cat"] = Field(default="cat")
-    can_meow: bool = Field(default=True)
+    pet_type: Literal["cat"] = "cat"
+    can_meow: bool = True
 
 
 class Dog(PetBase):
-    pet_type: Literal["dog"] = Field(default="dog")
-    can_bark: Optional[bool] = Field(default=True)
+    pet_type: Literal["dog"] = "dog"
+    can_bark: bool | None = True
 
 
-class Pet(RootModel):
-    root: Annotated[Union[Cat, Dog], Field(discriminator="pet_type")]
+class Pet(SchemaUnion):
+    root: Annotated[Cat | Dog, Field(discriminator="pet_type")]
 
 
-class PersonAndPet(BaseModel):
+class PersonAndPet(SchemaModel):
     owner: str
-    pet: Optional[Pet] = Field(default=None)
+    pet: Pet | None = None
 
 
 if __name__ == "__main__":
-    schema = PersonAndPet.model_json_schema()
-    Path("person-and-discriminated-pets.json").write_text(json.dumps(schema, indent=2))
+    write_schema(Path(__file__).parent, PersonAndPet)
