@@ -1,2 +1,4 @@
 - name: Documentation
   href: articles/
+- name: Python API
+  href: ../artifacts/docs/python/

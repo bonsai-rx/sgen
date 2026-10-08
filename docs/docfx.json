@@ -30,6 +30,11 @@
         "src": "../artifacts/docs/api/",
         "dest": "api",
         "files": "**/*.yml"
+      },
+      {
+        "src": "../artifacts/docs/python/",
+        "dest": "python",
+        "files": "**/*.yml"
       }
     ],
     "resource": [

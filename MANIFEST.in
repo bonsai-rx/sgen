@@ -1,0 +1,5 @@
+global-exclude *
+graft src/bonsai
+recursive-include tests *.py
+include LICENSE pyproject.toml
+global-exclude *.py[cod]
