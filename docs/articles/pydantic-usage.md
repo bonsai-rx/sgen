@@ -18,51 +18,17 @@ uv pip install bonsai-sgen
 
 ## Model definition
 
-Models derive from `SchemaModel`, enumerations from `SchemaEnum`, and discriminated unions from `SchemaUnion`. Each module declares the namespace of its generated types in its `SGEN_NAMESPACE` attribute, and each type is generated as the class of the same name in that namespace. For example, the following module defines the types of the [tagged unions](advanced-usage.md#tagged-unions) example:
+Models derive from `SchemaModel` and enumerations from `SchemaEnum`, and a discriminated union is declared as a type alias. Each module declares the namespace of its generated types in its `SGEN_NAMESPACE` attribute, and each type is generated as the class of the same name in that namespace. For example, the following module defines the types of the [tagged unions](advanced-usage.md#tagged-unions) example:
 
 [person_and_discriminated_pets.py](~/workflows/person_and_discriminated_pets.py)
 
-```python
-from pathlib import Path
-from typing import Annotated, Literal
+[!code-python[](../workflows/person_and_discriminated_pets.py)]
 
-from pydantic import Field
+The `Pet` union is discriminated by the constant tag that each member declares in its `pet_type` property. Since `Pet` is a type alias rather than a model, the `pet` property holds the `Cat` or `Dog` object itself. From Python 3.12, the `type` statement declares the same alias, as in `type Pet = Annotated[Cat | Dog, Field(discriminator="pet_type")]`. Pydantic copies inherited properties into each derived model, so the generated `Cat` and `Dog` classes do not derive from `PetBase`. The schema includes `PetBase` only if it is exported directly, as [`schema_types`](xref:bonsai.sgen.schema_types) does for every model in a module.
 
-from bonsai.sgen import SchemaModel, SchemaUnion, write_schema
+A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
 
-SGEN_NAMESPACE = "PersonAndDiscriminatedPets"
-
-
-class PetBase(SchemaModel):
-    age: int | None = None
-
-
-class Cat(PetBase):
-    pet_type: Literal["cat"] = "cat"
-    can_meow: bool = True
-
-
-class Dog(PetBase):
-    pet_type: Literal["dog"] = "dog"
-    can_bark: bool | None = True
-
-
-class Pet(SchemaUnion):
-    root: Annotated[Cat | Dog, Field(discriminator="pet_type")]
-
-
-class PersonAndPet(SchemaModel):
-    owner: str
-    pet: Pet | None = None
-
-
-if __name__ == "__main__":
-    write_schema(Path(__file__).parent, PersonAndPet)
-```
-
-The `Pet` union is discriminated by the constant tag that each member declares in its `pet_type` property. The `PetBase` class never appears in the schema, since Pydantic copies inherited properties into each derived model.
-
-Every type in the schema must derive from one of the base classes, so exporting a schema that refers to a plain Pydantic model or enumeration raises an error.
+Every other type in the schema must derive from one of the base classes, so exporting a schema that refers to a plain Pydantic model or enumeration raises an error.
 
 ## Schema export
 
@@ -78,7 +44,7 @@ The `write_schema` function writes the schema to a file named after the module n
 dotnet bonsai.sgen "PersonAndDiscriminatedPets.json" -o Extensions --serializer json
 ```
 
-The [Python API reference](xref:bonsai.sgen) describes every base class and export function, including how to refer to a type generated from another schema.
+The [Python API reference](xref:bonsai.sgen) describes every class and function in the package, including how to refer to a type generated from another schema.
 
 ## Model serialization
 

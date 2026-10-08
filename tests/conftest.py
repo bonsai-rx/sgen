@@ -9,7 +9,7 @@ from functools import cache
 from pathlib import Path
 
 import pytest
-from models import base, derived, owners
+from models import base, derived, local, owners
 
 from bonsai.sgen import SgenWarning, schema_types, write_schema
 
@@ -78,7 +78,9 @@ def runner(tmp_path_factory: pytest.TempPathFactory) -> Runner:
     root = tmp_path_factory.mktemp("interop")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", SgenWarning)
-        paths = [write_schema(root, *schema_types(module)) for module in (base, derived, owners)]
+        paths = [
+            write_schema(root, *schema_types(module)) for module in (base, derived, local, owners)
+        ]
 
     _run("dotnet", "build", GENERATOR, "--configuration", "Release")
     generator = _run_command(GENERATOR)

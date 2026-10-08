@@ -12,61 +12,55 @@ Each release of `bonsai-sgen` matches the release of `Bonsai.Sgen` with the same
     pip install bonsai-sgen
     ```
 
-2. Declare the namespace of the generated types in each module, and derive models, enumerations and unions from the base classes:
+2. Define the models in a module that declares the namespace of the generated types:
 
     ```python
     from typing import Annotated, Literal
 
     from pydantic import Field
+    from typing_extensions import TypeAliasType
 
-    from bonsai.sgen import SchemaEnum, SchemaModel, SchemaUnion
+    from bonsai.sgen import SchemaModel
 
-    SGEN_NAMESPACE = "Zoo"
-
-
-    class Habitat(SchemaEnum):
-        """Specifies the available habitats."""
-
-        SAVANNA = 0
-        FOREST = 1
+    SGEN_NAMESPACE = "PersonAndDiscriminatedPets"
 
 
-    class Lion(SchemaModel):
-        """A lion in the zoo."""
-
-        kind: Literal["lion"] = "lion"
-        name: str
-        habitat: Habitat = Habitat.SAVANNA
+    class PetBase(SchemaModel):
+        age: int | None = None
 
 
-    class Zebra(SchemaModel):
-        """A zebra in the zoo."""
-
-        kind: Literal["zebra"] = "zebra"
-        name: str
-        stripes: int = 0
+    class Cat(PetBase):
+        pet_type: Literal["cat"] = "cat"
+        can_meow: bool = True
 
 
-    class Animal(SchemaUnion):
-        """An animal in the zoo."""
+    class Dog(PetBase):
+        pet_type: Literal["dog"] = "dog"
+        can_bark: bool | None = True
 
-        root: Annotated[Lion | Zebra, Field(discriminator="kind")]
+
+    Pet = TypeAliasType("Pet", Annotated[Cat | Dog, Field(discriminator="pet_type")])
+
+
+    class PersonAndPet(SchemaModel):
+        owner: str
+        pet: Pet | None = None
     ```
 
-3. Write the schema of each namespace to a file named after the namespace, here `schemas/Zoo.json`:
+3. Write the schema of the models to a file:
 
     ```python
-    import zoo
+    from person_and_discriminated_pets import PersonAndPet
 
-    from bonsai.sgen import schema_types, write_schema
+    from bonsai.sgen import write_schema
 
-    write_schema("schemas", *schema_types(zoo))
+    write_schema("schemas", PersonAndPet)
     ```
 
 4. Generate the C# types with the release of `Bonsai.Sgen` matching the installed version of `bonsai-sgen`:
 
     ```cmd
-    dotnet bonsai.sgen schemas/Zoo.json -o Extensions --serializer json yaml
+    dotnet bonsai.sgen schemas/PersonAndDiscriminatedPets.json -o Extensions --serializer json yaml
     ```
 
 ## Additional Documentation

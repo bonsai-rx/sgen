@@ -29,7 +29,7 @@ class Mood(str, SchemaEnum):
 
 
 class Cat(SchemaModel):
-    """A cat, which belongs to two unions."""
+    """A member of several unions."""
 
     kind: Literal["cat"] = "cat"
     name: str
@@ -44,32 +44,32 @@ class Hamster(SchemaModel):
 
 
 class Animal(SchemaUnion):
-    """An animal, including a member generated in another namespace."""
+    """A union including a member generated in another namespace."""
 
     root: Annotated[Cat | base.Dog, Field(discriminator="kind")]
 
 
 class Pet(SchemaUnion):
-    """A pet, sharing a member with another union."""
+    """A union sharing a member with another union."""
 
     root: Annotated[Cat | Hamster, Field(discriminator="kind")]
 
 
 class Parrot(SchemaModel):
-    """A parrot, which declares no tag."""
+    """A union member that declares no tag."""
 
     name: str
     words: int = 0
 
 
 class Goldfish(SchemaModel):
-    """A goldfish, which declares no tag."""
+    """A union member that declares no tag."""
 
     name: str
 
 
 class Creature(SchemaUnion):
-    """A creature, tagged by the union rather than by its members."""
+    """A union assigning the tags of its members."""
 
     root: Annotated[Parrot | Goldfish, DiscriminatedUnion("species")]
 
@@ -77,16 +77,16 @@ class Creature(SchemaUnion):
 Companion = TypeAliasType(
     "Companion", Annotated[Cat | Hamster, Field(discriminator="kind"), SchemaAlias()]
 )
-"""A companion, declared as a type alias rather than as a model."""
+"""A union declared as a type alias."""
 
 Flock = TypeAliasType(
     "Flock", Annotated[Parrot | Goldfish, DiscriminatedUnion("species"), SchemaAlias()]
 )
-"""A flock, declared as a type alias tagged by the union rather than by its members."""
+"""A union alias assigning the tags of its members."""
 
 
 class Home(SchemaModel):
-    """A home, referring to unions declared as type aliases."""
+    """A model referring to unions declared as type aliases."""
 
     companion: Companion
     companions: list[Companion] = []
@@ -102,7 +102,7 @@ class Palette(SchemaModel):
 
 
 class Owner(SchemaModel):
-    """An owner of animals, with the common property types."""
+    """A model with the common property types."""
 
     name: str
     age: int | None = None

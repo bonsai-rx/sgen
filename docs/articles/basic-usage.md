@@ -61,11 +61,11 @@ Some points to note in this example:
 
 - The schema file contains the two definitions `Person` and `Dog`, each of which generates an operator of the same name.
 - The schema root, titled `PersonAndPet`, combines the two objects into a single record.
-- The `--serializer` flag selects YAML for the generated [serialization and deserialization operators](#serialization-and-deserialization).
+- The `--serializer` option selects YAML for the generated [serialization and deserialization operators](#serialization-and-deserialization).
 - The generated classes are in a different namespace from the previous example. By default, the namespace is derived from the name of the schema file, which prevents name clashes between schemas, such as between `PersonAndDog.Person` here and `Person.Person` in the previous example.
 
 > [!TIP]
-> The `--namespace` flag sets the namespace of the generated code explicitly.
+> The `--namespace` option sets the namespace of the generated code explicitly.
 
 ## Nested objects
 

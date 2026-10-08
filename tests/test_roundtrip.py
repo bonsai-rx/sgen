@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 import yaml
 from conftest import Runner
-from models import base, derived, owners
+from models import base, derived, local, owners
 from pydantic import BaseModel
 
 from bonsai.sgen import get_typename
@@ -47,6 +47,7 @@ CASES: dict[str, BaseModel] = {
         companions=[derived.Hamster(name="Hammy")],
         flock=derived.Parrot(name="Polly", words=12),
     ),
+    "local-union": local.Burrow(digger=local.Mole(name="Digger")),
     "union-from-other-namespace": owners.Household(animal=derived.Animal(DOG)),
     "redefined-union": owners.Shelter(resident=owners.Resident(DOG)),
 }
