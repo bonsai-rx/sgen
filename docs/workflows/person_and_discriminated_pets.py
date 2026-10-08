@@ -2,8 +2,9 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import Field
+from typing_extensions import TypeAliasType
 
-from bonsai.sgen import SchemaModel, SchemaUnion, write_schema
+from bonsai.sgen import SchemaModel, write_schema
 
 SGEN_NAMESPACE = "PersonAndDiscriminatedPets"
 
@@ -22,8 +23,7 @@ class Dog(PetBase):
     can_bark: bool | None = True
 
 
-class Pet(SchemaUnion):
-    root: Annotated[Cat | Dog, Field(discriminator="pet_type")]
+Pet = TypeAliasType("Pet", Annotated[Cat | Dog, Field(discriminator="pet_type")])
 
 
 class PersonAndPet(SchemaModel):

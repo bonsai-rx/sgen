@@ -31,7 +31,7 @@ A statically typed language such as C# needs a single type for the property at c
 
 ## Tagged unions
 
-A [tagged union](https://en.wikipedia.org/wiki/Tagged_union), also called a discriminated union, records which member type each value has. Tagged unions are not part of the JSON Schema specification, but the [OpenAPI standard](https://swagger.io/docs/specification/v3_0/data-models/inheritance-and-polymorphism/#discriminator), a superset of JSON Schema, supports them. A `discriminator` field in the schema names the property whose value selects the type of each object at runtime.
+A [tagged union](https://en.wikipedia.org/wiki/Tagged_union), also called a discriminated union, records which member type each value has. Tagged unions are not part of the JSON Schema specification, but the [OpenAPI standard](https://swagger.io/docs/specification/v3_0/data-models/inheritance-and-polymorphism/#discriminator), a superset of JSON Schema, supports them. A `discriminator` field in the schema specifies the property whose value selects the type of each object at runtime.
 
 For example, the following schema declares a `Pet` that is either a `Dog` or a `Cat`:
 
@@ -130,7 +130,7 @@ Wrapper types are internal to the generated code, although a wrapped member stil
 >
 > - An external member that is itself a tagged union. List its members directly in one union instead.
 > - A wrapper type name that clashes with an existing type. Rename the discriminator tag of that member.
-> - A wrapped member with an ordinary property named like the discriminator, since its value would be lost. Declare the property as a constant or rename it.
+> - A wrapped member whose ordinary property has the same name as the discriminator, since its value would be lost. Declare the property as a constant or rename it.
 
 > [!TIP]
 > To use a tagged union in another schema, define the union again in that schema and refer to its members through `x-sgen-typename`, rather than referring to the union type itself. A union type from another schema currently round-trips only with the JSON serializer, since the YAML serializer of a schema handles only the unions defined in that schema.

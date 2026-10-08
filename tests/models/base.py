@@ -8,7 +8,7 @@ SGEN_NAMESPACE = "TestHelper.Base"
 
 
 class Dog(SchemaModel):
-    """A dog, generated outside the namespace of its unions."""
+    """A union member generated outside the namespace of its unions."""
 
     kind: Literal["dog"] = "dog"
     name: str

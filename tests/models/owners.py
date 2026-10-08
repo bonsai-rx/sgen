@@ -12,18 +12,18 @@ SGEN_NAMESPACE = "TestHelper.Owners"
 
 
 class Household(SchemaModel):
-    """A household, referring to a union defined in another namespace."""
+    """A model referring to a union defined in another namespace."""
 
     animal: derived.Animal
 
 
 class Resident(SchemaUnion):
-    """A resident, redefining a union over the members of another namespace."""
+    """A union redefined over the members of another namespace."""
 
     root: Annotated[derived.Cat | base.Dog, Field(discriminator="kind")]
 
 
 class Shelter(SchemaModel):
-    """A shelter, referring to a union defined in the same namespace."""
+    """A model referring to a union defined in the same namespace."""
 
     resident: Resident

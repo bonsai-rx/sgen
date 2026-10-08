@@ -31,7 +31,7 @@ T = TypeVar("T")
 
 
 class Turtle(BaseModel):
-    """A turtle, which is not a schema model."""
+    """A plain pydantic model."""
 
     kind: Literal["turtle"] = "turtle"
 
@@ -44,21 +44,26 @@ Pack = TypeAliasType(
         SchemaAlias(sgen_typename="Kennel.Pack"),
     ],
 )
-"""A pack, declaring the type name of the union explicitly."""
+"""A union alias declaring its type name explicitly."""
 
 Mixed = TypeAliasType("Mixed", Annotated[derived.Cat | derived.Parrot, SchemaAlias()])
-"""A mixture, whose members are not discriminated."""
+"""A union alias whose members are not discriminated."""
 
 Flight = TypeAliasType("Flight", Annotated[list[derived.Parrot], SchemaAlias()])
-"""A flight of parrots, which is a list rather than a union."""
+"""A list alias marked as a union."""
 
 Reptile = TypeAliasType(
     "Reptile", Annotated[derived.Cat | Turtle, Field(discriminator="kind"), SchemaAlias()]
 )
-"""A reptile, with a member that is not a schema model."""
+"""A union alias with a member that is not a schema model."""
 
 Plain = TypeAliasType("Plain", derived.Cat | derived.Hamster)
 """A union alias not marked for generation."""
+
+Brood = TypeAliasType(
+    "Brood", Annotated[derived.Cat | derived.Hamster, Field(discriminator="kind")]
+)
+"""A discriminated union alias not marked for generation."""
 
 
 def _definitions(*models: SchemaType) -> dict:
@@ -146,6 +151,31 @@ def test_plain_enum_raises_on_export():
 
     with pytest.raises(TypeError, match="Missing type names for Coat"):
         export_schema(Puppy)
+
+
+def test_unmarked_union_alias_exports_as_local_union():
+    """A discriminated union alias without the marker is exported as a local union."""
+
+    class Nest(SchemaModel):
+        """A nest."""
+
+        brood: Brood
+
+    definition = export_schema(Nest)["$defs"]["Brood"]
+    assert "discriminator" in definition
+    assert "x-sgen-typename" not in definition
+
+
+def test_undiscriminated_alias_raises_on_export():
+    """A union alias without a discriminator has no type name, so it raises on export."""
+
+    class Litter(SchemaModel):
+        """A litter."""
+
+        plain: Plain
+
+    with pytest.raises(TypeError, match="Missing type names for Plain"):
+        export_schema(Litter)
 
 
 def test_explicit_typename_not_inherited():
