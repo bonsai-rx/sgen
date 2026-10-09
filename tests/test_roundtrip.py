@@ -47,7 +47,7 @@ CASES: dict[str, BaseModel] = {
         companions=[derived.Hamster(name="Hammy")],
         flock=derived.Parrot(name="Polly", words=12),
     ),
-    "local-union": local.Burrow(digger=local.Mole(name="Digger")),
+    "local-union": local.Burrow(digger=local.Mole(name="Digger", depth=2)),
     "union-from-other-namespace": owners.Household(animal=derived.Animal(DOG)),
     "redefined-union": owners.Shelter(resident=owners.Resident(DOG)),
 }

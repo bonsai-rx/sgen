@@ -1,3 +1,4 @@
+from abc import ABC
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -9,7 +10,7 @@ from bonsai.sgen import SchemaModel, write_schema
 SGEN_NAMESPACE = "PersonAndDiscriminatedPets"
 
 
-class PetBase(SchemaModel):
+class PetBase(SchemaModel, ABC):
     age: int | None = None
 
 

@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Annotated, Generic, Literal, TypeVar
 
 import pytest
-from models import base, derived, late, owners, unnamed
+from models import base, derived, late, local, owners, unnamed
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from typing_extensions import TypeAliasType
 
@@ -164,6 +164,47 @@ def test_unmarked_union_alias_exports_as_local_union():
     definition = export_schema(Nest)["$defs"]["Brood"]
     assert "discriminator" in definition
     assert "x-sgen-typename" not in definition
+
+
+def test_subclass_refers_to_base():
+    """A model deriving from another schema model refers to it instead of repeating its fields."""
+    definitions = _definitions(local.Burrow)
+    assert definitions["Mole"]["allOf"] == [{"$ref": "#/$defs/Burrower"}]
+    assert set(definitions["Mole"]["properties"]) == {"kind"}
+    assert definitions["Burrower"]["x-sgen-typename"] == "TestHelper.Local.Burrower"
+
+
+def test_abstract_base_marked_abstract():
+    """A model listing ABC among its bases is abstract, while its subclasses are not."""
+    definitions = _definitions(local.Burrow)
+    assert definitions["Burrower"]["x-abstract"] is True
+    assert "x-abstract" not in definitions["Mole"]
+
+
+def test_subclass_redefining_base_field_repeats_fields():
+    """A model redefining a field of its base repeats every field instead of referring to it."""
+
+    class Kit(local.Burrower):
+        """A model redefining a field of its base."""
+
+        depth: int = 1
+
+    definition = _definitions(Kit)["Kit"]
+    assert "allOf" not in definition
+    assert set(definition["properties"]) == {"name", "depth"}
+
+
+def test_subclass_changing_config_repeats_fields():
+    """A model changing the configuration of its base repeats every field of the base."""
+
+    class Kit(local.Burrower):
+        """A model changing the configuration of its base."""
+
+        model_config = ConfigDict(alias_generator=str.upper)
+
+    definition = _definitions(Kit)["Kit"]
+    assert "allOf" not in definition
+    assert set(definition["properties"]) == {"NAME", "DEPTH"}
 
 
 def test_undiscriminated_alias_raises_on_export():

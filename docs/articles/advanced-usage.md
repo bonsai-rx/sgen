@@ -47,15 +47,15 @@ For example, the following schema declares a `Pet` that is either a `Dog` or a `
     "propertyName": "pet_type"
   },
   "oneOf": [
-    { "$ref": "#/$defs/Dog" },
-    { "$ref": "#/$defs/Cat" }
+    { "$ref": "#/$defs/Cat" },
+    { "$ref": "#/$defs/Dog" }
   ]
 }
 ```
 
-From this schema, `Bonsai.Sgen` generates a base type `Pet` from which the `Dog` and `Cat` types derive. None of these types has a `pet_type` property. Instead, the generated serializers write the `pet_type` tag of each object and read it back to create an object of the matching type.
+From this schema, `Bonsai.Sgen` generates an abstract base type `Pet` from which the `Dog` and `Cat` types derive. None of these types has a `pet_type` property. Instead, the generated serializers write the `pet_type` tag of each object and read it back to create an object of the matching type.
 
-In a workflow, a property of type `Pet` is more specific than `object`, but still gives no access to the properties of `Dog` or `Cat`. `Bonsai.Sgen` therefore also generates an operator that filters and downcasts the objects at runtime. Each union gets its own match operator, such as `MatchPet` for the `Pet` union. Setting its `Type` property to `Dog` or `Cat` keeps only the objects of that type and gives access to their properties. Leaving `Type` empty instead upcasts a `Dog` or `Cat` to `Pet`.
+In a workflow, a property of type `Pet` is more specific than `object`, but gives access only to the properties of `Pet` itself, not to those added by `Dog` or `Cat`. `Bonsai.Sgen` therefore also generates an operator that filters and downcasts the objects at runtime. Each union gets its own match operator, such as `MatchPet` for the `Pet` union. Setting its `Type` property to `Dog` or `Cat` keeps only the objects of that type and gives access to their properties. Leaving `Type` empty instead upcasts a `Dog` or `Cat` to `Pet`.
 
 Match operators also accept a sequence of any other type, such as `object`, and keep only the elements matching the selected type. An input type unrelated to the union, such as a type with a hand-written conversion to `Pet`, is first converted to `Pet`. Selecting a type that no input element could ever match makes the workflow fail to build.
 
@@ -70,7 +70,7 @@ Match operators also accept a sequence of any other type, such as `object`, and 
 
 A tagged union can include either a member type that is defined outside the generated code, such as a type generated from another schema, or a type that already derives from another type, such as a member of another union.
 
-C# has no union types of its own, so `Bonsai.Sgen` models a tagged union as a base type that each member derives from. A type can derive from only one base, and only if it is generated in the same schema, so `Bonsai.Sgen` generates a wrapper type for each of the other members instead. The wrapper changes neither the data format nor how the union is used in a workflow.
+C# has no union types of its own, so `Bonsai.Sgen` models a tagged union as a base type that each member derives from. A type can derive from only one base, and only if it is generated in the same schema, so `Bonsai.Sgen` generates a wrapper type for each of the other members instead. The wrapper changes neither the data format nor how the union is used in a workflow. When every member derives from the same base type through `allOf`, no member is wrapped. The union base derives from the shared base type instead, and each member derives from the union base, so the shared properties are available on the union base.
 
 For example, the `Dog` member below refers to the `Dog` type generated from [person-and-dog.json](~/workflows/person-and-dog.json) through the `x-sgen-typename` annotation:
 
