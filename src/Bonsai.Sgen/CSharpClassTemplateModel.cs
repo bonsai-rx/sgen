@@ -21,6 +21,8 @@ namespace Bonsai.Sgen
 
         public JsonSchema Schema { get; }
 
+        public new bool IsAbstract => Schema.ActualSchema.IsAbstract;
+
         public CSharpTypeResolver Resolver { get; }
 
         public object RootObject { get; }
