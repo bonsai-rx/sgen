@@ -143,6 +143,22 @@ namespace TestHelper.Base
             return schema;
         }
 
+        static JsonSchema CreateCommonBaseMemberSchema(bool unionInheritsBase)
+        {
+            var mammal = new JsonSchema
+            {
+                Type = JsonObjectType.Object,
+                Properties = { { "age", new JsonSchemaProperty { Type = JsonObjectType.Integer } } }
+            };
+            var members = SchemaTestHelper.CreateDerivedSchemas("kind", baseSchema: mammal, "Cat", "Dog");
+            var animal = SchemaTestHelper.CreateDiscriminatorSchema("kind", members);
+            if (unionInheritsBase) animal.AllOf.Add(new JsonSchema { Reference = mammal });
+            var schema = SchemaTestHelper.CreateContainerSchema(
+                members.Prepend(new("Mammal", mammal)).Prepend(new("Animal", animal)));
+            schema.Properties.Add("pet", new JsonSchemaProperty { Reference = animal });
+            return schema;
+        }
+
         [TestMethod]
         public async Task GenerateWithExternalUnionMember_GenerateWrapperType()
         {
@@ -323,6 +339,20 @@ namespace TestHelper.Base
         }
 
         [TestMethod]
+        public async Task GenerateWithUnion_UnionBaseIsAbstract()
+        {
+            var schema = await CreateSharedMemberSchema();
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            foreach (var typeName in new[] { "Animal", "Guard" })
+            {
+                var unionType = SerializerTestHelper.GetGeneratedType(assembly, typeName);
+                Assert.IsTrue(unionType.IsAbstract, $"Union base {typeName} must be abstract.");
+                Assert.IsFalse(Attribute.IsDefined(unionType, typeof(CombinatorAttribute)), $"Union base {typeName} must not be an operator.");
+            }
+        }
+
+        [TestMethod]
         [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""pet"":{""kind"":""dog"",""name"":""Rex""},""guard"":{""kind"":""dog"",""name"":""Fang""}}")]
         [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "pet:\n  kind: dog\n  name: Rex\nguard:\n  kind: dog\n  name: Fang\n")]
         public async Task GenerateWithMemberSharedByUnions_RoundTripFlatFormat(SerializerLibraries serializerLibraries, string format, string text)
@@ -421,6 +451,40 @@ namespace TestHelper.Base
             StringAssert.Contains(output, "Dog", "Serialized wrapper must carry its tag.");
             StringAssert.Contains(output, "3", "Serialized wrapper must carry inherited properties.");
             Assert.IsFalse(output.Contains("Value"), "Serialized wrapper must use the flat format.");
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void GenerateWithMembersSharingBaseType_InheritBaseThroughUnion(bool unionInheritsBase)
+        {
+            var schema = CreateCommonBaseMemberSchema(unionInheritsBase);
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("class Animal : Mammal"), "Union base must inherit the shared base type.");
+            Assert.IsTrue(code.Contains("class Cat : Animal"), "Member must inherit from union base type.");
+            Assert.IsTrue(code.Contains("class Dog : Animal"), "Member must inherit from union base type.");
+            Assert.IsFalse(code.Contains("IUnionWrapper, IUnionWrapper<"), "Members sharing a base type must not be wrapped.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""pet"":{""kind"":""Dog"",""age"":3}}")]
+        [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "pet:\n  kind: Dog\n  age: 3\n")]
+        public async Task GenerateWithMembersSharingBaseType_RoundTripInheritedProperty(SerializerLibraries serializerLibraries, string format, string text)
+        {
+            var schema = CreateCommonBaseMemberSchema(unionInheritsBase: false);
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries, SchemaNamespace);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            var containerType = SerializerTestHelper.GetGeneratedType(assembly, "Container");
+            var container = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, text);
+            var member = await WorkflowTestHelper.Select(container, "Pet");
+            Assert.AreEqual("Dog", member.GetType().Name, "Tagged member must deserialize as its own type.");
+            Assert.AreEqual(3, await WorkflowTestHelper.Select(member, "Age"), "Member must carry inherited properties.");
+
+            var output = await SerializerTestHelper.Serialize(assembly, $"SerializeTo{format}", containerType, container);
+            StringAssert.Contains(output, "Dog", "Serialized member must carry its tag.");
+            StringAssert.Contains(output, "3", "Serialized member must carry inherited properties.");
         }
 
         [TestMethod]

@@ -24,7 +24,9 @@ Models derive from `SchemaModel` and enumerations from `SchemaEnum`, and a discr
 
 [!code-python[](../workflows/person_and_discriminated_pets.py)]
 
-The `Pet` union is discriminated by the constant tag that each member declares in its `pet_type` property. Since `Pet` is a type alias rather than a model, the `pet` property holds the `Cat` or `Dog` object itself. From Python 3.12, the `type` statement declares the same alias, as in `type Pet = Annotated[Cat | Dog, Field(discriminator="pet_type")]`. Pydantic copies inherited properties into each derived model, so the generated `Cat` and `Dog` classes do not derive from `PetBase`. The schema includes `PetBase` only if it is exported directly, as [`schema_types`](xref:bonsai.sgen.schema_types) does for every model in a module.
+The `Pet` union is discriminated by the constant tag that each member declares in its `pet_type` property. Since `Pet` is a type alias rather than a model, the `pet` property holds the `Cat` or `Dog` object itself. From Python 3.12, the `type` statement declares the same alias, as in `type Pet = Annotated[Cat | Dog, Field(discriminator="pet_type")]`. Since `Cat` and `Dog` both derive from `PetBase`, the generated `Pet` union derives from `PetBase` too, and `Cat` and `Dog` derive from `Pet`, so the common `age` property is available on every `Pet`.
+
+`PetBase` lists `ABC` among its bases, so it is generated as an abstract class. Only a model that lists `ABC` itself is generated as abstract, which leaves `Cat` and `Dog` concrete.
 
 A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
 

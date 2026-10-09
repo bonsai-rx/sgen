@@ -1,9 +1,11 @@
 """Base classes for pydantic models used to generate code with Bonsai.Sgen."""
 
+import inspect
 import sys
 import types
 import typing
 import warnings
+from abc import ABC
 from collections.abc import Iterator
 from enum import Enum
 from typing import Annotated, Any, TypeAlias, Union, get_args, get_origin
@@ -27,6 +29,9 @@ TYPENAME_KEY = "x-sgen-typename"
 
 ENUM_NAMES_KEY = "x-enumNames"
 """Annotation specifying the names of the values in an enumeration type."""
+
+ABSTRACT_KEY = "x-abstract"
+"""Annotation marking a type as abstract."""
 
 NAMESPACE_ATTRIBUTE = "SGEN_NAMESPACE"
 """Module attribute declaring the generated namespace of the schema types in the module."""
@@ -142,6 +147,44 @@ def _union_members(annotation: Any) -> tuple[Any, ...]:
     return (annotation,)
 
 
+def _field_key(name: str, field: FieldInfo) -> str:
+    return field.serialization_alias or field.alias or name
+
+
+def _schema_base(cls: type["SchemaModel"]) -> type["SchemaModel"] | None:
+    bases = [
+        base for base in cls.__bases__ if issubclass(base, SchemaModel) and base is not SchemaModel
+    ]
+    if len(bases) != 1:
+        return None
+    base = bases[0]
+    metadata = base.__pydantic_generic_metadata__
+    if metadata["origin"] is not None or metadata["parameters"]:
+        return None
+    annotations = inspect.get_annotations(cls)
+    if base.model_config != cls.model_config or any(
+        name in annotations for name in base.model_fields
+    ):
+        return None
+    return base
+
+
+def _inherit_base(
+    definition: JsonSchemaValue, base: type["SchemaModel"], handler: GetJsonSchemaHandler
+) -> None:
+    base_schema = base.__pydantic_core_schema__
+    ref = base_schema.get("ref")
+    if ref is None:
+        raise TypeError(f"{base.__qualname__} has no core schema reference.")
+    base_ref = handler(
+        core_schema.definitions_schema(core_schema.definition_reference_schema(ref), [base_schema])
+    )
+    properties = definition.get("properties", {})
+    for name, field in base.model_fields.items():
+        properties.pop(_field_key(name, field), None)
+    definition["allOf"] = [base_ref]
+
+
 def _check_union_members(name: str, annotation: Any) -> None:
     members = _union_members(annotation)
     if len(members) < 2:
@@ -161,6 +204,10 @@ class SchemaModel(BaseModel):
     `SGEN_NAMESPACE` attribute of its module. Pass `sgen_typename` to describe a type defined
     elsewhere, as in `class Dog(SchemaModel, sgen_typename="Kennel.Dog")`, so that a schema
     refers to the existing type rather than defining a new one.
+
+    A model listing `ABC` among its direct bases, as in `class PetBase(SchemaModel, ABC)`, is
+    generated as an abstract class. Its subclasses are generated as concrete classes unless they
+    also list `ABC`.
 
     A discriminated union is declared as a type alias or as a `SchemaUnion`, so that it is
     generated under its own name. A generic model cannot be generated, so only concrete
@@ -206,10 +253,15 @@ class SchemaModel(BaseModel):
             )
         json_schema = handler(core_schema)
         typename = _bind_typename(cls, json_schema, handler)
-        properties = handler.resolve_ref_schema(json_schema).get("properties", {})
+        definition = handler.resolve_ref_schema(json_schema)
+        if ABC in cls.__bases__:
+            definition[ABSTRACT_KEY] = True
+        properties = definition.get("properties", {})
+        base = _schema_base(cls)
+        if base is not None:
+            _inherit_base(definition, base, handler)
         for name, field in cls.model_fields.items():
-            key = field.serialization_alias or field.alias or name
-            prop = properties.get(key)
+            prop = properties.get(_field_key(name, field))
             if field.description and prop is not None and "description" not in prop:
                 prop["description"] = field.description
             for union_typename in _referenced_unions(field.annotation):

@@ -104,22 +104,6 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
-        public void GenerateFromAbstractOneOfDiscriminatorSchema_UnionBaseIsAbstract()
-        {
-            var derivedSchemas = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog", "Cat");
-            var discriminator = SchemaTestHelper.CreateDiscriminatorSchema("kind", derivedSchemas);
-            discriminator.IsAbstract = true;
-            var schema = SchemaTestHelper.CreateContainerSchema(derivedSchemas.Prepend(new("Animal", discriminator)));
-            schema.Properties.Add("Animal", new JsonSchemaProperty { Reference = discriminator });
-
-            var generator = TestHelper.CreateGenerator(schema);
-            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
-            var unionType = SerializerTestHelper.GetGeneratedType(assembly, "Animal");
-            Assert.IsTrue(unionType.IsAbstract, "Union base declared abstract must be abstract.");
-            Assert.IsFalse(Attribute.IsDefined(unionType, typeof(CombinatorAttribute)), "Abstract union base must not be an operator.");
-        }
-
-        [TestMethod]
         [DataRow(SerializerLibraries.YamlDotNet)]
         [DataRow(SerializerLibraries.NewtonsoftJson)]
         [DataRow(SerializerLibraries.NewtonsoftJson | SerializerLibraries.YamlDotNet)]

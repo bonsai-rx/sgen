@@ -15,8 +15,6 @@ namespace PersonAndDiscriminatedPets
     public partial class Cat : Pet
     {
     
-        private int? _age;
-    
         private bool _canMeow;
     
         public Cat()
@@ -27,21 +25,7 @@ namespace PersonAndDiscriminatedPets
         protected Cat(Cat other) : 
                 base(other)
         {
-            _age = other._age;
             _canMeow = other._canMeow;
-        }
-    
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="age")]
-        public int? Age
-        {
-            get
-            {
-                return _age;
-            }
-            set
-            {
-                _age = value;
-            }
         }
     
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="can_meow")]
@@ -73,7 +57,6 @@ namespace PersonAndDiscriminatedPets
             {
                 stringBuilder.Append(", ");
             }
-            stringBuilder.Append("Age = " + _age + ", ");
             stringBuilder.Append("CanMeow = " + _canMeow);
             return true;
         }
@@ -86,8 +69,6 @@ namespace PersonAndDiscriminatedPets
     public partial class Dog : Pet
     {
     
-        private int? _age;
-    
         private bool? _canBark;
     
         public Dog()
@@ -98,21 +79,7 @@ namespace PersonAndDiscriminatedPets
         protected Dog(Dog other) : 
                 base(other)
         {
-            _age = other._age;
             _canBark = other._canBark;
-        }
-    
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="age")]
-        public int? Age
-        {
-            get
-            {
-                return _age;
-            }
-            set
-            {
-                _age = value;
-            }
         }
     
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias="can_bark")]
@@ -144,56 +111,8 @@ namespace PersonAndDiscriminatedPets
             {
                 stringBuilder.Append(", ");
             }
-            stringBuilder.Append("Age = " + _age + ", ");
             stringBuilder.Append("CanBark = " + _canBark);
             return true;
-        }
-    }
-
-
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.10.0.0 (YamlDotNet v16.0.0.0)")]
-    [YamlDiscriminator("pet_type")]
-    [JsonInheritanceAttribute("cat", typeof(Cat))]
-    [JsonInheritanceAttribute("dog", typeof(Dog))]
-    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
-    [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class Pet
-    {
-    
-        public Pet()
-        {
-        }
-    
-        protected Pet(Pet other)
-        {
-        }
-    
-        public System.IObservable<Pet> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Pet(this)));
-        }
-    
-        public System.IObservable<Pet> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new Pet(this));
-        }
-    
-        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
-        {
-            return false;
-        }
-    
-        public override string ToString()
-        {
-            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
-            stringBuilder.Append(GetType().Name);
-            stringBuilder.Append(" { ");
-            if (PrintMembers(stringBuilder))
-            {
-                stringBuilder.Append(" ");
-            }
-            stringBuilder.Append("}");
-            return stringBuilder.ToString();
         }
     }
 
@@ -259,6 +178,78 @@ namespace PersonAndDiscriminatedPets
         {
             stringBuilder.Append("Owner = " + _owner + ", ");
             stringBuilder.Append("Pet = " + _pet);
+            return true;
+        }
+    
+        public override string ToString()
+        {
+            System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
+            stringBuilder.Append(GetType().Name);
+            stringBuilder.Append(" { ");
+            if (PrintMembers(stringBuilder))
+            {
+                stringBuilder.Append(" ");
+            }
+            stringBuilder.Append("}");
+            return stringBuilder.ToString();
+        }
+    }
+
+
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.10.0.0 (YamlDotNet v16.0.0.0)")]
+    [YamlDiscriminator("pet_type")]
+    [JsonInheritanceAttribute("cat", typeof(Cat))]
+    [JsonInheritanceAttribute("dog", typeof(Dog))]
+    public abstract partial class Pet : PetBase
+    {
+    
+        protected Pet()
+        {
+        }
+    
+        protected Pet(Pet other) : 
+                base(other)
+        {
+        }
+    
+        protected override bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            return base.PrintMembers(stringBuilder);
+        }
+    }
+
+
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.10.0.0 (YamlDotNet v16.0.0.0)")]
+    public abstract partial class PetBase
+    {
+    
+        private int? _age;
+    
+        protected PetBase()
+        {
+        }
+    
+        protected PetBase(PetBase other)
+        {
+            _age = other._age;
+        }
+    
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="age")]
+        public int? Age
+        {
+            get
+            {
+                return _age;
+            }
+            set
+            {
+                _age = value;
+            }
+        }
+    
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append("Age = " + _age);
             return true;
         }
     
@@ -504,14 +495,19 @@ namespace PersonAndDiscriminatedPets
             return Process<Dog>(source);
         }
 
+        public System.IObservable<string> Process(System.IObservable<PersonAndPet> source)
+        {
+            return Process<PersonAndPet>(source);
+        }
+
         public System.IObservable<string> Process(System.IObservable<Pet> source)
         {
             return Process<Pet>(source);
         }
 
-        public System.IObservable<string> Process(System.IObservable<PersonAndPet> source)
+        public System.IObservable<string> Process(System.IObservable<PetBase> source)
         {
-            return Process<PersonAndPet>(source);
+            return Process<PetBase>(source);
         }
     }
 
@@ -525,14 +521,15 @@ namespace PersonAndDiscriminatedPets
     [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Transform)]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Cat>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Dog>))]
-    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Pet>))]
     [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PersonAndPet>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<Pet>))]
+    [System.Xml.Serialization.XmlIncludeAttribute(typeof(Bonsai.Expressions.TypeMapping<PetBase>))]
     public partial class DeserializeFromYaml : Bonsai.Expressions.SingleArgumentExpressionBuilder
     {
     
         public DeserializeFromYaml()
         {
-            Type = new Bonsai.Expressions.TypeMapping<PersonAndPet>();
+            Type = new Bonsai.Expressions.TypeMapping<Cat>();
         }
 
         public Bonsai.Expressions.TypeMapping Type { get; set; }

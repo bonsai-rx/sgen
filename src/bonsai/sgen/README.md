@@ -15,6 +15,7 @@ Each release of `bonsai-sgen` matches the release of `Bonsai.Sgen` with the same
 2. Define the models in a module that declares the namespace of the generated types:
 
     ```python
+    from abc import ABC
     from typing import Annotated, Literal
 
     from pydantic import Field
@@ -25,7 +26,7 @@ Each release of `bonsai-sgen` matches the release of `Bonsai.Sgen` with the same
     SGEN_NAMESPACE = "PersonAndDiscriminatedPets"
 
 
-    class PetBase(SchemaModel):
+    class PetBase(SchemaModel, ABC):
         age: int | None = None
 
 

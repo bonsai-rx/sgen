@@ -1,5 +1,6 @@
 """Types referring to a union generated locally in their namespace."""
 
+from abc import ABC
 from typing import Annotated, Literal
 
 from pydantic import Field
@@ -10,18 +11,23 @@ from bonsai.sgen import SchemaModel
 SGEN_NAMESPACE = "TestHelper.Local"
 
 
-class Rabbit(SchemaModel):
+class Burrower(SchemaModel, ABC):
+    """An abstract base type shared by every member of a union."""
+
+    name: str
+    depth: int = 0
+
+
+class Rabbit(Burrower):
     """A rabbit."""
 
     kind: Literal["rabbit"] = "rabbit"
-    name: str
 
 
-class Mole(SchemaModel):
+class Mole(Burrower):
     """A mole."""
 
     kind: Literal["mole"] = "mole"
-    name: str
 
 
 Digger = TypeAliasType("Digger", Annotated[Rabbit | Mole, Field(discriminator="kind")])

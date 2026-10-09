@@ -86,9 +86,7 @@ namespace ExternalUnionMember
     [YamlDiscriminator("pet_type")]
     [JsonInheritanceAttribute("cat", typeof(Cat))]
     [JsonInheritanceAttribute("dog", typeof(PetDog))]
-    [Bonsai.WorkflowElementCategoryAttribute(Bonsai.ElementCategory.Source)]
-    [Bonsai.CombinatorAttribute(MethodName="Generate")]
-    public partial class Pet
+    public abstract partial class Pet
     {
     
         public static implicit operator Pet(PersonAndDog.Dog value)
@@ -96,22 +94,12 @@ namespace ExternalUnionMember
             return new PetDog(value);
         }
     
-        public Pet()
+        protected Pet()
         {
         }
     
         protected Pet(Pet other)
         {
-        }
-    
-        public System.IObservable<Pet> Generate()
-        {
-            return System.Reactive.Linq.Observable.Defer(() => System.Reactive.Linq.Observable.Return(new Pet(this)));
-        }
-    
-        public System.IObservable<Pet> Generate<TSource>(System.IObservable<TSource> source)
-        {
-            return System.Reactive.Linq.Observable.Select(source, _ => new Pet(this));
         }
     
         protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
