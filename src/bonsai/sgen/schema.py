@@ -61,10 +61,16 @@ def get_typename(schema_type: type | SchemaType) -> str:
     itself is consulted, so a subclass can never inherit the type name of its parent.
 
     Raises:
-        TypeError: If the type has no explicit name and its module declares no namespace,
-            or is a type alias not annotated with `SchemaAlias`.
+        TypeError: If the type is not a subclass of `SchemaModel`, `SchemaEnum` or
+            `SchemaUnion`, is a type alias not annotated with `SchemaAlias`, or has no
+            explicit name and its module declares no namespace.
     """
     if isinstance(schema_type, type):
+        if not issubclass(schema_type, SchemaModel | SchemaEnum | SchemaUnion):
+            raise TypeError(
+                f"{schema_type.__qualname__} has no type name, since it is not a subclass "
+                "of SchemaModel, SchemaEnum or SchemaUnion."
+            )
         typename = vars(schema_type).get(_TYPENAME_ATTRIBUTE)
         if typename is not None:
             return typename
@@ -456,7 +462,9 @@ class SchemaAlias:
         """
         if get_origin(source_type) not in (Union, types.UnionType):
             raise TypeError(
-                f"SchemaAlias supports only aliases of discriminated unions, not {source_type!r}."
+                f"SchemaAlias supports only aliases of discriminated unions, not {source_type!r}, "
+                "since Bonsai.Sgen cannot represent any other alias as a type of its own. "
+                "Refer to the aliased type directly instead."
             )
         _check_union_members(repr(source_type), source_type)
         return handler(source_type)

@@ -1,5 +1,6 @@
 """Tests for schemas exported from the base classes."""
 
+import dataclasses
 import json
 import sys
 import warnings
@@ -8,7 +9,7 @@ from typing import Annotated, Generic, Literal, TypeVar
 
 import pytest
 from models import base, derived, late, local, owners, unnamed
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, RootModel, ValidationError
 from typing_extensions import TypeAliasType
 
 from bonsai.sgen import (
@@ -64,6 +65,22 @@ Brood = TypeAliasType(
     "Brood", Annotated[derived.Cat | derived.Hamster, Field(discriminator="kind")]
 )
 """A discriminated union alias not marked for generation."""
+
+Link = TypeAliasType("Link", HttpUrl)
+"""An alias of a library type with a scalar schema."""
+
+Speed = TypeAliasType("Speed", Literal["fast"])
+"""An alias of a single literal value."""
+
+Speeds = TypeAliasType("Speeds", Literal["fast", "slow"])
+"""An alias of several literal values, generated as an enumeration."""
+
+MaybeLabel = TypeAliasType("MaybeLabel", str | None)
+"""An alias of a nullable scalar type."""
+
+
+class Count(RootModel[int]):
+    """A plain root model of a scalar type."""
 
 
 def _definitions(*models: SchemaType) -> dict:
@@ -217,6 +234,74 @@ def test_undiscriminated_alias_raises_on_export():
 
     with pytest.raises(TypeError, match="Missing type names for Plain"):
         export_schema(Litter)
+
+
+def test_scalar_alias_exports_without_typename():
+    """An alias of a scalar type needs no type name, since generated code inlines it."""
+
+    class Gauge(SchemaModel):
+        """A gauge."""
+
+        label: derived.Label
+        link: Link
+        speed: Speed
+        count: Count
+
+    definitions = _definitions(Gauge)
+    untagged = {key for key, value in definitions.items() if "x-sgen-typename" not in value}
+    assert untagged == {"Label", "Link", "Speed", "Count"}
+
+
+def test_enumerated_literal_alias_raises_on_export():
+    """An alias of several literal values is generated as an enumeration needing a type name."""
+
+    class Gearbox(SchemaModel):
+        """A gearbox."""
+
+        speeds: Speeds
+
+    with pytest.raises(TypeError, match="Missing type names for Speeds"):
+        export_schema(Gearbox)
+
+
+def test_nullable_scalar_alias_raises_on_export():
+    """An alias of a nullable scalar type is generated as a class, which needs a type name."""
+
+    class Badge(SchemaModel):
+        """A badge."""
+
+        label: MaybeLabel
+
+    with pytest.raises(TypeError, match="Missing type names for MaybeLabel"):
+        export_schema(Badge)
+
+
+def test_export_plain_type_raises():
+    """Only schema types can be exported, since a plain type has no type name."""
+
+    @dataclasses.dataclass
+    class Point:
+        """A point."""
+
+        x: int
+
+    with pytest.raises(TypeError, match="str has no type name"):
+        export_schema(str)  # pyright: ignore[reportArgumentType]
+    with pytest.raises(TypeError, match="Point has no type name"):
+        export_schema(Point)  # pyright: ignore[reportArgumentType]
+
+
+def test_plain_class_typename_raises():
+    """A class that is not a schema type has no type name, since its schema carries none."""
+
+    @dataclasses.dataclass
+    class Point:
+        """A point."""
+
+        x: int
+
+    with pytest.raises(TypeError, match="not a subclass of SchemaModel, SchemaEnum or SchemaUnion"):
+        get_typename(Point)
 
 
 def test_explicit_typename_not_inherited():

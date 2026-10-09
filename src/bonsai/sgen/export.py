@@ -17,6 +17,13 @@ from .schema import (
     get_typename,
 )
 
+_SCALAR_TYPES = frozenset({"boolean", "integer", "number", "string"})
+"""JSON types of scalar definitions."""
+
+
+def _is_scalar(definition: JsonSchemaValue) -> bool:
+    return definition.get("type") in _SCALAR_TYPES and "enum" not in definition
+
 
 def schema_types(module: ModuleType) -> list[SchemaType]:
     """Returns the models, unions and union aliases defined in a module, in declaration order."""
@@ -45,19 +52,24 @@ def export_schema(*models: SchemaType) -> JsonSchemaValue:
     union is defined even if no model in its namespace refers to it.
 
     Raises:
-        TypeError: If a definition has no type name, such as a plain pydantic model,
-            enumeration or type alias. Discriminated unions are exempt, since they are
-            generated as local unions.
+        TypeError: If a specified type is not a schema type, or a definition has no type
+            name, such as a plain pydantic model, enumeration or type alias. Discriminated
+            unions are exempt, since they are generated as local unions, and so are aliases
+            of scalar types, since they need no type name.
     """
     if not models:
         raise ValueError("No models to export.")
+    for model in models:
+        get_typename(model)
     _, schema = TypeAdapter.json_schemas(
         [(index, "validation", TypeAdapter(model)) for index, model in enumerate(models)]
     )
     unnamed = [
         key
         for key, definition in schema["$defs"].items()
-        if TYPENAME_KEY not in definition and "discriminator" not in definition
+        if TYPENAME_KEY not in definition
+        and "discriminator" not in definition
+        and not _is_scalar(definition)
     ]
     if unnamed:
         raise TypeError(

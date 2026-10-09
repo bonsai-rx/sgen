@@ -114,6 +114,16 @@ class Owner(SchemaModel):
     creature: Creature | None = None
 
 
+Label = TypeAliasType("Label", str)
+"""An alias of a scalar type."""
+
+
+class Tag(SchemaModel):
+    """A model referring to an alias of a scalar type."""
+
+    label: Label
+
+
 class Visit(SchemaModel):
     """A visit to the veterinarian."""
 
