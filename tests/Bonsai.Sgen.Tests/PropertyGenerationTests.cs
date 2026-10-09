@@ -394,6 +394,72 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        public void GenerateFromNullableScalarDefinitions_InlinesScalarTypes()
+        {
+            var nameSchema = new JsonSchema { Type = JsonObjectType.String };
+            var definitions = new Dictionary<string, JsonSchema>
+            {
+                ["Name"] = nameSchema,
+                ["Nickname"] = SchemaTestHelper.CreateAnyOfSchema(new[] { new JsonSchema { Type = JsonObjectType.String } }),
+                ["Age"] = SchemaTestHelper.CreateAnyOfSchema(new[] { new JsonSchema { Type = JsonObjectType.Integer } }),
+                ["Title"] = SchemaTestHelper.CreateAnyOfSchema(new[] { new JsonSchema { Reference = nameSchema } })
+            };
+            var schema = SchemaTestHelper.CreateContainerSchema(definitions);
+            foreach (var definition in definitions.Skip(1))
+            {
+                schema.Properties.Add(definition.Key, new JsonSchemaProperty { Reference = definition.Value });
+            }
+
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("public string Nickname"), "Nullable string definition must be inlined.");
+            Assert.IsTrue(code.Contains("public int? Age"), "Nullable integer definition must be inlined.");
+            Assert.IsTrue(code.Contains("public string Title"), "Nullable reference to a scalar must be inlined.");
+            foreach (var typeName in new[] { "Name", "Nickname", "Age", "Title" })
+            {
+                Assert.IsFalse(code.Contains($"class {typeName}"), $"Nullable scalar definition {typeName} must not generate a class.");
+            }
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        public async Task GenerateFromCollectionDefinitions_InlinesCollectionTypes()
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+    ""$schema"": ""https://json-schema.org/draft/2020-12/schema"",
+    ""$defs"": {
+      ""Names"": { ""type"": ""array"", ""items"": { ""type"": ""string"" } },
+      ""Ages"": { ""type"": ""object"", ""additionalProperties"": { ""type"": ""integer"" } },
+      ""Nicknames"": { ""anyOf"": [{ ""type"": ""array"", ""items"": { ""type"": ""string"" } }, { ""type"": ""null"" }] },
+      ""Weights"": { ""anyOf"": [{ ""type"": ""object"", ""additionalProperties"": { ""type"": ""number"" } }, { ""type"": ""null"" }] },
+      ""Pair"": { ""anyOf"": [{ ""type"": ""array"", ""items"": [{ ""type"": ""integer"" }, { ""type"": ""string"" }] }, { ""type"": ""null"" }] }
+    },
+    ""properties"": {
+      ""names"": { ""$ref"": ""#/$defs/Names"" },
+      ""ages"": { ""$ref"": ""#/$defs/Ages"" },
+      ""nicknames"": { ""$ref"": ""#/$defs/Nicknames"" },
+      ""weights"": { ""$ref"": ""#/$defs/Weights"" },
+      ""pair"": { ""$ref"": ""#/$defs/Pair"" }
+    },
+    ""title"": ""Dog"",
+    ""type"": ""object""
+}");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("public System.Collections.Generic.List<string> Names"), "Named array definition must be inlined.");
+            Assert.IsTrue(code.Contains("public System.Collections.Generic.Dictionary<string, int> Ages"), "Named dictionary definition must be inlined.");
+            Assert.IsTrue(code.Contains("public System.Collections.Generic.List<string> Nicknames"), "Nullable array definition must be inlined.");
+            Assert.IsTrue(code.Contains("public System.Collections.Generic.Dictionary<string, double> Weights"), "Nullable dictionary definition must be inlined.");
+            Assert.IsTrue(code.Contains("public System.Tuple<int, string> Pair"), "Nullable tuple definition must be inlined.");
+            foreach (var typeName in new[] { "Names", "Ages", "Nicknames", "Weights", "Pair" })
+            {
+                Assert.IsFalse(code.Contains($"class {typeName}"), $"Collection definition {typeName} must not generate a class.");
+            }
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
         public async Task GenerateOptionalProperties_EnsureAnyOfResolvesToNullable()
         {
             var schema = await SchemaTestHelper.FromJsonAsync(@"

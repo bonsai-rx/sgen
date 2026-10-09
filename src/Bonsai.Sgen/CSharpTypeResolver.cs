@@ -35,6 +35,15 @@ namespace Bonsai.Sgen
             return typeName;
         }
 
+        protected override bool IsDefinitionTypeSchema(JsonSchema schema)
+        {
+            var valueSchemas = schema.OneOf.Where(member => !member.IsNullable(SchemaType.JsonSchema)).ToList();
+            if (schema.Type == JsonObjectType.None && schema.OneOf.Count == 2 && valueSchemas.Count == 1)
+                return base.IsDefinitionTypeSchema(valueSchemas[0].ActualSchema);
+
+            return base.IsDefinitionTypeSchema(schema);
+        }
+
         public override JsonSchema RemoveNullability(JsonSchema schema)
         {
             JsonSchema? selectedSchema = null;

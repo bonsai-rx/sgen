@@ -60,6 +60,17 @@ namespace Bonsai.Sgen.Tests
             return schema;
         }
 
+        public static JsonSchema CreateAnyOfSchema(IEnumerable<JsonSchema> schemas, bool optional = true)
+        {
+            var schema = new JsonSchema();
+            schema.AnyOf.AddRange(schemas);
+            if (optional)
+            {
+                schema.AnyOf.Add(CreateNullSchema());
+            }
+            return schema;
+        }
+
         public static JsonSchema CreateDiscriminatorSchema(
             string propertyName = "kind",
             params KeyValuePair<string, JsonSchema>[] mappings)

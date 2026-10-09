@@ -21,8 +21,33 @@ _SCALAR_TYPES = frozenset({"boolean", "integer", "number", "string"})
 """JSON types of scalar definitions."""
 
 
-def _is_scalar(definition: JsonSchemaValue) -> bool:
-    return definition.get("type") in _SCALAR_TYPES and "enum" not in definition
+_DEFINITION_PREFIX = "#/$defs/"
+"""Prefix of a reference to a definition in the same schema document."""
+
+
+def _is_inlined_value(definition: JsonSchemaValue) -> bool:
+    kind = definition.get("type")
+    if kind in _SCALAR_TYPES:
+        return "enum" not in definition
+    if kind == "array":
+        return "prefixItems" not in definition
+    if kind == "object":
+        return "additionalProperties" in definition and "properties" not in definition
+    return False
+
+
+def _is_inlined(definition: JsonSchemaValue, definitions: dict[str, JsonSchemaValue]) -> bool:
+    if _is_inlined_value(definition):
+        return True
+    members = definition.get("anyOf") or definition.get("oneOf") or []
+    values = [member for member in members if member.get("type") != "null"]
+    if len(members) != 2 or len(values) != 1:
+        return False
+    value = values[0]
+    reference = value.get("$ref", "")
+    if reference.startswith(_DEFINITION_PREFIX):
+        value = definitions.get(reference.removeprefix(_DEFINITION_PREFIX), {})
+    return _is_inlined_value(value)
 
 
 def schema_types(module: ModuleType) -> list[SchemaType]:
@@ -55,7 +80,8 @@ def export_schema(*models: SchemaType) -> JsonSchemaValue:
         TypeError: If a specified type is not a schema type, or a definition has no type
             name, such as a plain pydantic model, enumeration or type alias. Discriminated
             unions are exempt, since they are generated as local unions, and so are aliases
-            of scalar types, since they need no type name.
+            of scalar types, lists and dictionaries, nullable or not, since they need no type
+            name.
     """
     if not models:
         raise ValueError("No models to export.")
@@ -64,12 +90,13 @@ def export_schema(*models: SchemaType) -> JsonSchemaValue:
     _, schema = TypeAdapter.json_schemas(
         [(index, "validation", TypeAdapter(model)) for index, model in enumerate(models)]
     )
+    definitions = schema["$defs"]
     unnamed = [
         key
-        for key, definition in schema["$defs"].items()
+        for key, definition in definitions.items()
         if TYPENAME_KEY not in definition
         and "discriminator" not in definition
-        and not _is_scalar(definition)
+        and not _is_inlined(definition, definitions)
     ]
     if unnamed:
         raise TypeError(

@@ -78,6 +78,24 @@ Speeds = TypeAliasType("Speeds", Literal["fast", "slow"])
 MaybeLabel = TypeAliasType("MaybeLabel", str | None)
 """An alias of a nullable scalar type."""
 
+MaybeLink = TypeAliasType("MaybeLink", Link | None)
+"""An alias of a nullable alias of a scalar type."""
+
+Roster = TypeAliasType("Roster", list[str])
+"""An alias of a list."""
+
+Herd = TypeAliasType("Herd", list[derived.Cat])
+"""An alias of a list of models."""
+
+Scores = TypeAliasType("Scores", dict[str, int])
+"""An alias of a dictionary."""
+
+MaybeRoster = TypeAliasType("MaybeRoster", Roster | None)
+"""An alias of a nullable alias of a list."""
+
+Coordinates = TypeAliasType("Coordinates", tuple[int, int])
+"""An alias of a tuple."""
+
 
 class Count(RootModel[int]):
     """A plain root model of a scalar type."""
@@ -246,10 +264,40 @@ def test_scalar_alias_exports_without_typename():
         link: Link
         speed: Speed
         count: Count
+        maybe_label: MaybeLabel
+        maybe_link: MaybeLink
 
     definitions = _definitions(Gauge)
     untagged = {key for key, value in definitions.items() if "x-sgen-typename" not in value}
-    assert untagged == {"Label", "Link", "Speed", "Count"}
+    assert untagged == {"Label", "Link", "Speed", "Count", "MaybeLabel", "MaybeLink"}
+
+
+def test_collection_alias_exports_without_typename():
+    """An alias of a list or dictionary needs no type name, since generated code inlines it."""
+
+    class Kennel(SchemaModel):
+        """A kennel."""
+
+        roster: Roster
+        herd: Herd
+        scores: Scores
+        maybe_roster: MaybeRoster
+
+    definitions = _definitions(Kennel)
+    untagged = {key for key, value in definitions.items() if "x-sgen-typename" not in value}
+    assert untagged == {"Roster", "Herd", "Scores", "MaybeRoster"}
+
+
+def test_tuple_alias_raises_on_export():
+    """An alias of a tuple raises, since generated code loses the types of its items."""
+
+    class Map(SchemaModel):
+        """A map."""
+
+        coordinates: Coordinates
+
+    with pytest.raises(TypeError, match="Missing type names for Coordinates"):
+        export_schema(Map)
 
 
 def test_enumerated_literal_alias_raises_on_export():
@@ -262,18 +310,6 @@ def test_enumerated_literal_alias_raises_on_export():
 
     with pytest.raises(TypeError, match="Missing type names for Speeds"):
         export_schema(Gearbox)
-
-
-def test_nullable_scalar_alias_raises_on_export():
-    """An alias of a nullable scalar type is generated as a class, which needs a type name."""
-
-    class Badge(SchemaModel):
-        """A badge."""
-
-        label: MaybeLabel
-
-    with pytest.raises(TypeError, match="Missing type names for MaybeLabel"):
-        export_schema(Badge)
 
 
 def test_export_plain_type_raises():
