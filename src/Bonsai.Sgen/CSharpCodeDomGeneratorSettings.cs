@@ -8,6 +8,8 @@ namespace Bonsai.Sgen
         {
             GenerateDataAnnotations = false;
             GenerateJsonMethods = true;
+            InlineNamedArrays = true;
+            InlineNamedDictionaries = true;
             TypeNameGenerator = new CSharpTypeNameGenerator(this);
             EnumNameGenerator = new CSharpEnumNameGenerator();
             PropertyNameGenerator = new CSharpPropertyNameGenerator();

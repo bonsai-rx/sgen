@@ -114,6 +114,28 @@ class Owner(SchemaModel):
     creature: Creature | None = None
 
 
+Label = TypeAliasType("Label", str)
+"""An alias of a scalar type."""
+
+Nickname = TypeAliasType("Nickname", Label | None)
+"""An alias of a nullable scalar type."""
+
+Labels = TypeAliasType("Labels", list[Label])
+"""An alias of a list."""
+
+Counts = TypeAliasType("Counts", dict[str, int] | None)
+"""An alias of a nullable dictionary."""
+
+
+class Tag(SchemaModel):
+    """A model referring to aliases of scalar types and collections."""
+
+    label: Label
+    nickname: Nickname = None
+    aliases: Labels = []
+    counts: Counts = None
+
+
 class Visit(SchemaModel):
     """A visit to the veterinarian."""
 
