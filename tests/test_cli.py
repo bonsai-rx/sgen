@@ -41,6 +41,23 @@ def test_module_entry_point_runs():
     assert "--allow-local-types" in result.stdout
 
 
+def test_console_script_imports_from_current_folder(tmp_path: Path):
+    """The console script imports modules from the current folder."""
+    script = shutil.which("bonsai-sgen", path=str(Path(sys.executable).parent))
+    assert script is not None
+    command = [script, "export", "models.base", "-o", str(tmp_path)]
+    subprocess.run(command, cwd=Path(__file__).parent, check=True)
+    assert (tmp_path / "TestHelper.Base.json").exists()
+
+
+def test_main_restores_module_search_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Running the command in-process leaves the module search path as it was."""
+    monkeypatch.chdir(tmp_path)
+    search_path = list(sys.path)
+    assert cli.main(["export", "models.base", "-o", str(tmp_path)]) == 0
+    assert sys.path == search_path
+
+
 def test_export_writes_schema_per_namespace(tmp_path: Path):
     """Each namespace is written to a file named after it, as write_schema writes it."""
     output = tmp_path / "schemas"
@@ -119,7 +136,7 @@ def test_export_warning_shown_as_message(tmp_path: Path, capsys: pytest.CaptureF
     """A warning is shown as a message of the command, without the source that raised it."""
     assert cli.main(["export", "models.owners", "-o", str(tmp_path)]) == 0
     message = capsys.readouterr().err
-    assert "python -m bonsai.sgen: warning: Household.animal refers to union" in message
+    assert "bonsai-sgen: warning: Household.animal refers to union" in message
     assert ".py:" not in message
 
 

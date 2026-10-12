@@ -8,6 +8,9 @@ readme = "src/bonsai/sgen/README.md"
 requires-python = ">=3.11"
 dependencies = ["pydantic>=2.10", "typing-extensions>=4.6.1"]
 
+[project.scripts]
+bonsai-sgen = "bonsai.sgen.cli:main"
+
 [project.urls]
 Documentation = "https://bonsai-rx.org/sgen"
 Repository = "https://github.com/bonsai-rx/sgen"
