@@ -248,7 +248,13 @@ def write_schema(
     namespaces = sorted({get_typename(model).rpartition(".")[0] for model in models})
     if len(namespaces) != 1:
         raise ValueError(f"Models belong to {len(namespaces)} namespaces: {namespaces}.")
-    path = Path(directory) / f"{namespaces[0]}.json"
     schema = export_schema(*models, allow_local_types=allow_local_types)
+    return _write_schema_file(directory, namespaces[0], schema)
+
+
+def _write_schema_file(
+    directory: str | PathLike[str], namespace: str, schema: JsonSchemaValue
+) -> Path:
+    path = Path(directory) / f"{namespace}.json"
     path.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
     return path

@@ -73,7 +73,14 @@ class Runner:
 
 
 @pytest.fixture(scope="session")
-def runner(tmp_path_factory: pytest.TempPathFactory) -> Runner:
+def generator() -> list[str]:
+    """Builds the local generator and returns the command line running it."""
+    _run("dotnet", "build", GENERATOR, "--configuration", "Release")
+    return _run_command(GENERATOR)
+
+
+@pytest.fixture(scope="session")
+def runner(tmp_path_factory: pytest.TempPathFactory, generator: list[str]) -> Runner:
     """Generates code for every test namespace with the local generator and compiles it."""
     root = tmp_path_factory.mktemp("interop")
     with warnings.catch_warnings():
@@ -83,8 +90,6 @@ def runner(tmp_path_factory: pytest.TempPathFactory) -> Runner:
         ]
         paths.append(write_schema(root, *schema_types(plain), allow_local_types=True))
 
-    _run("dotnet", "build", GENERATOR, "--configuration", "Release")
-    generator = _run_command(GENERATOR)
     generated = root / "Generated"
     for path in paths:
         _run(*generator, path, "--output", generated, "--serializer", "json", "yaml")
