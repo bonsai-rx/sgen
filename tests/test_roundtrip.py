@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 import yaml
 from conftest import Runner
-from models import base, derived, local, owners
+from models import base, derived, local, owners, plain
 from pydantic import BaseModel
 
 from bonsai.sgen import get_typename
@@ -52,6 +52,27 @@ CASES: dict[str, BaseModel] = {
     "local-union": local.Burrow(digger=local.Mole(name="Digger", depth=2)),
     "union-from-other-namespace": owners.Household(animal=derived.Animal(DOG)),
     "redefined-union": owners.Shelter(resident=owners.Resident(DOG)),
+    "local-model": plain.Puppy(name="Rex", collar=plain.Collar(size=3, color="red")),
+    "local-dataclass": plain.Puppy(
+        name="Rex", collar=plain.Collar(size=3), basket=plain.Basket(width=1.5)
+    ),
+    "local-typed-dict": plain.Puppy(
+        name="Rex", collar=plain.Collar(size=3), bowls=[{"food": "kibble", "grams": 200}]
+    ),
+    "local-integer-enum": plain.Puppy(
+        name="Rex", collar=plain.Collar(size=3), coat=plain.Coat.LONG_HAIR
+    ),
+    "local-string-enum": plain.Puppy(
+        name="Rex", collar=plain.Collar(size=3), temper=plain.Temper.VERY_PLAYFUL
+    ),
+    "local-generic": plain.Puppy(
+        name="Rex", collar=plain.Collar(size=3), crate=plain.Crate[int](content=2)
+    ),
+    "local-generic-schema-model": plain.Puppy(
+        name="Rex",
+        collar=plain.Collar(size=3),
+        box=plain.Box[plain.Collar](content=plain.Collar(size=1)),
+    ),
 }
 """Values covering each schema pattern, one pattern per value so failures stay separate."""
 
@@ -65,6 +86,8 @@ KNOWN_FAILURES: dict[tuple[str, str | None, str | None, str | None], str] = {
     ("integer-enum", "Yaml", "net472", "test_roundtrip_preserves_value"): YAML_ENUM_FAILURE,
     ("null-enum", "Yaml", "net472", "test_roundtrip_preserves_value"): YAML_ENUM_FAILURE,
     ("string-enum", "Yaml", "net472", None): YAML_ENUM_FAILURE,
+    ("local-integer-enum", "Yaml", "net472", "test_roundtrip_preserves_value"): YAML_ENUM_FAILURE,
+    ("local-string-enum", "Yaml", "net472", None): YAML_ENUM_FAILURE,
     ("datetime", "Yaml", None, None): "YAML reads date-time only in the round-trip format of .NET",
     ("duration", None, None, None): "durations are not written in ISO 8601, #85",
     ("union-from-other-namespace", "Yaml", None, None): YAML_UNION_FAILURE,

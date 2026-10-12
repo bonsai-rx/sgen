@@ -30,7 +30,10 @@ The `Pet` union is discriminated by the constant tag that each member declares i
 
 A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
 
-Every other type in the schema must derive from one of the base classes, so exporting a schema that refers to a plain Pydantic model or enumeration raises an error. An alias of a scalar type, a list or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.
+Every other type in the schema must derive from one of the base classes, so exporting a schema that refers to a plain Pydantic model or enumeration raises an error, unless the export allows [local types](#local-types). An alias of a scalar type, a list or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.
+
+> [!WARNING]
+> Generated code cannot represent tuples, unions without a discriminator such as `int | str`, or anonymous discriminated unions declared in a field. Exporting a schema that refers to any of them raises an error.
 
 ## Schema export
 
@@ -47,6 +50,44 @@ dotnet bonsai.sgen "PersonAndDiscriminatedPets.json" -o Extensions --serializer 
 ```
 
 The [Python API reference](xref:bonsai.sgen) describes every class and function in the package, including how to refer to a type generated from another schema.
+
+## Local types
+
+A schema can also refer to types that do not derive from the base classes, such as plain Pydantic models, dataclasses, typed dictionaries and enumerations from another library. These types have no namespace of their own, so they would be exported as local types in the schema of each module that refers to them. In the following module, `Basket` is a local type:
+
+```python
+from dataclasses import dataclass
+
+from bonsai.sgen import SchemaModel
+
+SGEN_NAMESPACE = "DogAndBasket"
+
+
+@dataclass
+class Basket:
+    size: int
+    color: str = ""
+
+
+class Dog(SchemaModel):
+    name: str
+    basket: Basket
+```
+
+Exporting such a schema would raise an error unless `allow_local_types` is set:
+
+```python
+write_schema("schemas", Dog, allow_local_types=True)
+```
+
+`Bonsai.Sgen` then generates `Basket` in the `DogAndBasket` namespace alongside `Dog`, as it does for a local union. This has some costs:
+
+- Two namespaces that refer to the same local type each generate their own class. The two classes are distinct C# types, so an object of one cannot be assigned to a property of the other, although both read and write the same data.
+- The name of the generated class matches the Python class name, unless the schema includes two Python classes with the same name from different modules. Pydantic then prefixes both with their module names to prevent a name clash, which means adding a type to the schema can change the name of a generated class.
+
+Local types otherwise follow the conventions of the base classes. The schema of an integer enumeration specifies the names of its values, and field descriptions are kept. A parametrized generic model is also exported as a local type, and generated as a class whose name combines the model and its arguments, such as `BoxInt` for `Box[int]`.
+
+The option affects only the type name check. A type that generated code cannot represent raises an error independently of `allow_local_types`. The models passed to `write_schema` or `export_schema` must still derive from the base classes, since the namespace of the schema is derived from them.
 
 ## Model serialization
 

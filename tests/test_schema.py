@@ -8,7 +8,7 @@ from enum import Enum, StrEnum, auto
 from typing import Annotated, Generic, Literal, TypeVar
 
 import pytest
-from models import base, derived, late, local, owners, unnamed
+from models import base, derived, late, local, owners, plain, unnamed
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, RootModel, ValidationError
 from typing_extensions import TypeAliasType
 
@@ -243,15 +243,39 @@ def test_subclass_changing_config_repeats_fields():
 
 
 def test_undiscriminated_alias_raises_on_export():
-    """A union alias without a discriminator has no type name, so it raises on export."""
+    """A union alias without a discriminator raises on export, since its members are lost."""
 
     class Litter(SchemaModel):
         """A litter."""
 
         plain: Plain
 
-    with pytest.raises(TypeError, match="Missing type names for Plain"):
+    with pytest.raises(TypeError, match="Plain is a union without a discriminator"):
         export_schema(Litter)
+
+
+def test_undiscriminated_union_raises_on_export():
+    """A union of models without a discriminator raises on export, since its members are lost."""
+
+    class Litter(SchemaModel):
+        """A litter."""
+
+        runt: derived.Cat | derived.Hamster
+
+    with pytest.raises(TypeError, match="Litter.runt is a union without a discriminator"):
+        export_schema(Litter)
+
+
+def test_scalar_union_raises_on_export():
+    """A union of scalar types raises on export, since generated code cannot represent it."""
+
+    class Collar(SchemaModel):
+        """A collar."""
+
+        size: int | str | None = None
+
+    with pytest.raises(TypeError, match="Collar.size is a union without a discriminator"):
+        export_schema(Collar)
 
 
 def test_scalar_alias_exports_without_typename():
@@ -296,7 +320,32 @@ def test_tuple_alias_raises_on_export():
 
         coordinates: Coordinates
 
-    with pytest.raises(TypeError, match="Missing type names for Coordinates"):
+    with pytest.raises(TypeError, match="Coordinates is a tuple"):
+        export_schema(Map)
+
+
+def test_tuple_raises_on_export():
+    """A tuple raises on export, since generated code loses the types of its items."""
+
+    class Map(SchemaModel):
+        """A map."""
+
+        bounds: list[tuple[int, int]]
+
+    with pytest.raises(TypeError, match="Map.bounds is a tuple"):
+        export_schema(Map)
+
+
+def test_unsupported_types_all_reported():
+    """Every type that generated code cannot represent is reported in a single error."""
+
+    class Map(SchemaModel):
+        """A map."""
+
+        origin: tuple[int, int]
+        scale: int | float
+
+    with pytest.raises(TypeError, match=r"Map.origin is a tuple(.|\n)*Map.scale is a union"):
         export_schema(Map)
 
 
@@ -348,7 +397,7 @@ def test_explicit_typename_not_inherited():
 
 
 def test_generic_model_raises_on_export():
-    """A parametrized generic model cannot be exported, but a concrete subclass can."""
+    """A parametrized generic model has no type name, but a concrete subclass has one."""
 
     class Box(SchemaModel, Generic[T]):
         """A box."""
@@ -363,9 +412,97 @@ def test_generic_model_raises_on_export():
 
         box: Box[int]
 
-    with pytest.raises(TypeError, match=r"Box\[int\] is a generic model"):
+    with pytest.raises(TypeError, match="Missing type names for Box_int_"):
         export_schema(Crate)
     assert _definitions(IntBox)["IntBox"]["properties"]["content"]["type"] == "integer"
+
+
+def test_generic_model_typename_raises():
+    """A generic model has no type name, so it cannot be exported directly."""
+    with pytest.raises(TypeError, match=r"Box\[int\] has no type name"):
+        get_typename(plain.Box[int])
+    with pytest.raises(TypeError, match="Box has no type name"):
+        export_schema(plain.Box)
+
+
+def test_local_types_export_without_typenames():
+    """Types without type names are exported as local types when local types are allowed."""
+    definitions = export_schema(plain.Puppy, allow_local_types=True)["$defs"]
+    untagged = {key for key, value in definitions.items() if "x-sgen-typename" not in value}
+    assert untagged == {"Collar", "Basket", "Bowl", "Coat", "Temper", "Crate_int_", "Box_Collar_"}
+
+
+def test_generic_model_from_other_namespace_exports_as_local_type():
+    """A generic model parametrized in another namespace has no type name of its module."""
+
+    class Crate(SchemaModel):
+        """A crate."""
+
+        box: plain.Box[int]
+
+    definitions = export_schema(Crate, allow_local_types=True)["$defs"]
+    assert "x-sgen-typename" not in definitions["Box_int_"]
+    assert definitions["Crate"]["x-sgen-typename"] == "TestHelper.Schema.Crate"
+
+
+def test_local_integer_enum_names_values():
+    """A local integer enumeration specifies the names of its values like a SchemaEnum."""
+    definitions = export_schema(plain.Puppy, allow_local_types=True)["$defs"]
+    assert definitions["Coat"]["x-enumNames"] == ["Short", "LongHair"]
+    assert "x-enumNames" not in definitions["Temper"]
+
+
+def test_local_type_description_kept():
+    """A field described exactly like its local type keeps its description, which pydantic drops."""
+
+    @dataclasses.dataclass
+    class Basket:
+        """A basket."""
+
+        width: float
+
+    class Home(BaseModel):
+        """A home."""
+
+        basket: Basket = Field(description="A basket.")
+
+    class Puppy(SchemaModel):
+        """A puppy."""
+
+        home: Home = Field(description="A home.")
+
+    definitions = export_schema(Puppy, allow_local_types=True)["$defs"]
+    assert definitions["Puppy"]["properties"]["home"]["description"] == "A home."
+    assert definitions["Home"]["properties"]["basket"]["description"] == "A basket."
+
+
+def test_local_type_union_from_other_namespace_warns():
+    """A local type referring to a union of another namespace warns of the YAML gap."""
+
+    class Basket(BaseModel):
+        """A basket."""
+
+        animal: derived.Animal
+
+    class Home(SchemaModel):
+        """A home."""
+
+        basket: Basket
+
+    with pytest.warns(SgenWarning, match="Basket.animal refers to union TestHelper.Derived.Animal"):
+        export_schema(Home, allow_local_types=True)
+
+
+def test_local_types_unsupported_type_raises_on_export():
+    """A type that generated code cannot represent raises even when local types are allowed."""
+
+    class Map(SchemaModel):
+        """A map."""
+
+        origin: tuple[int, int]
+
+    with pytest.raises(TypeError, match="Map.origin is a tuple"):
+        export_schema(Map, allow_local_types=True)
 
 
 def test_description_of_type_kept():
@@ -672,19 +809,43 @@ def test_alias_union_type_statement():
     assert get_typename(namespace["Litter"]) == "TestHelper.Schema.Litter"
 
 
-def test_inline_union_raises():
-    """A discriminated union declared inline in a field raises on definition."""
-    with pytest.raises(TypeError, match="Zoo.animals declares a discriminated union inline"):
+def test_anonymous_union_raises_on_export():
+    """An anonymous discriminated union declared in a field raises on export."""
 
-        class Zoo(SchemaModel):
-            """A zoo."""
+    class Zoo(SchemaModel):
+        """A zoo."""
 
-            animals: list[Annotated[derived.Cat | base.Dog, Field(discriminator="kind")]]
+        animals: list[Annotated[derived.Cat | base.Dog, Field(discriminator="kind")]]
+
+    with pytest.raises(TypeError, match="Zoo.animals declares an anonymous discriminated union"):
+        export_schema(Zoo)
+
+
+def test_anonymous_union_in_plain_model_raises_on_export():
+    """An anonymous discriminated union declared in a plain model raises on export."""
+
+    class Basket(BaseModel):
+        """A basket."""
+
+        animal: Annotated[derived.Cat | derived.Hamster, Field(discriminator="kind")]
+
+    class Home(SchemaModel):
+        """A home."""
+
+        basket: Basket
+
+    with pytest.raises(TypeError, match="Basket.animal declares an anonymous discriminated union"):
+        export_schema(Home)
 
 
 def test_schema_types_in_declaration_order():
     """The schema types of a module are those defined in it, in declaration order."""
     assert schema_types(owners) == [owners.Household, owners.Resident, owners.Shelter]
+
+
+def test_schema_types_exclude_generic_models():
+    """The schema types of a module leave out generic models, which have no type name."""
+    assert schema_types(plain) == [plain.Puppy]
 
 
 def test_schema_types_include_marked_aliases():
