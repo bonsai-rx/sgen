@@ -30,30 +30,43 @@ The `Pet` union is discriminated by the constant tag that each member declares i
 
 A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
 
-Every other type in the schema must derive from one of the base classes, so exporting a schema that refers to a plain Pydantic model or enumeration raises an error, unless the export allows [local types](#local-types). An alias of a scalar type, a list or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.
+Every other type in the schema must derive from one of the base classes. Exporting a schema that refers to a plain Pydantic model or enumeration raises an error, unless the export allows [local types](#local-types). An alias of a scalar type, a list or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.
+
+> [!TIP]
+> When combining `SchemaEnum` with an enumeration base that defines the behavior of its values, such as `IntEnum` or `StrEnum`, list `SchemaEnum` first, so that the other base keeps its behavior.
 
 > [!WARNING]
 > Generated code cannot represent tuples, unions without a discriminator such as `int | str`, or anonymous discriminated unions declared in a field. Exporting a schema that refers to any of them raises an error.
 
 ## Schema export
 
-The module works both as a library for manipulating model objects and as a script that writes the schema when run:
+The `export` command writes one schema file for each namespace declared by the specified modules. For the example module, it writes `PersonAndDiscriminatedPets.json`:
 
 ```powershell
-uv run "person_and_discriminated_pets.py"
+uv run bonsai-sgen export person_and_discriminated_pets -o schemas
 ```
 
-The `write_schema` function writes the schema to a file named after the module namespace, here `PersonAndDiscriminatedPets.json`. `Bonsai.Sgen` derives the namespace of the generated types from that file, so they share the namespace of the module:
+Each module is specified by its fully qualified name, and a package exports all its submodules. `Bonsai.Sgen` derives the namespace of the generated types from the name of the schema file, so they keep the namespace declared in Python:
 
 ```powershell
-dotnet bonsai.sgen "PersonAndDiscriminatedPets.json" -o Extensions --serializer json
+dotnet bonsai.sgen "schemas/PersonAndDiscriminatedPets.json" -o Extensions --serializer json
 ```
 
-The [Python API reference](xref:bonsai.sgen) describes every class and function in the package, including how to refer to a type generated from another schema.
+Run `bonsai-sgen --help` for the options of each command. From Python, the [`export_schema`](xref:bonsai.sgen.export_schema) and [`write_schema`](xref:bonsai.sgen.write_schema) functions produce the same schemas.
+
+## Code generation
+
+The `generate` command exports each schema in memory and passes it to `Bonsai.Sgen` directly, so no schema file is written:
+
+```powershell
+uv run bonsai-sgen generate person_and_discriminated_pets -o Extensions --serializer json
+```
+
+The command runs `dotnet bonsai.sgen`, so `Bonsai.Sgen` must be installed as a local tool of the repository, from the same minor release as `bonsai-sgen`. To run another build of `Bonsai.Sgen`, such as a global install or a local build, set the `BONSAI_SGEN` environment variable to the command line that runs it.
 
 ## Local types
 
-A schema can also refer to types that do not derive from the base classes, such as plain Pydantic models, dataclasses, typed dictionaries and enumerations from another library. These types have no namespace of their own, so they would be exported as local types in the schema of each module that refers to them. In the following module, `Basket` is a local type:
+A schema can also refer to types that do not derive from the base classes, such as plain Pydantic models, dataclasses, typed dictionaries and enumerations from another library. These types have no namespace of their own, so they would be exported as local types in the schema of each namespace that refers to them. In the following module, `dog_and_basket.py`, `Basket` is a local type:
 
 ```python
 from dataclasses import dataclass
@@ -74,10 +87,10 @@ class Dog(SchemaModel):
     basket: Basket
 ```
 
-Exporting such a schema would raise an error unless `allow_local_types` is set:
+Exporting such a schema would raise an error unless local types are allowed:
 
-```python
-write_schema("schemas", Dog, allow_local_types=True)
+```powershell
+uv run bonsai-sgen export dog_and_basket --allow-local-types -o schemas
 ```
 
 `Bonsai.Sgen` then generates `Basket` in the `DogAndBasket` namespace alongside `Dog`, as it does for a local union. This has some costs:
@@ -87,7 +100,7 @@ write_schema("schemas", Dog, allow_local_types=True)
 
 Local types otherwise follow the conventions of the base classes. The schema of an integer enumeration specifies the names of its values, and field descriptions are kept. A parametrized generic model is also exported as a local type, and generated as a class whose name combines the model and its arguments, such as `BoxInt` for `Box[int]`.
 
-The option affects only the type name check. A type that generated code cannot represent raises an error independently of `allow_local_types`. The models passed to `write_schema` or `export_schema` must still derive from the base classes, since the namespace of the schema is derived from them.
+The option affects only the type name check. A type that generated code cannot represent raises an error even when local types are allowed.
 
 ## Model serialization
 

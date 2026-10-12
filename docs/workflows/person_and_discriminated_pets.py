@@ -1,11 +1,10 @@
 from abc import ABC
-from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import Field
 from typing_extensions import TypeAliasType
 
-from bonsai.sgen import SchemaModel, write_schema
+from bonsai.sgen import SchemaModel
 
 SGEN_NAMESPACE = "PersonAndDiscriminatedPets"
 
@@ -30,7 +29,3 @@ Pet = TypeAliasType("Pet", Annotated[Cat | Dog, Field(discriminator="pet_type")]
 class PersonAndPet(SchemaModel):
     owner: str
     pet: Pet | None = None
-
-
-if __name__ == "__main__":
-    write_schema(Path(__file__).parent, PersonAndPet)
