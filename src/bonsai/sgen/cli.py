@@ -191,7 +191,7 @@ def _parser() -> argparse.ArgumentParser:
     )
 
     parser = argparse.ArgumentParser(
-        prog="python -m bonsai.sgen",
+        prog="bonsai-sgen",
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -231,16 +231,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     parser = _parser()
     arguments = parser.parse_args(argv)
+    current_folder = os.getcwd()
+    add_current_folder = "" not in sys.path and current_folder not in sys.path
+    if add_current_folder:
+        sys.path.insert(0, current_folder)
 
     def show_warning(message: Warning | str, *_: object, **__: object) -> None:
         print(f"{parser.prog}: warning: {message}", file=sys.stderr)
 
-    with warnings.catch_warnings():
-        warnings.showwarning = show_warning
-        try:
+    try:
+        with warnings.catch_warnings():
+            warnings.showwarning = show_warning
             if arguments.command == "export":
                 return _export(arguments)
             return _generate(arguments)
-        except _CommandError as error:
-            print(f"{parser.prog}: error: {error}", file=sys.stderr)
-            return 1
+    except _CommandError as error:
+        print(f"{parser.prog}: error: {error}", file=sys.stderr)
+        return 1
+    finally:
+        if add_current_folder and current_folder in sys.path:
+            sys.path.remove(current_folder)
