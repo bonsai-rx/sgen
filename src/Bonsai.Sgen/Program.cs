@@ -1,5 +1,4 @@
 ﻿using System.CommandLine;
-using NJsonSchema;
 
 namespace Bonsai.Sgen
 {
@@ -7,20 +6,8 @@ namespace Bonsai.Sgen
     {
         static async Task<int> Main(string[] args)
         {
-            var schemaPathArgument = ArgumentValidation.AcceptExistingOnly(
-                new Argument<FileInfo>("schema")
-            {
-                Description = "Specifies the URL or path to the JSON schema describing the data types " +
-                              "for which to generate serialization classes.",
-                Arity = Console.IsInputRedirected ? ArgumentArity.ZeroOrOne : ArgumentArity.ExactlyOne
-            });
-
-            var generatorNamespaceOption = new Option<string?>("--namespace")
-            {
-                Description = "Namespace to use for generated code. If not specified, the sanitized name " +
-                              "of the schema file will be used."
-            };
-
+            var schemaPathArgument = new SchemaPathArgument();
+            var generatorNamespaceOption = new NamespaceOption();
             var generatorTypeNameOption = new Option<string?>("--root")
             {
                 Description = "Type name hint to use for the schema root element. If not specified, the title " +
@@ -62,32 +49,14 @@ namespace Bonsai.Sgen
             rootCommand.Options.Add(serializerLibrariesOption);
             rootCommand.SetAction(async (parseResult, cancellationToken) =>
             {
-                JsonSchema schema;
-                var schemaPath = parseResult.GetValue(schemaPathArgument);
                 var referenceResolverFactory = JsonSchemaExtensions.CreateJsonReferenceResolverFactory();
-                if (schemaPath is null && Console.IsInputRedirected)
-                {
-                    using var stream = Console.OpenStandardInput();
-                    schema = await JsonSchema.FromJsonAsync(stream, documentPath: null, referenceResolverFactory, cancellationToken);
-                }
-                else
-                {
-                    schema = Uri.IsWellFormedUriString(schemaPath!.FullName, UriKind.Absolute)
-                        ? await JsonSchema.FromUrlAsync(schemaPath.FullName, referenceResolverFactory, cancellationToken)
-                        : await JsonSchema.FromFileAsync(schemaPath.FullName, referenceResolverFactory, cancellationToken);
-                }
+                var schemaDocument = await schemaPathArgument.LoadSchemaAsync(parseResult, referenceResolverFactory, cancellationToken);
+                var generatorNamespace = parseResult.GetValue(generatorNamespaceOption) ?? schemaDocument.Name;
+                var schema = schemaDocument.Schema;
 
                 var settings = new CSharpCodeDomGeneratorSettings();
                 var nameGenerator = (CSharpTypeNameGenerator)settings.TypeNameGenerator;
                 settings.SerializerLibraries = (SerializerLibraries)parseResult.GetValue(serializerLibrariesOption);
-
-                var generatorNamespace = parseResult.GetValue(generatorNamespaceOption);
-                if (string.IsNullOrEmpty(generatorNamespace))
-                    generatorNamespace =
-                        schemaPath is not null ? Path.GetFileNameWithoutExtension(schemaPath.Name) :
-                        !string.IsNullOrEmpty(schema.Title) ? schema.Title :
-                        "DataSchema";
-
                 settings.Namespace = nameGenerator.GenerateNamespace(schema, generatorNamespace);
                 schema = schema.WithCompatibleDefinitions(nameGenerator)
                                .WithResolvedAnyOfNullableProperty()
