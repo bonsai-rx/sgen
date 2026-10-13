@@ -1,6 +1,14 @@
 """A module that declares no namespace."""
 
+from pydantic import ConfigDict
+
 from bonsai.sgen import SchemaModel
+
+
+class Mustelid(SchemaModel):
+    """A base with no type name that only sets the configuration of its subclasses."""
+
+    model_config = ConfigDict(validate_assignment=True)
 
 
 class Ferret(SchemaModel):

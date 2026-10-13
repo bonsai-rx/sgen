@@ -28,6 +28,8 @@ The `Pet` union is discriminated by the constant tag that each member declares i
 
 `PetBase` lists `ABC` among its bases, so it is generated as an abstract class. Only a model that lists `ABC` itself is generated as abstract, which leaves `Cat` and `Dog` concrete.
 
+A base class in a module that declares no namespace is not generated as its own type. Instead, each model deriving from it includes the fields of the base within its own schema.
+
 A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
 
 Every other type in the schema must derive from one of the base classes. Exporting a schema that refers to a plain Pydantic model or enumeration raises an error, unless the export allows [local types](#local-types). An alias of a scalar type, a list or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.

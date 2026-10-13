@@ -209,6 +209,33 @@ def test_subclass_refers_to_base():
     assert definitions["Burrower"]["x-sgen-typename"] == "TestHelper.Local.Burrower"
 
 
+def test_subclass_repeats_unnamed_base_fields():
+    """A model deriving from a base with no type name repeats the fields of the base."""
+
+    class Polecat(unnamed.Ferret):
+        """A model deriving from a base with no type name."""
+
+        age: int
+
+    definitions = _definitions(Polecat)
+    assert "allOf" not in definitions["Polecat"]
+    assert set(definitions["Polecat"]["properties"]) == {"name", "age"}
+    assert "Ferret" not in definitions
+
+
+def test_unnamed_configuration_base_not_exported():
+    """A base with no type name that only sets configuration is left out of the schema."""
+
+    class Otter(unnamed.Mustelid):
+        """A model deriving from a configuration base."""
+
+        name: str
+
+    definitions = _definitions(Otter)
+    assert "allOf" not in definitions["Otter"]
+    assert set(definitions) == {"Otter"}
+
+
 def test_abstract_base_marked_abstract():
     """A model listing ABC among its bases is abstract, while its subclasses are not."""
     definitions = _definitions(local.Burrow)

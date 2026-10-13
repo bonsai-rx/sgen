@@ -149,7 +149,9 @@ def _schema_base(cls: type["SchemaModel"]) -> type["SchemaModel"] | None:
     if len(bases) != 1:
         return None
     base = bases[0]
-    if _is_generic(base):
+    try:
+        get_typename(base)
+    except TypeError:
         return None
     annotations = inspect.get_annotations(cls)
     if base.model_config != cls.model_config or any(
