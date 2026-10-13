@@ -186,8 +186,8 @@ def _parser() -> argparse.ArgumentParser:
     shared.add_argument(
         "--allow-local-types",
         action="store_true",
-        help="Allows types with no type name as local types, generated in the namespace of "
-        "each module that refers to them.",
+        help="Allows types with no type name as local types, generated in each namespace that "
+        "refers to them.",
     )
 
     parser = argparse.ArgumentParser(

@@ -218,7 +218,7 @@ def export_schema(*models: SchemaType, allow_local_types: bool = False) -> JsonS
         raise TypeError(
             f"Missing type names for {', '.join(sorted(unnamed))}. Declare these types as "
             "subclasses of SchemaModel, SchemaEnum or SchemaUnion, or allow them as local "
-            "types with allow_local_types=True."
+            "types."
         )
     local_namespace = next(iter(namespaces)) if len(namespaces) == 1 else None
     _warn_unions_from_other_namespaces(definitions, local_namespace)

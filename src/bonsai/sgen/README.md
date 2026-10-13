@@ -12,7 +12,7 @@ Each release of `bonsai-sgen` matches the release of `Bonsai.Sgen` with the same
     pip install bonsai-sgen
     ```
 
-2. Define the models in a module that declares the namespace of the generated types:
+2. Define the models in a module, `person_and_discriminated_pets.py`, that declares the namespace of the generated types:
 
     ```python
     from abc import ABC
@@ -48,14 +48,10 @@ Each release of `bonsai-sgen` matches the release of `Bonsai.Sgen` with the same
         pet: Pet | None = None
     ```
 
-3. Write the schema of the models to a file:
+3. Write the schema of the models to a file named after the namespace:
 
-    ```python
-    from person_and_discriminated_pets import PersonAndPet
-
-    from bonsai.sgen import write_schema
-
-    write_schema("schemas", PersonAndPet)
+    ```cmd
+    bonsai-sgen export person_and_discriminated_pets -o schemas
     ```
 
 4. Generate the C# types with the release of `Bonsai.Sgen` matching the installed version of `bonsai-sgen`:
