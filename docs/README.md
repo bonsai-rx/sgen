@@ -1,45 +1,18 @@
-# Serializer Generator Tool
+# Bonsai - Serializer Generator
 
-`Bonsai.Sgen` is a code generator tool for the [Bonsai visual reactive programming language](https://bonsai-rx.org). It uses [JSON Schema](https://json-schema.org/) to specify [record data types](https://en.wikipedia.org/wiki/Record_(computer_science)), and generates operators to create and manipulate these records. It builds on [NJsonSchema](https://github.com/RicoSuter/NJsonSchema), adding further customization of the generated code and features specific to Bonsai.
+Tools for defining record data types in the [Bonsai visual reactive programming language](https://bonsai-rx.org) with [JSON Schema](https://json-schema.org/). Each type is specified once in a schema, and the generated C# code includes operators to create, serialize and deserialize records of that type in a workflow.
 
-## Getting Started
+## Packages
 
-1. Install `Bonsai.Sgen` as a local tool:
+- [`Bonsai.Sgen`](https://www.nuget.org/packages/Bonsai.Sgen) is a .NET tool that generates C# types and operators from JSON Schema files.
+- [`bonsai-sgen`](https://pypi.org/project/bonsai-sgen/) is a Python package of Pydantic base classes for models that export schemas compatible with `Bonsai.Sgen`. Its `bonsai-sgen` command exports the schemas of a module as JSON Schema files, or generates the C# types directly.
 
-    ```cmd
-    dotnet new tool-manifest
-    ```
-
-    ```cmd
-    dotnet tool install --local Bonsai.Sgen
-    ```
-
-2. Generate YAML or JSON serialization classes from a schema file into the `Extensions` folder of the project:
-
-    ```cmd
-    dotnet bonsai.sgen schema.json -o Extensions --serializer yaml
-    ```
-
-    ```cmd
-    dotnet bonsai.sgen schema.json -o Extensions --serializer json
-    ```
-
-3. Add the package reference for the chosen serializer to the `Extensions.csproj` file:
-
-    ```xml
-    <PackageReference Include="YamlDotNet" Version="16.3.0" />
-    ```
-
-    ```xml
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    ```
-
-4. When using the JSON serializer, also install `Newtonsoft.Json` in the Bonsai environment.
+Both packages are released together, and each release of `bonsai-sgen` matches the release of `Bonsai.Sgen` with the same version number.
 
 ## Additional Documentation
 
-For additional documentation and examples, refer to the [official Bonsai.Sgen documentation](https://bonsai-rx.org/sgen/articles/basic-usage.html).
+For installation steps, examples and the reference of both packages, refer to the [official Bonsai.Sgen documentation](https://bonsai-rx.org/sgen).
 
 ## Feedback & Contributing
 
-`Bonsai.Sgen` is released as open source under the [MIT license](https://licenses.nuget.org/MIT). Bug reports and contributions are welcome at [the GitHub repository](https://github.com/bonsai-rx/sgen).
+`Bonsai.Sgen` and `bonsai-sgen` are released as open source under the [MIT license](https://github.com/bonsai-rx/sgen/blob/main/LICENSE). Bug reports and contributions are welcome at [the GitHub repository](https://github.com/bonsai-rx/sgen).
