@@ -9,7 +9,16 @@ from typing import Annotated, Generic, Literal, TypeVar
 
 import pytest
 from models import base, derived, late, local, owners, plain, unnamed
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, RootModel, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    RootModel,
+    TypeAdapter,
+    ValidationError,
+    create_model,
+)
 from typing_extensions import TypeAliasType
 
 from bonsai.sgen import (
@@ -151,6 +160,27 @@ def test_missing_namespace_raises_on_export():
     """A model whose module declares no namespace cannot be exported."""
     with pytest.raises(TypeError, match="SGEN_NAMESPACE"):
         export_schema(unnamed.Ferret)
+
+
+@pytest.mark.parametrize(
+    "schema_type", [unnamed.Ferret, unnamed.Mustelids, unnamed.Burrowers], ids=str
+)
+def test_unnamed_type_schema_omits_typename(schema_type: SchemaType):
+    """A type with no type name has a schema without one outside an export."""
+    schema = TypeAdapter(schema_type).json_schema()
+    assert "x-sgen-typename" not in json.dumps(schema)
+
+
+@pytest.mark.parametrize(
+    "schema_type", [unnamed.Ferret, unnamed.Mustelids, unnamed.Burrowers], ids=str
+)
+def test_unnamed_type_reference_raises_only_on_export(schema_type: SchemaType):
+    """A model referring to a type with no type name raises on export, but not before or after."""
+    Keeper = create_model("Keeper", __base__=SchemaModel, animal=(schema_type, ...))
+    Keeper.model_json_schema()
+    with pytest.raises(TypeError, match="SGEN_NAMESPACE"):
+        export_schema(Keeper)
+    Keeper.model_json_schema()
 
 
 def test_plain_model_raises_on_export():

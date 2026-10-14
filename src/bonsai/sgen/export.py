@@ -19,6 +19,7 @@ from .schema import (
     SgenWarning,
     _add_enum_names,
     _alias_marker,
+    _exporting,
     _is_generic,
     _namespace,
     get_typename,
@@ -195,10 +196,11 @@ def export_schema(*models: SchemaType, allow_local_types: bool = False) -> JsonS
     if not models:
         raise ValueError("No models to export.")
     namespaces = {_namespace(get_typename(model)) for model in models}
-    _, schema = TypeAdapter.json_schemas(
-        [(index, "validation", TypeAdapter(model)) for index, model in enumerate(models)],
-        schema_generator=_SchemaGenerator,
-    )
+    with _exporting():
+        _, schema = TypeAdapter.json_schemas(
+            [(index, "validation", TypeAdapter(model)) for index, model in enumerate(models)],
+            schema_generator=_SchemaGenerator,
+        )
     definitions = schema["$defs"]
     unsupported = [
         error

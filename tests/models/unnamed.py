@@ -1,8 +1,11 @@
 """A module that declares no namespace."""
 
-from pydantic import ConfigDict
+from typing import Annotated
 
-from bonsai.sgen import SchemaModel
+from pydantic import ConfigDict
+from typing_extensions import TypeAliasType
+
+from bonsai.sgen import DiscriminatedUnion, SchemaAlias, SchemaModel, SchemaUnion
 
 
 class Mustelid(SchemaModel):
@@ -15,6 +18,24 @@ class Ferret(SchemaModel):
     """A model with no type name."""
 
     name: str
+
+
+class Mink(SchemaModel):
+    """Another model with no type name."""
+
+    name: str
+
+
+class Mustelids(SchemaUnion):
+    """A union with no type name."""
+
+    root: Annotated[Ferret | Mink, DiscriminatedUnion("species")]
+
+
+Burrowers = TypeAliasType(
+    "Burrowers", Annotated[Ferret | Mink, DiscriminatedUnion("species"), SchemaAlias()]
+)
+"""A union alias with no type name."""
 
 
 class Stoat(SchemaModel, sgen_typename="TestHelper.Base.Stoat"):
