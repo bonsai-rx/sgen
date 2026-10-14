@@ -10,12 +10,12 @@
         "pet_type": {
           "const": "cat",
           "default": "cat",
-          "title": "Pet Type",
+          "title": "PetType",
           "type": "string"
         },
         "can_meow": {
           "default": true,
-          "title": "Can Meow",
+          "title": "CanMeow",
           "type": "boolean"
         }
       },
@@ -33,7 +33,7 @@
         "pet_type": {
           "const": "dog",
           "default": "dog",
-          "title": "Pet Type",
+          "title": "PetType",
           "type": "string"
         },
         "can_bark": {
@@ -46,7 +46,7 @@
             }
           ],
           "default": true,
-          "title": "Can Bark"
+          "title": "CanBark"
         }
       },
       "title": "Dog",
@@ -68,7 +68,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "title": "Pet"
         }
       },
       "required": [

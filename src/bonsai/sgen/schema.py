@@ -1,6 +1,7 @@
 """Base classes for pydantic models used to generate code with Bonsai.Sgen."""
 
 import inspect
+import re
 import sys
 import types
 import typing
@@ -14,13 +15,14 @@ from typing import Annotated, Any, TypeAlias, Union, get_args, get_origin
 import typing_extensions
 from pydantic import (
     BaseModel,
+    ConfigDict,
     GetCoreSchemaHandler,
     GetJsonSchemaHandler,
     RootModel,
     SerializerFunctionWrapHandler,
 )
 from pydantic.alias_generators import to_pascal
-from pydantic.fields import FieldInfo
+from pydantic.fields import ComputedFieldInfo, FieldInfo
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema, core_schema
 
@@ -168,6 +170,11 @@ def _field_key(name: str, field: FieldInfo) -> str:
     return field.serialization_alias or field.alias or name
 
 
+def _field_title(name: str, field: FieldInfo | ComputedFieldInfo) -> str:
+    key = _field_key(name, field) if isinstance(field, FieldInfo) else field.alias or name
+    return "".join(part[:1].upper() + part[1:] for part in re.split(r"[-_.]", key))
+
+
 def _schema_base(cls: type["SchemaModel"]) -> type["SchemaModel"] | None:
     bases = [
         base for base in cls.__bases__ if issubclass(base, SchemaModel) and base is not SchemaModel
@@ -229,12 +236,25 @@ class SchemaModel(BaseModel):
     A discriminated union is declared as a type alias or as a `SchemaUnion`, so that it is
     generated under its own name. A generic model has no type name, so it is exported only
     as a local type. A concrete subclass of a generic model has a type name of its own.
+
+    The alias of a field is its key in the schema and in the generated code, so it is used for
+    serialization, and the title of the field is the name of the generated property.
     """
+
+    model_config = ConfigDict(serialize_by_alias=True, field_title_generator=_field_title)
 
     def __init_subclass__(cls, sgen_typename: str | None = None, **kwargs: Any) -> None:
         """Records the type name specified for a type defined elsewhere, which `object` rejects."""
         super().__init_subclass__(**kwargs)
         _set_typename(cls, sgen_typename)
+
+    def model_dump(self, *, by_alias: bool | None = True, **kwargs: Any) -> dict[str, Any]:
+        """Serializes the model to a dict, under aliases by default, including nested types."""
+        return super().model_dump(by_alias=by_alias, **kwargs)
+
+    def model_dump_json(self, *, by_alias: bool | None = True, **kwargs: Any) -> str:
+        """Serializes the model to JSON, under aliases by default, including nested types."""
+        return super().model_dump_json(by_alias=by_alias, **kwargs)
 
     @classmethod
     def __get_pydantic_json_schema__(
