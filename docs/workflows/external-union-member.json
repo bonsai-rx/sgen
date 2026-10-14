@@ -5,7 +5,7 @@
       "title": "Cat",
       "type": "object",
       "properties": {
-        "pet_type": {
+        "petType": {
           "const": "cat",
           "default": "cat",
           "type": "string"
@@ -13,7 +13,7 @@
         "name": {
           "type": "string"
         },
-        "can_meow": {
+        "canMeow": {
           "type": "boolean"
         }
       }
@@ -37,7 +37,7 @@
     "Pet": {
       "title": "Pet",
       "discriminator": {
-        "propertyName": "pet_type",
+        "propertyName": "petType",
         "mapping": {
           "cat": "#/$defs/Cat",
           "dog": "#/$defs/Dog"

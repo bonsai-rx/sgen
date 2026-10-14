@@ -26,9 +26,9 @@ Projects often need more than one record type. A single schema file can define s
       "type": "object",
       "properties": {
         "age": { "type": "integer" },
-        "first_name": { "type": "string" },
-        "last_name": { "type": "string" },
-        "date_of_birth": { "type": "string", "format": "date-time" }
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "dateOfBirth": { "type": "string", "format": "date-time" }
       }
     },
     "Dog": {
@@ -140,7 +140,7 @@ An `array` generates a [`List<T>`](https://learn.microsoft.com/en-us/dotnet/api/
 JSON Schema represents dates and times as strings with the `date` or `date-time` format:
 
 ```json
-"date_of_birth": { "type": "string", "format": "date-time" }
+"dateOfBirth": { "type": "string", "format": "date-time" }
 ```
 
 Both formats generate a [`DateTimeOffset`](https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset) property. A `date-time` value follows [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339), which requires the offset from UTC that `DateTimeOffset` stores. A `date` value has no offset, but .NET Framework has no type that holds only a date, so the generated property uses `DateTimeOffset` as well. A date stored as a `DateTime` converts implicitly to `DateTimeOffset`.

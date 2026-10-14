@@ -44,8 +44,8 @@ namespace ExternalUnionMember
             }
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("can_meow")]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="can_meow")]
+        [Newtonsoft.Json.JsonPropertyAttribute("canMeow")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="canMeow")]
         public bool CanMeow
         {
             get
@@ -82,8 +82,8 @@ namespace ExternalUnionMember
 
 
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.10.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [Newtonsoft.Json.JsonConverter(typeof(JsonInheritanceConverter), "pet_type")]
-    [YamlDiscriminator("pet_type")]
+    [Newtonsoft.Json.JsonConverter(typeof(JsonInheritanceConverter), "petType")]
+    [YamlDiscriminator("petType")]
     [JsonInheritanceAttribute("cat", typeof(Cat))]
     [JsonInheritanceAttribute("dog", typeof(PetDog))]
     public abstract partial class Pet
@@ -123,7 +123,7 @@ namespace ExternalUnionMember
 
 
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.10.0.0 (Newtonsoft.Json v13.0.0.0, YamlDotNet v16.0.0.0)")]
-    [Newtonsoft.Json.JsonConverter(typeof(JsonUnionWrapperConverter), typeof(PersonAndDog.Dog), "pet_type", "dog")]
+    [Newtonsoft.Json.JsonConverter(typeof(JsonUnionWrapperConverter), typeof(PersonAndDog.Dog), "petType", "dog")]
     [YamlUnionWrapper(typeof(PersonAndDog.Dog))]
     internal sealed partial class PetDog : Pet, IUnionWrapper, IUnionWrapper<PersonAndDog.Dog>
     {

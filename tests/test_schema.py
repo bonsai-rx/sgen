@@ -18,11 +18,13 @@ from pydantic import (
     TypeAdapter,
     ValidationError,
     create_model,
+    with_config,
 )
 from pydantic.alias_generators import to_camel
 from typing_extensions import TypeAliasType
 
 from bonsai.sgen import (
+    CAMEL_CASE_CONFIG,
     DiscriminatedUnion,
     SchemaAlias,
     SchemaEnum,
@@ -330,44 +332,114 @@ def test_dump_uses_aliases_of_nested_plain_models():
         spare_collars: list[Collar] = [Collar()]
 
     dog = Dog()
-    expected = {"collar": {"collarSize": 1}, "spare_collars": [{"collarSize": 1}]}
+    expected = {"collar": {"collarSize": 1}, "spareCollars": [{"collarSize": 1}]}
     assert dog.model_dump() == expected
     assert json.loads(dog.model_dump_json()) == expected
     assert dog.model_dump(by_alias=False)["collar"] == {"collar_size": 1}
 
 
+def test_camel_case_keys_written():
+    """A schema model writes and exports camelCase keys, including in nested models."""
+    owner = derived.Owner(name="Avery", animal=derived.Animal(base.Dog(name="Rex", can_bark=False)))
+    properties = _definitions(base.Dog)["Dog"]["properties"]
+    data = json.loads(owner.model_dump_json())
+    assert set(properties) == set(data["animal"]) == {"kind", "name", "canBark"}
+    assert data["animal"]["canBark"] is False
+
+
+@pytest.mark.parametrize("key", ["canBark", "can_bark"])
+def test_camel_and_snake_keys_read(key: str):
+    """A schema model reads keys in either form, so files written before the convention load."""
+    data = {"name": "Avery", "animal": {"kind": "dog", "name": "Rex", key: False}}
+    animal = derived.Owner.model_validate(data).animal.root
+    assert isinstance(animal, base.Dog)
+    assert animal.can_bark is False
+
+
+def test_camel_key_read_over_snake_key():
+    """Data with both forms of one key reads the camelCase form."""
+    dog = base.Dog.model_validate({"name": "Rex", "can_bark": True, "canBark": False})
+    assert dog.can_bark is False
+
+
+def test_constructor_accepts_field_names():
+    """A schema model is constructed from the Python names of its fields."""
+    assert base.Dog(name="Rex", can_bark=False).can_bark is False
+
+
+def test_local_type_follows_convention_only_with_config():
+    """A plain local type writes camelCase keys only when it applies the convention."""
+
+    class Collar(BaseModel):
+        """A plain model without configuration."""
+
+        collar_size: int = 1
+
+    @with_config(CAMEL_CASE_CONFIG)
+    @dataclasses.dataclass
+    class Basket:
+        """A dataclass applying the convention."""
+
+        basket_color: str = "red"
+
+    class Dog(SchemaModel):
+        """A model nesting local types."""
+
+        collar: Collar = Collar()
+        basket: Basket = dataclasses.field(default_factory=Basket)
+
+    definitions = export_schema(Dog, allow_local_types=True)["$defs"]
+    assert list(definitions["Collar"]["properties"]) == ["collar_size"]
+    assert list(definitions["Basket"]["properties"]) == ["basketColor"]
+
+
+def test_base_without_alias_generator_writes_field_names():
+    """A project base clearing the alias generator writes and exports the Python names."""
+
+    class SnakeCaseModel(SchemaModel):
+        """A base opting out of the camelCase convention."""
+
+        model_config = ConfigDict(alias_generator=None)
+
+    class Cat(SnakeCaseModel):
+        """A model deriving from the base."""
+
+        can_meow: bool = True
+
+    assert list(_definitions(Cat)["Cat"]["properties"]) == ["can_meow"]
+    assert json.loads(Cat().model_dump_json()) == {"can_meow": True}
+
+
 def test_field_titles_match_property_names():
     """The title of each field is the name of the generated property, unless set explicitly."""
 
-    class Feeder(SchemaModel):
-        """A model with field aliases."""
+    class Dog(SchemaModel):
+        """A model with an explicit alias and an explicit title."""
 
-        model_config = ConfigDict(alias_generator=to_camel)
+        favorite_toy: str = "ball"
+        toy_count: int = Field(0, alias="toy-total")
+        nickname: str = Field("", title="Pet name")
 
-        pellet_delivery_timeout: int = 1
-        pellet_count: int = Field(0, alias="pellet-total")
-        roi: int = Field(0, title="Region of interest")
-
-    class Patch(SchemaModel):
-        """A model without field aliases."""
+    class Cat(SchemaModel):
+        """A model with field names of different forms."""
 
         x: float = 0
-        led_1: bool = False
-        frameRate: int = 50
+        paw_1: bool = False
+        canMeow: bool = True
 
-    definitions = _definitions(Feeder, Patch)
+    definitions = _definitions(Dog, Cat)
     titles = {
         key: prop["title"]
-        for name in ("Feeder", "Patch")
+        for name in ("Dog", "Cat")
         for key, prop in definitions[name]["properties"].items()
     }
     assert titles == {
-        "pelletDeliveryTimeout": "PelletDeliveryTimeout",
-        "pellet-total": "PelletTotal",
-        "roi": "Region of interest",
+        "favoriteToy": "FavoriteToy",
+        "toy-total": "ToyTotal",
+        "nickname": "Pet name",
         "x": "X",
-        "led_1": "Led1",
-        "frameRate": "FrameRate",
+        "paw1": "Paw1",
+        "canMeow": "CanMeow",
     }
 
 

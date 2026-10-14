@@ -28,7 +28,7 @@ namespace PersonAndDiscriminatedPets
             _canMeow = other._canMeow;
         }
     
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="can_meow")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="canMeow")]
         public bool CanMeow
         {
             get
@@ -82,7 +82,7 @@ namespace PersonAndDiscriminatedPets
             _canBark = other._canBark;
         }
     
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="can_bark")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="canBark")]
         public bool? CanBark
         {
             get
@@ -197,7 +197,7 @@ namespace PersonAndDiscriminatedPets
 
 
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Bonsai.Sgen", "0.10.0.0 (YamlDotNet v16.0.0.0)")]
-    [YamlDiscriminator("pet_type")]
+    [YamlDiscriminator("petType")]
     [JsonInheritanceAttribute("cat", typeof(Cat))]
     [JsonInheritanceAttribute("dog", typeof(Dog))]
     public abstract partial class Pet : PetBase

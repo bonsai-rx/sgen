@@ -48,7 +48,7 @@ namespace PersonAndDog
             }
         }
     
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="first_name")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="firstName")]
         public string FirstName
         {
             get
@@ -61,7 +61,7 @@ namespace PersonAndDog
             }
         }
     
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="last_name")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="lastName")]
         public string LastName
         {
             get
@@ -75,7 +75,7 @@ namespace PersonAndDog
         }
     
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="date_of_birth")]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="dateOfBirth")]
         public System.DateTimeOffset DateOfBirth
         {
             get

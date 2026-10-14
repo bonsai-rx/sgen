@@ -44,7 +44,7 @@ For example, the following schema declares a `Pet` that is either a `Dog` or a `
       "cat": "#/$defs/Cat",
       "dog": "#/$defs/Dog"
     },
-    "propertyName": "pet_type"
+    "propertyName": "petType"
   },
   "oneOf": [
     { "$ref": "#/$defs/Cat" },
@@ -53,7 +53,7 @@ For example, the following schema declares a `Pet` that is either a `Dog` or a `
 }
 ```
 
-From this schema, `Bonsai.Sgen` generates an abstract base type `Pet` from which the `Dog` and `Cat` types derive. None of these types has a `pet_type` property. Instead, the generated serializers write the `pet_type` tag of each object and read it back to create an object of the matching type.
+From this schema, `Bonsai.Sgen` generates an abstract base type `Pet` from which the `Dog` and `Cat` types derive. None of these types has a `petType` property. Instead, the generated serializers write the `petType` tag of each object and read it back to create an object of the matching type.
 
 In a workflow, a property of type `Pet` is more specific than `object`, but gives access only to the properties of `Pet` itself, not to those added by `Dog` or `Cat`. `Bonsai.Sgen` therefore also generates an operator that filters and downcasts the objects at runtime. Each union gets its own match operator, such as `MatchPet` for the `Pet` union. Setting its `Type` property to `Dog` or `Cat` keeps only the objects of that type and gives access to their properties. Leaving `Type` empty instead upcasts a `Dog` or `Cat` to `Pet`.
 
@@ -90,7 +90,7 @@ For example, the `Dog` member below refers to the `Dog` type generated from [per
 "Pet": {
   "title": "Pet",
   "discriminator": {
-    "propertyName": "pet_type",
+    "propertyName": "petType",
     "mapping": {
       "cat": "#/$defs/Cat",
       "dog": "#/$defs/Dog"
@@ -115,10 +115,10 @@ public partial class Pet
 }
 ```
 
-A `Dog` is serialized with its `pet_type` discriminator tag next to its own properties, in the same flat format as a `Cat`:
+A `Dog` is serialized with its `petType` discriminator tag next to its own properties, in the same flat format as a `Cat`:
 
 ```json
-{ "owner": "Ana", "pet": { "pet_type": "dog", "name": "Rex", "breed": "Collie", "age": 3 } }
+{ "owner": "Ana", "pet": { "petType": "dog", "name": "Rex", "breed": "Collie", "age": 3 } }
 ```
 
 In a workflow, a `MatchPet` operator with its `Type` set to `Dog` specifies a sequence that keeps only the `PetDog` wrappers of the `Pet` sequence and emits the `Dog` object held in each of them. For a sequence of `object`, it also keeps any plain `Dog` values. The implicit conversion shown above wraps a `Dog` in a `PetDog` whenever it is assigned to a property of type `Pet`.

@@ -48,7 +48,7 @@ namespace Person
             }
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("first_name")]
+        [Newtonsoft.Json.JsonPropertyAttribute("firstName")]
         public string FirstName
         {
             get
@@ -61,7 +61,7 @@ namespace Person
             }
         }
     
-        [Newtonsoft.Json.JsonPropertyAttribute("last_name")]
+        [Newtonsoft.Json.JsonPropertyAttribute("lastName")]
         public string LastName
         {
             get
@@ -75,7 +75,7 @@ namespace Person
         }
     
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [Newtonsoft.Json.JsonPropertyAttribute("date_of_birth")]
+        [Newtonsoft.Json.JsonPropertyAttribute("dateOfBirth")]
         public System.DateTimeOffset DateOfBirth
         {
             get
