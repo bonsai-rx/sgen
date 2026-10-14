@@ -21,7 +21,7 @@ from pydantic import (
     RootModel,
     SerializerFunctionWrapHandler,
 )
-from pydantic.alias_generators import to_pascal
+from pydantic.alias_generators import to_camel, to_pascal
 from pydantic.fields import ComputedFieldInfo, FieldInfo
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema, core_schema
@@ -37,6 +37,11 @@ ABSTRACT_KEY = "x-abstract"
 
 NAMESPACE_ATTRIBUTE = "SGEN_NAMESPACE"
 """Module attribute declaring the generated namespace of the schema types in the module."""
+
+CAMEL_CASE_CONFIG = ConfigDict(
+    alias_generator=to_camel, validate_by_name=True, serialize_by_alias=True
+)
+"""Model configuration writing camelCase keys and reading either camelCase or Python names."""
 
 _TYPENAME_ATTRIBUTE = "__sgen_typename__"
 """Class attribute holding the type name specified explicitly for a type defined elsewhere."""
@@ -238,10 +243,11 @@ class SchemaModel(BaseModel):
     as a local type. A concrete subclass of a generic model has a type name of its own.
 
     The alias of a field is its key in the schema and in the generated code, so it is used for
-    serialization, and the title of the field is the name of the generated property.
+    serialization, and the title of the field is the name of the generated property. Aliases
+    are the camelCase form of field names, and data with either form is read.
     """
 
-    model_config = ConfigDict(serialize_by_alias=True, field_title_generator=_field_title)
+    model_config = CAMEL_CASE_CONFIG | ConfigDict(field_title_generator=_field_title)
 
     def __init_subclass__(cls, sgen_typename: str | None = None, **kwargs: Any) -> None:
         """Records the type name specified for a type defined elsewhere, which `object` rejects."""
@@ -293,7 +299,7 @@ class SchemaEnum(Enum):
 
     Type names follow the same rules as `SchemaModel`, including `sgen_typename` for a type
     defined elsewhere. The schema of an integer enumeration specifies the names of its values,
-    with names in the upper case of the Python convention converted to Pascal case. For a
+    with names in the upper case of the Python convention converted to PascalCase. For a
     string enumeration the names are derived directly from its values. To combine it with
     another enumeration base such as `IntEnum` or `StrEnum`, list `SchemaEnum` first.
     """

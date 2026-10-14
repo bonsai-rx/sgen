@@ -3,6 +3,7 @@
 from .export import export_schema, schema_types, write_schema
 from .schema import (
     ABSTRACT_KEY,
+    CAMEL_CASE_CONFIG,
     ENUM_NAMES_KEY,
     NAMESPACE_ATTRIBUTE,
     TYPENAME_KEY,
@@ -18,6 +19,7 @@ from .schema import (
 
 __all__ = [
     "ABSTRACT_KEY",
+    "CAMEL_CASE_CONFIG",
     "ENUM_NAMES_KEY",
     "NAMESPACE_ATTRIBUTE",
     "TYPENAME_KEY",

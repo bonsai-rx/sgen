@@ -7,13 +7,13 @@
         }
       ],
       "properties": {
-        "pet_type": {
+        "petType": {
           "const": "cat",
           "default": "cat",
           "title": "PetType",
           "type": "string"
         },
-        "can_meow": {
+        "canMeow": {
           "default": true,
           "title": "CanMeow",
           "type": "boolean"
@@ -30,13 +30,13 @@
         }
       ],
       "properties": {
-        "pet_type": {
+        "petType": {
           "const": "dog",
           "default": "dog",
           "title": "PetType",
           "type": "string"
         },
-        "can_bark": {
+        "canBark": {
           "anyOf": [
             {
               "type": "boolean"
@@ -85,7 +85,7 @@
           "cat": "#/$defs/Cat",
           "dog": "#/$defs/Dog"
         },
-        "propertyName": "pet_type"
+        "propertyName": "petType"
       },
       "oneOf": [
         {

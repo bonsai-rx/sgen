@@ -8,13 +8,13 @@
         "age": {
           "type": "integer"
         },
-        "first_name": {
+        "firstName": {
           "type": "string"
         },
-        "last_name": {
+        "lastName": {
           "type": "string"
         },
-        "date_of_birth": {
+        "dateOfBirth": {
           "type": "string",
           "format": "date-time"
         }

@@ -53,7 +53,7 @@ A union declared as a type alias is generated as a local union in each namespace
 
 ### Enumerations
 
-Enumerations derive from `SchemaEnum`. The schema of an integer enumeration specifies the names of its values, so the generated members keep the names declared in Python, converted to Pascal case when written in upper case. The names of a string enumeration are derived from its values.
+Enumerations derive from `SchemaEnum`. The schema of an integer enumeration specifies the names of its values, so the generated members keep the names declared in Python, converted to PascalCase when written in upper case. The names of a string enumeration are derived from its values.
 
 > [!TIP]
 > When combining `SchemaEnum` with an enumeration base that defines the behavior of its values, such as `IntEnum` or `StrEnum`, list `SchemaEnum` first, so that the other base keeps its behavior.
@@ -125,6 +125,8 @@ The option affects only the type name check. A type that generated code cannot r
 ## Model serialization
 
 The same model classes create and manipulate objects directly in Python, write them to a JSON file, and read a JSON file back into objects.
+
+Schema models follow a camelCase convention for keys. The key of each field, in data and in the exported schema, is the camelCase form of its Python name, such as `canMeow` for `can_meow`. Schema models accept both forms of a key when reading data, so a file can use either the camelCase keys or the Python names. A local type such as a plain Pydantic model or dataclass follows the convention by applying [`CAMEL_CASE_CONFIG`](xref:bonsai.sgen.CAMEL_CASE_CONFIG).
 
 ### Serialize to JSON
 
