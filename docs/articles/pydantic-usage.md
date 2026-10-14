@@ -18,27 +18,45 @@ uv pip install bonsai-sgen
 
 ## Model definition
 
-Models derive from `SchemaModel` and enumerations from `SchemaEnum`, and a discriminated union is declared as a type alias. Each module declares the namespace of its generated types in its `SGEN_NAMESPACE` attribute, and each type is generated as the class of the same name in that namespace. For example, the following module defines the types of the [tagged unions](advanced-usage.md#tagged-unions) example:
+Models derive from `SchemaModel` and enumerations from `SchemaEnum`, and a discriminated union is declared as a type alias. For example, the following module defines the types of the [tagged unions](advanced-usage.md#tagged-unions) example:
 
 [person_and_discriminated_pets.py](~/workflows/person_and_discriminated_pets.py)
 
 [!code-python[](../workflows/person_and_discriminated_pets.py)]
 
-The `Pet` union is discriminated by the constant tag that each member declares in its `pet_type` property. Since `Pet` is a type alias rather than a model, the `pet` property holds the `Cat` or `Dog` object itself. From Python 3.12, the `type` statement declares the same alias, as in `type Pet = Annotated[Cat | Dog, Field(discriminator="pet_type")]`. Since `Cat` and `Dog` both derive from `PetBase`, the generated `Pet` union derives from `PetBase` too, and `Cat` and `Dog` derive from `Pet`, so the common `age` property is available on every `Pet`.
+### Namespaces and type names
 
-`PetBase` lists `ABC` among its bases, so it is generated as an abstract class. Only a model that lists `ABC` itself is generated as abstract, which leaves `Cat` and `Dog` concrete.
+Each module declares the namespace of its generated types in the `SGEN_NAMESPACE` attribute, and each type is generated as a class of the same name in that namespace. The fully qualified name of the generated class is the type name of the model, such as `PersonAndDiscriminatedPets.Cat`.
 
-A base class in a module that declares no namespace is not generated as its own type. Instead, each model deriving from it includes the fields of the base within its own schema.
-
-A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
+A model describing a type generated elsewhere, for example in an external package, provides its fully qualified type name in the class definition, as in `class Dog(SchemaModel, sgen_typename="Home.Dog")`. Code generated for any other namespace then refers to the existing `Home.Dog` class instead of defining a new one. `SchemaEnum` and `SchemaUnion` accept the same keyword, and `SchemaAlias` accepts it as an argument.
 
 Every other type in the schema must derive from one of the base classes. Exporting a schema that refers to a plain Pydantic model or enumeration raises an error, unless the export allows [local types](#local-types). An alias of a scalar type, a list or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.
 
-> [!TIP]
-> When combining `SchemaEnum` with an enumeration base that defines the behavior of its values, such as `IntEnum` or `StrEnum`, list `SchemaEnum` first, so that the other base keeps its behavior.
-
 > [!WARNING]
 > Generated code cannot represent tuples, unions without a discriminator such as `int | str`, or anonymous discriminated unions declared in a field. Exporting a schema that refers to any of them raises an error.
+
+### Inheritance
+
+A model deriving from another model is generated as a class deriving from the class of its base, so `Cat` and `Dog` share the `age` property declared once in `PetBase`. A model with more than one base model, or one that redefines a field or changes the configuration of its base, includes the fields of its bases within its own schema instead.
+
+`PetBase` lists `ABC` among its bases, so it is generated as an abstract class. Only a model that lists `ABC` itself is generated as abstract, which leaves `Cat` and `Dog` concrete.
+
+A base class with no type name, such as a base in a module that declares no namespace, is not generated as its own type. Instead, each model deriving from it includes the fields of the base within its own schema.
+
+### Discriminated unions
+
+The `Pet` union is discriminated by the constant tag that each member declares in its `pet_type` property. Since `Pet` is a type alias rather than a model, the `pet` property holds the `Cat` or `Dog` object itself. From Python 3.12, the `type` statement declares the same alias, as in `type Pet = Annotated[Cat | Dog, Field(discriminator="pet_type")]`.
+
+Since `Cat` and `Dog` both derive from `PetBase`, the generated `Pet` union derives from `PetBase` too, and `Cat` and `Dog` derive from `Pet`. The common `age` property is therefore available on every `Pet`.
+
+A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
+
+### Enumerations
+
+Enumerations derive from `SchemaEnum`. The schema of an integer enumeration specifies the names of its values, so the generated members keep the names declared in Python, converted to Pascal case when written in upper case. The names of a string enumeration are derived from its values.
+
+> [!TIP]
+> When combining `SchemaEnum` with an enumeration base that defines the behavior of its values, such as `IntEnum` or `StrEnum`, list `SchemaEnum` first, so that the other base keeps its behavior.
 
 ## Schema export
 
