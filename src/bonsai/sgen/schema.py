@@ -446,6 +446,14 @@ class SchemaUnion(RootModel[Any]):
         super().__init_subclass__(**kwargs)
         _set_typename(cls, sgen_typename)
 
+    def model_dump(self, *, by_alias: bool | None = True, **kwargs: Any) -> Any:
+        """Serializes the union to a dict, under aliases by default, including nested types."""
+        return super().model_dump(by_alias=by_alias, **kwargs)
+
+    def model_dump_json(self, *, by_alias: bool | None = True, **kwargs: Any) -> str:
+        """Serializes the union to JSON, under aliases by default, including nested types."""
+        return super().model_dump_json(by_alias=by_alias, **kwargs)
+
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
         """Ensures the union can be generated.

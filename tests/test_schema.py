@@ -338,6 +338,34 @@ def test_dump_uses_aliases_of_nested_plain_models():
     assert dog.model_dump(by_alias=False)["collar"] == {"collar_size": 1}
 
 
+def test_union_dump_uses_aliases_of_nested_plain_models():
+    """A dump of a schema union writes the aliases of plain models nested in its members."""
+
+    class Collar(BaseModel):
+        """A plain model with field aliases."""
+
+        model_config = ConfigDict(alias_generator=to_camel)
+
+        collar_size: int = 1
+
+    class Cat(SchemaModel):
+        """A union member nesting a plain model."""
+
+        kind: Literal["cat"] = "cat"
+        collar: Collar = Collar()
+
+    class Animal(SchemaUnion):
+        """A union whose members nest plain models."""
+
+        root: Annotated[Cat | derived.Hamster, Field(discriminator="kind")]
+
+    animal = Animal(Cat())
+    expected = {"kind": "cat", "collar": {"collarSize": 1}}
+    assert animal.model_dump() == expected
+    assert json.loads(animal.model_dump_json()) == expected
+    assert animal.model_dump(by_alias=False)["collar"] == {"collar_size": 1}
+
+
 def test_camel_case_keys_written():
     """A schema model writes and exports camelCase keys, including in nested models."""
     owner = derived.Owner(name="Avery", animal=derived.Animal(base.Dog(name="Rex", can_bark=False)))
