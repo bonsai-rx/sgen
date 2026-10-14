@@ -5,6 +5,9 @@ import sys
 import types
 import typing
 from abc import ABC
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from enum import Enum
 from typing import Annotated, Any, TypeAlias, Union, get_args, get_origin
 
@@ -35,6 +38,9 @@ NAMESPACE_ATTRIBUTE = "SGEN_NAMESPACE"
 
 _TYPENAME_ATTRIBUTE = "__sgen_typename__"
 """Class attribute holding the type name specified explicitly for a type defined elsewhere."""
+
+_EXPORTING: ContextVar[bool] = ContextVar("_EXPORTING", default=False)
+"""Indicates whether a schema is being exported, in which case a type without a type name raises."""
 
 if sys.version_info >= (3, 12):
     SchemaType: TypeAlias = type[BaseModel] | typing_extensions.TypeAliasType | typing.TypeAliasType
@@ -112,8 +118,28 @@ def _set_typename(cls: type, typename: str | None) -> None:
         setattr(cls, _TYPENAME_ATTRIBUTE, typename)
 
 
+@contextmanager
+def _exporting() -> Generator[None, None, None]:
+    token = _EXPORTING.set(True)
+    try:
+        yield
+    finally:
+        _EXPORTING.reset(token)
+
+
+def _resolve_typename(resolve: Callable[[], str]) -> str | None:
+    try:
+        return resolve()
+    except TypeError:
+        if _EXPORTING.get():
+            raise
+        return None
+
+
 def _bind_typename(cls: type, json_schema: JsonSchemaValue, handler: GetJsonSchemaHandler) -> None:
-    handler.resolve_ref_schema(json_schema)[TYPENAME_KEY] = get_typename(cls)
+    typename = _resolve_typename(lambda: get_typename(cls))
+    if typename is not None:
+        handler.resolve_ref_schema(json_schema)[TYPENAME_KEY] = typename
 
 
 def _alias_marker(alias: Any) -> "SchemaAlias | None":
@@ -218,10 +244,12 @@ class SchemaModel(BaseModel):
 
         Pydantic leaves out a field description identical to that of the field type, which
         would leave the generated property without one, so the description is restored.
-        A generic model is left without a type name.
+        A generic model is left without a type name, as is any other model without one
+        unless the schema is being exported.
 
         Raises:
-            TypeError: If the model has no type name.
+            TypeError: If the model is not generic, has no type name, and the schema is being
+                exported.
         """
         json_schema = handler(core_schema)
         if not _is_generic(cls):
@@ -453,5 +481,9 @@ class SchemaAlias:
                 f"Union {name} is not discriminated. Annotate its members with "
                 "Field(discriminator=...) referring to a constant tag, or with DiscriminatedUnion."
             )
-        definition[TYPENAME_KEY] = self.sgen_typename or _module_typename(name, name, module_name)
+        typename = self.sgen_typename or _resolve_typename(
+            lambda: _module_typename(name, name, module_name)
+        )
+        if typename is not None:
+            definition[TYPENAME_KEY] = typename
         return json_schema
