@@ -19,6 +19,7 @@ from pydantic import (
     ValidationError,
     create_model,
 )
+from pydantic.alias_generators import to_camel
 from typing_extensions import TypeAliasType
 
 from bonsai.sgen import (
@@ -297,6 +298,77 @@ def test_subclass_changing_config_repeats_fields():
     definition = _definitions(Kit)["Kit"]
     assert "allOf" not in definition
     assert set(definition["properties"]) == {"NAME", "DEPTH"}
+
+
+def test_dump_uses_schema_property_names():
+    """A model with field aliases is serialized under the property names of its schema."""
+
+    class Kit(local.Burrower):
+        """A model with field aliases."""
+
+        model_config = ConfigDict(alias_generator=str.upper)
+
+    properties = _definitions(Kit)["Kit"]["properties"]
+    data = json.loads(Kit.model_validate({"NAME": "Ruby"}).model_dump_json())
+    assert set(data) == set(properties) == {"NAME", "DEPTH"}
+
+
+def test_dump_uses_aliases_of_nested_plain_models():
+    """A dump of a schema model writes the aliases of nested plain models, unless disabled."""
+
+    class Collar(BaseModel):
+        """A plain model with field aliases."""
+
+        model_config = ConfigDict(alias_generator=to_camel)
+
+        collar_size: int = 1
+
+    class Dog(SchemaModel):
+        """A model nesting plain models."""
+
+        collar: Collar = Collar()
+        spare_collars: list[Collar] = [Collar()]
+
+    dog = Dog()
+    expected = {"collar": {"collarSize": 1}, "spare_collars": [{"collarSize": 1}]}
+    assert dog.model_dump() == expected
+    assert json.loads(dog.model_dump_json()) == expected
+    assert dog.model_dump(by_alias=False)["collar"] == {"collar_size": 1}
+
+
+def test_field_titles_match_property_names():
+    """The title of each field is the name of the generated property, unless set explicitly."""
+
+    class Feeder(SchemaModel):
+        """A model with field aliases."""
+
+        model_config = ConfigDict(alias_generator=to_camel)
+
+        pellet_delivery_timeout: int = 1
+        pellet_count: int = Field(0, alias="pellet-total")
+        roi: int = Field(0, title="Region of interest")
+
+    class Patch(SchemaModel):
+        """A model without field aliases."""
+
+        x: float = 0
+        led_1: bool = False
+        frameRate: int = 50
+
+    definitions = _definitions(Feeder, Patch)
+    titles = {
+        key: prop["title"]
+        for name in ("Feeder", "Patch")
+        for key, prop in definitions[name]["properties"].items()
+    }
+    assert titles == {
+        "pelletDeliveryTimeout": "PelletDeliveryTimeout",
+        "pellet-total": "PelletTotal",
+        "roi": "Region of interest",
+        "x": "X",
+        "led_1": "Led1",
+        "frameRate": "FrameRate",
+    }
 
 
 def test_undiscriminated_alias_raises_on_export():
