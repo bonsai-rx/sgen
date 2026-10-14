@@ -830,6 +830,95 @@ def test_union_tags_qualified():
     assert Fish(base.Dog(name="Rex")).model_dump()["species"] == "TestHelper.Base.Dog"
 
 
+class Pet(SchemaUnion):
+    """A union tagging its members under a multi-word property name."""
+
+    root: Annotated[derived.Parrot | derived.Goldfish, DiscriminatedUnion("pet_kind")]
+
+
+def test_union_tag_key_follows_member_convention():
+    """The key of the tag property is the camelCase form of its name, as for fields."""
+    assert Pet(derived.Parrot(name="Polly")).model_dump()["petKind"] == "Parrot"
+    assert _definitions(Pet)["Pet"]["discriminator"]["propertyName"] == "petKind"
+
+
+@pytest.mark.parametrize("key", ["petKind", "pet_kind"])
+def test_union_tag_key_read_in_both_forms(key: str):
+    """A union reads the tag under either form of its key."""
+    value = Pet.model_validate({key: "Goldfish", "name": "Bubbles"})
+    assert isinstance(value.root, derived.Goldfish)
+
+
+def test_union_tag_camel_key_read_over_snake_key():
+    """Data with both forms of the tag key reads the camelCase form."""
+    value = Pet.model_validate({"pet_kind": "Parrot", "petKind": "Goldfish", "name": "Bubbles"})
+    assert isinstance(value.root, derived.Goldfish)
+
+
+def test_union_tag_key_kept_without_alias_generator():
+    """The tag key is the specified name when the members clear the alias generator."""
+
+    class SnakeCaseModel(SchemaModel):
+        """A base opting out of the camelCase convention."""
+
+        model_config = ConfigDict(alias_generator=None)
+
+    class Cat(SnakeCaseModel):
+        """A cat."""
+
+        can_meow: bool = True
+
+    class Dog(SnakeCaseModel):
+        """A dog."""
+
+        can_bark: bool = True
+
+    class Animal(SchemaUnion):
+        """A union of members without an alias generator."""
+
+        root: Annotated[Cat | Dog, DiscriminatedUnion("pet_kind")]
+
+    assert Animal(Cat()).model_dump() == {"pet_kind": "Cat", "can_meow": True}
+
+
+def test_union_members_deriving_different_tag_keys_raise():
+    """A union raises when its members derive different keys for the tag property."""
+
+    class Cat(SchemaModel):
+        """A cat opting out of the convention."""
+
+        model_config = ConfigDict(alias_generator=None)
+
+    with pytest.raises(TypeError, match=r"different keys .* \(got petKind, pet_kind\)"):
+
+        class Animal(SchemaUnion):
+            """A union of members deriving different tag keys."""
+
+            root: Annotated[Cat | derived.Parrot, DiscriminatedUnion("pet_kind")]
+
+
+@pytest.mark.parametrize(
+    ("generator", "property_name"),
+    [(lambda name: to_camel(name), "pet_kind"), (None, "species")],
+    ids=["equivalent-generator", "single-word"],
+)
+def test_union_members_deriving_same_tag_key_accepted(generator, property_name: str):
+    """A union accepts members whose alias generators derive the same tag key."""
+
+    class Cat(SchemaModel):
+        """A cat with its own alias generator."""
+
+        model_config = ConfigDict(alias_generator=generator)
+
+    class Animal(SchemaUnion):
+        """A union of members deriving the same tag key."""
+
+        root: Annotated[Cat | derived.Parrot, DiscriminatedUnion(property_name)]
+
+    key = to_camel(property_name)
+    assert Animal(Cat()).model_dump() == {key: "Cat"}
+
+
 def test_union_rejects_member_of_same_name():
     """An instance of another class with the name of a member is not accepted as the member."""
 

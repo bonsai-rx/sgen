@@ -118,7 +118,7 @@ uv run bonsai-sgen export dog_and_basket --allow-local-types -o schemas
 - Two namespaces that refer to the same local type each generate their own class. The two classes are distinct C# types, so an object of one cannot be assigned to a property of the other, although both read and write the same data.
 - The name of the generated class matches the Python class name, unless the schema includes two Python classes with the same name from different modules. Pydantic then prefixes both with their module names to prevent a name clash, which means adding a type to the schema can change the name of a generated class.
 
-Local types otherwise follow the conventions of the base classes. The schema of an integer enumeration specifies the names of its values, and field descriptions are kept. A parametrized generic model is also exported as a local type, and generated as a class whose name combines the model and its arguments, such as `BoxInt` for `Box[int]`.
+Local types follow some conventions of the base classes. The schema of an integer enumeration specifies the names of its values, and field descriptions are kept. A parametrized generic model is also exported as a local type, and generated as a class whose name combines the model and its arguments, such as `BoxInt` for `Box[int]`.
 
 The option affects only the type name check. A type that generated code cannot represent raises an error even when local types are allowed.
 
