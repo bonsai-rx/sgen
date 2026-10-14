@@ -14,6 +14,7 @@ from typing import Annotated, Any, TypeAlias, Union, get_args, get_origin
 
 import typing_extensions
 from pydantic import (
+    AliasChoices,
     AliasGenerator,
     BaseModel,
     ConfigDict,
@@ -173,7 +174,12 @@ def _union_members(annotation: Any) -> tuple[Any, ...]:
 
 
 def _field_key(name: str, field: FieldInfo) -> str:
-    return field.serialization_alias or field.alias or name
+    alias = field.validation_alias
+    if isinstance(alias, AliasChoices) and alias.choices:
+        alias = alias.choices[0]
+    if isinstance(alias, str):
+        return alias
+    return field.alias or name
 
 
 def _field_title(name: str, field: FieldInfo | ComputedFieldInfo) -> str:

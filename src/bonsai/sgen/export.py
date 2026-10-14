@@ -49,6 +49,38 @@ class _SchemaGenerator(GenerateJsonSchema):
             result["description"] = json_schema["description"]
         return result
 
+    def model_field_schema(self, schema: core_schema.ModelField) -> JsonSchemaValue:
+        """Ensures a model field is read and written under the same key.
+
+        Raises:
+            TypeError: If the field is read and written under different keys.
+        """
+        _check_field_keys(schema)
+        return super().model_field_schema(schema)
+
+    def dataclass_field_schema(self, schema: core_schema.DataclassField) -> JsonSchemaValue:
+        """Ensures a dataclass field is read and written under the same key.
+
+        Raises:
+            TypeError: If the field is read and written under different keys.
+        """
+        _check_field_keys(schema)
+        return super().dataclass_field_schema(schema)
+
+
+def _check_field_keys(schema: core_schema.ModelField | core_schema.DataclassField) -> None:
+    written = schema.get("serialization_alias")
+    read = schema.get("validation_alias")
+    if isinstance(read, list):
+        first = read[0] if read else None
+        read = first[0] if isinstance(first, list) and len(first) == 1 else None
+    if isinstance(read, str) and written is not None and read != written:
+        raise TypeError(
+            f"A field read under key {read!r} is written under key {written!r}. Generated code "
+            "reads and writes each property under a single key, so the validation and "
+            "serialization aliases of a field must match."
+        )
+
 
 def _is_inlined_value(definition: JsonSchemaValue) -> bool:
     kind = definition.get("type")
