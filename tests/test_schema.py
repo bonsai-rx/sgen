@@ -10,6 +10,8 @@ from typing import Annotated, Generic, Literal, TypeVar
 import pytest
 from models import base, derived, late, local, owners, plain, unnamed
 from pydantic import (
+    AliasChoices,
+    AliasGenerator,
     BaseModel,
     ConfigDict,
     Field,
@@ -20,7 +22,7 @@ from pydantic import (
     create_model,
     with_config,
 )
-from pydantic.alias_generators import to_camel
+from pydantic.alias_generators import to_camel, to_pascal
 from typing_extensions import TypeAliasType
 
 from bonsai.sgen import (
@@ -336,6 +338,125 @@ def test_dump_uses_aliases_of_nested_plain_models():
     assert dog.model_dump() == expected
     assert json.loads(dog.model_dump_json()) == expected
     assert dog.model_dump(by_alias=False)["collar"] == {"collar_size": 1}
+
+
+SPLIT_ALIASES = ConfigDict(
+    alias_generator=AliasGenerator(validation_alias=to_pascal, serialization_alias=to_camel)
+)
+
+
+def test_split_field_aliases_raise_on_export():
+    """A field read and written under different keys cannot be exported."""
+
+    class Dog(SchemaModel):
+        """A model with a field read and written under different keys."""
+
+        toy_count: int = Field(0, validation_alias="toyTotal", serialization_alias="toys")
+
+    with pytest.raises(TypeError, match="read under key 'toyTotal' is written under key 'toys'"):
+        export_schema(Dog)
+
+
+def test_split_alias_generator_raises_on_export():
+    """A model whose alias generator derives different read and write keys cannot be exported."""
+
+    class Dog(SchemaModel):
+        """A model with a split alias generator."""
+
+        model_config = SPLIT_ALIASES
+
+        toy_count: int = 0
+
+    with pytest.raises(TypeError, match="read under key 'ToyCount' is written under key"):
+        export_schema(Dog)
+
+
+def test_local_type_split_aliases_raise_on_export():
+    """A local type read and written under different keys cannot be exported either."""
+
+    @with_config(SPLIT_ALIASES)
+    @dataclasses.dataclass
+    class Basket:
+        """A dataclass with a split alias generator."""
+
+        basket_color: str = "red"
+
+    class Dog(SchemaModel):
+        """A model nesting the dataclass."""
+
+        basket: Basket = dataclasses.field(default_factory=Basket)
+
+    with pytest.raises(TypeError, match="read under key 'BasketColor'"):
+        export_schema(Dog, allow_local_types=True)
+
+
+def test_alias_choices_led_by_written_key_exported():
+    """A field also reading other keys is exported when its first key is the written one."""
+
+    class Dog(SchemaModel):
+        """A model reading a field under several keys."""
+
+        toy_count: int = Field(0, validation_alias=AliasChoices("toyCount", "toys"))
+
+    assert list(_definitions(Dog)["Dog"]["properties"]) == ["toyCount"]
+
+
+def test_alias_choices_led_by_other_key_raise_on_export():
+    """A field whose first read key is not the written key cannot be exported."""
+
+    class Dog(SchemaModel):
+        """A model reading a field first under a key it does not write."""
+
+        toy_count: int = Field(0, validation_alias=AliasChoices("toys", "toyCount"))
+
+    with pytest.raises(TypeError, match="read under key 'toys' is written under key 'toyCount'"):
+        export_schema(Dog)
+
+
+def test_subclass_of_base_with_split_alias_refers_to_base():
+    """A model deriving from a base with a split alias does not repeat the field of the base."""
+
+    class Canine(SchemaModel):
+        """A base with a field read and written under different keys."""
+
+        toy_count: int = Field(0, validation_alias="toyTotal", serialization_alias="toys")
+
+    class Dog(Canine):
+        """A model deriving from the base."""
+
+        can_bark: bool = True
+
+    schema = Dog.model_json_schema()
+    assert schema["allOf"] == [{"$ref": "#/$defs/Canine"}]
+    assert list(schema["properties"]) == ["canBark"]
+
+
+def test_union_dump_uses_aliases_of_nested_plain_models():
+    """A dump of a schema union writes the aliases of plain models nested in its members."""
+
+    class Collar(BaseModel):
+        """A plain model with field aliases."""
+
+        model_config = ConfigDict(alias_generator=to_camel)
+
+        collar_size: int = 1
+
+    class Cat(SchemaModel):
+        """A union member nesting a plain model."""
+
+        kind: Literal["cat"] = "cat"
+        collar: Collar = Collar()
+
+    class Animal(SchemaUnion):
+        """A union whose members nest plain models."""
+
+        root: Annotated[Cat | derived.Hamster, Field(discriminator="kind")]
+
+    animal = Animal(Cat())
+    expected = {"kind": "cat", "collar": {"collarSize": 1}}
+    assert animal.model_dump() == expected
+    assert json.loads(animal.model_dump_json()) == expected
+    assert animal.model_dump(by_alias=False)["collar"] == {"collar_size": 1}
 
 
 def test_camel_case_keys_written():
@@ -828,6 +949,95 @@ def test_union_tags_qualified():
         root: Annotated[derived.Goldfish | base.Dog, DiscriminatedUnion("species", qualified=True)]
 
     assert Fish(base.Dog(name="Rex")).model_dump()["species"] == "TestHelper.Base.Dog"
+
+
+class Pet(SchemaUnion):
+    """A union tagging its members under a multi-word property name."""
+
+    root: Annotated[derived.Parrot | derived.Goldfish, DiscriminatedUnion("pet_kind")]
+
+
+def test_union_tag_key_follows_member_convention():
+    """The key of the tag property is the camelCase form of its name, as for fields."""
+    assert Pet(derived.Parrot(name="Polly")).model_dump()["petKind"] == "Parrot"
+    assert _definitions(Pet)["Pet"]["discriminator"]["propertyName"] == "petKind"
+
+
+@pytest.mark.parametrize("key", ["petKind", "pet_kind"])
+def test_union_tag_key_read_in_both_forms(key: str):
+    """A union reads the tag under either form of its key."""
+    value = Pet.model_validate({key: "Goldfish", "name": "Bubbles"})
+    assert isinstance(value.root, derived.Goldfish)
+
+
+def test_union_tag_camel_key_read_over_snake_key():
+    """Data with both forms of the tag key reads the camelCase form."""
+    value = Pet.model_validate({"pet_kind": "Parrot", "petKind": "Goldfish", "name": "Bubbles"})
+    assert isinstance(value.root, derived.Goldfish)
+
+
+def test_union_tag_key_kept_without_alias_generator():
+    """The tag key is the specified name when the members clear the alias generator."""
+
+    class SnakeCaseModel(SchemaModel):
+        """A base opting out of the camelCase convention."""
+
+        model_config = ConfigDict(alias_generator=None)
+
+    class Cat(SnakeCaseModel):
+        """A cat."""
+
+        can_meow: bool = True
+
+    class Dog(SnakeCaseModel):
+        """A dog."""
+
+        can_bark: bool = True
+
+    class Animal(SchemaUnion):
+        """A union of members without an alias generator."""
+
+        root: Annotated[Cat | Dog, DiscriminatedUnion("pet_kind")]
+
+    assert Animal(Cat()).model_dump() == {"pet_kind": "Cat", "can_meow": True}
+
+
+def test_union_members_deriving_different_tag_keys_raise():
+    """A union raises when its members derive different keys for the tag property."""
+
+    class Cat(SchemaModel):
+        """A cat opting out of the convention."""
+
+        model_config = ConfigDict(alias_generator=None)
+
+    with pytest.raises(TypeError, match=r"different keys .* \(got petKind, pet_kind\)"):
+
+        class Animal(SchemaUnion):
+            """A union of members deriving different tag keys."""
+
+            root: Annotated[Cat | derived.Parrot, DiscriminatedUnion("pet_kind")]
+
+
+@pytest.mark.parametrize(
+    ("generator", "property_name"),
+    [(lambda name: to_camel(name), "pet_kind"), (None, "species")],
+    ids=["equivalent-generator", "single-word"],
+)
+def test_union_members_deriving_same_tag_key_accepted(generator, property_name: str):
+    """A union accepts members whose alias generators derive the same tag key."""
+
+    class Cat(SchemaModel):
+        """A cat with its own alias generator."""
+
+        model_config = ConfigDict(alias_generator=generator)
+
+    class Animal(SchemaUnion):
+        """A union of members deriving the same tag key."""
+
+        root: Annotated[Cat | derived.Parrot, DiscriminatedUnion(property_name)]
+
+    key = to_camel(property_name)
+    assert Animal(Cat()).model_dump() == {key: "Cat"}
 
 
 def test_union_rejects_member_of_same_name():

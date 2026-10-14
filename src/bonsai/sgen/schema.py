@@ -14,6 +14,8 @@ from typing import Annotated, Any, TypeAlias, Union, get_args, get_origin
 
 import typing_extensions
 from pydantic import (
+    AliasChoices,
+    AliasGenerator,
     BaseModel,
     ConfigDict,
     GetCoreSchemaHandler,
@@ -172,7 +174,12 @@ def _union_members(annotation: Any) -> tuple[Any, ...]:
 
 
 def _field_key(name: str, field: FieldInfo) -> str:
-    return field.serialization_alias or field.alias or name
+    alias = field.validation_alias
+    if isinstance(alias, AliasChoices) and alias.choices:
+        alias = alias.choices[0]
+    if isinstance(alias, str):
+        return alias
+    return field.alias or name
 
 
 def _field_title(name: str, field: FieldInfo | ComputedFieldInfo) -> str:
@@ -213,6 +220,13 @@ def _inherit_base(
     for name, field in base.model_fields.items():
         properties.pop(_field_key(name, field), None)
     definition["allOf"] = [base_ref]
+
+
+def _tag_key(member: Any, name: str) -> str:
+    generator = getattr(member, "model_config", {}).get("alias_generator")
+    if isinstance(generator, AliasGenerator):
+        generator = generator.serialization_alias or generator.alias
+    return generator(name) if generator else name
 
 
 def _check_union_members(name: str, annotation: Any) -> None:
@@ -347,19 +361,22 @@ class DiscriminatedUnion:
     each member must declare its namespace before the union is defined. A member instance is
     resolved by its exact class, so an instance of another class with the same name is
     rejected.
+
+    The tag property follows the alias generator of the union members.
     """
 
     def __init__(self, property_name: str, *, qualified: bool = False):
         """Declares the property carrying the tag, and whether tags are qualified.
 
         Args:
-            property_name: The property carrying the tag of each union member.
+            property_name: The name of the property carrying the tag of each union member.
             qualified: True to tag each union member with its fully qualified type name;
                 otherwise with its class name.
         """
         self.property_name = property_name
         self.qualified = qualified
         self._tags: dict[str, type] | None = None
+        self._key: str | None = None
 
     def __get_pydantic_core_schema__(
         self, source_type: Any, handler: GetCoreSchemaHandler
@@ -367,7 +384,8 @@ class DiscriminatedUnion:
         """Builds a union validated and serialized through the tag of each member.
 
         Raises:
-            TypeError: If two members share a tag, or the marker already tags other members.
+            TypeError: If two members share a tag, the marker already tags other members, or
+                the members derive different keys for the tag property.
         """
         tags: dict[str, type] = {}
         for member in _union_members(source_type):
@@ -377,17 +395,26 @@ class DiscriminatedUnion:
             tags[tag] = member
         if self._tags is not None and self._tags != tags:
             raise TypeError(f"DiscriminatedUnion({self.property_name!r}) tags other members.")
-        self._tags = tags
-        tag_of = {member: tag for tag, member in tags.items()}
         property_name = self.property_name
+        keys = {_tag_key(member, property_name) for member in tags.values()}
+        if len(keys) > 1:
+            raise TypeError(
+                f"Union members derive different keys for tag property {property_name!r} "
+                f"(got {', '.join(sorted(keys))})."
+            )
+        self._tags = tags
+        key = keys.pop()
+        self._key = key
+        tag_of = {member: tag for tag, member in tags.items()}
 
         def select(value: Any) -> str | None:
             if isinstance(value, dict):
-                return value.get(property_name)
+                tag = value.get(key)
+                return value.get(property_name) if tag is None else tag
             return tag_of.get(type(value))
 
         def serialize(value: Any, serializer: SerializerFunctionWrapHandler) -> Any:
-            return {property_name: tag_of[type(value)], **serializer(value)}
+            return {key: tag_of[type(value)], **serializer(value)}
 
         return core_schema.tagged_union_schema(
             {tag: handler.generate_schema(member) for tag, member in tags.items()},
@@ -403,7 +430,7 @@ class DiscriminatedUnion:
         definition = handler.resolve_ref_schema(json_schema)
         references = [member["$ref"] for member in definition["oneOf"]]
         definition["discriminator"] = {
-            "propertyName": self.property_name,
+            "propertyName": self._key or self.property_name,
             "mapping": dict(zip(self._tags or {}, references, strict=True)),
         }
         return json_schema
@@ -424,6 +451,14 @@ class SchemaUnion(RootModel[Any]):
         """Records the type name specified for a type defined elsewhere."""
         super().__init_subclass__(**kwargs)
         _set_typename(cls, sgen_typename)
+
+    def model_dump(self, *, by_alias: bool | None = True, **kwargs: Any) -> Any:
+        """Serializes the union to a dict, under aliases by default, including nested types."""
+        return super().model_dump(by_alias=by_alias, **kwargs)
+
+    def model_dump_json(self, *, by_alias: bool | None = True, **kwargs: Any) -> str:
+        """Serializes the union to JSON, under aliases by default, including nested types."""
+        return super().model_dump_json(by_alias=by_alias, **kwargs)
 
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
