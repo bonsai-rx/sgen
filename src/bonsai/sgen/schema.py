@@ -1,6 +1,5 @@
 """Base classes for pydantic models used to generate code with Bonsai.Sgen."""
 
-import inspect
 import re
 import sys
 import types
@@ -198,12 +197,17 @@ def _schema_base(cls: type["SchemaModel"]) -> type["SchemaModel"] | None:
         get_typename(base)
     except TypeError:
         return None
-    annotations = inspect.get_annotations(cls)
-    if base.model_config != cls.model_config or any(
-        name in annotations for name in base.model_fields
-    ):
-        return None
     return base
+
+
+def _all_properties(
+    definition: JsonSchemaValue, handler: GetJsonSchemaHandler
+) -> dict[str, JsonSchemaValue]:
+    properties: dict[str, JsonSchemaValue] = {}
+    for member in definition.get("allOf", []):
+        properties.update(_all_properties(handler.resolve_ref_schema(member), handler))
+    properties.update(definition.get("properties", {}))
+    return properties
 
 
 def _inherit_base(
@@ -216,9 +220,18 @@ def _inherit_base(
     base_ref = handler(
         core_schema.definitions_schema(core_schema.definition_reference_schema(ref), [base_schema])
     )
+    base_definition = handler.resolve_ref_schema(base_ref)
+    inherited = _all_properties(base_definition, handler)
+    base_required = set(base_definition.get("required", []))
     properties = definition.get("properties", {})
-    for name, field in base.model_fields.items():
-        properties.pop(_field_key(name, field), None)
+    required = set(definition.get("required", []))
+    if any(
+        properties.get(key) != value or (key in required) != (key in base_required)
+        for key, value in inherited.items()
+    ):
+        return
+    for key in inherited:
+        properties.pop(key)
     definition["allOf"] = [base_ref]
 
 
@@ -298,13 +311,13 @@ class SchemaModel(BaseModel):
         if ABC in cls.__bases__:
             definition[ABSTRACT_KEY] = True
         properties = definition.get("properties", {})
-        base = _schema_base(cls)
-        if base is not None:
-            _inherit_base(definition, base, handler)
         for name, field in cls.model_fields.items():
             prop = properties.get(_field_key(name, field))
             if field.description and prop is not None and "description" not in prop:
                 prop["description"] = field.description
+        base = _schema_base(cls)
+        if base is not None:
+            _inherit_base(definition, base, handler)
         return json_schema
 
 
