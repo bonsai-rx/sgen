@@ -219,7 +219,8 @@ def export_schema(*models: SchemaType, allow_local_types: bool = False) -> JsonS
             with no type name, such as a plain pydantic model or enumeration, and
             `allow_local_types` is not set. The error is also raised when the schema refers
             to a type that generated code cannot represent, such as a tuple, a union without
-            a discriminator, or an anonymous discriminated union.
+            a discriminator, or an anonymous discriminated union, and when two definitions
+            share a type name, which would define the same type twice.
 
     Warns:
         SgenWarning: If a type refers to a union from another namespace, which the generated
@@ -241,6 +242,17 @@ def export_schema(*models: SchemaType, allow_local_types: bool = False) -> JsonS
     ]
     if unsupported:
         raise TypeError("\n".join(unsupported))
+    keys_by_typename: dict[str, list[str]] = {}
+    for key, definition in definitions.items():
+        if TYPENAME_KEY in definition:
+            keys_by_typename.setdefault(definition[TYPENAME_KEY], []).append(key)
+    shared = [
+        f"{', '.join(sorted(keys)[:-1])} and {sorted(keys)[-1]} share type name {typename}"
+        for typename, keys in keys_by_typename.items()
+        if len(keys) > 1
+    ]
+    if shared:
+        raise TypeError(f"Definitions {', and '.join(shared)}. Type names must be unique.")
     unnamed = [
         key
         for key, definition in definitions.items()
