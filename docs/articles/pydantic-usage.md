@@ -28,7 +28,7 @@ Models derive from `SchemaModel` and enumerations from `SchemaEnum`, and a discr
 
 Each module declares the namespace of its generated types in the `SGEN_NAMESPACE` attribute, and each type is generated as a class of the same name in that namespace. The fully qualified name of the generated class is the type name of the model, such as `PersonAndDiscriminatedPets.Cat`.
 
-A model describing a type generated elsewhere, for example in an external package, provides its fully qualified type name in the class definition, as in `class Dog(SchemaModel, sgen_typename="Home.Dog")`. Code generated for any other namespace then refers to the existing `Home.Dog` class instead of defining a new one. `SchemaEnum` and `SchemaUnion` accept the same keyword, and `SchemaAlias` accepts it as an argument.
+A model describing a type generated elsewhere, for example in an external package, provides its fully qualified type name in the class definition, as in `class Dog(SchemaModel, sgen_typename="Home.Dog")`. Code generated for any other namespace then refers to the existing `Home.Dog` class instead of defining a new one. `SchemaEnum` and `SchemaUnion` accept the same keyword, and `SchemaAlias` accepts it as an argument. Type names must be unique.
 
 Every other type in the schema must derive from one of the base classes. Exporting a schema that refers to a plain Pydantic model or enumeration raises an error, unless the export allows [local types](#local-types). An alias of a scalar type, a list or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.
 

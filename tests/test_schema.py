@@ -304,6 +304,93 @@ def test_subclass_changing_config_repeats_fields():
     assert set(definition["properties"]) == {"NAME", "DEPTH"}
 
 
+def test_subclass_sharing_base_typename_raises_on_export():
+    """A model with the same type name as its base would define the same type twice."""
+
+    class Kitten(derived.Cat, sgen_typename=get_typename(derived.Cat)):
+        """A model with the same type name as its base."""
+
+    with pytest.raises(TypeError, match="Cat and Kitten share type name TestHelper.Derived.Cat"):
+        export_schema(Kitten)
+
+
+def test_subclass_sharing_indirect_base_typename_raises_on_export():
+    """A model with the same type name as an indirect base would define the same type twice."""
+
+    class Tabby(derived.Cat):
+        """A model with a type name of its own."""
+
+    class Kitten(Tabby, sgen_typename=get_typename(derived.Cat)):
+        """A model with the same type name as the base of its base."""
+
+    with pytest.raises(TypeError, match="Cat and Kitten share type name TestHelper.Derived.Cat"):
+        export_schema(Kitten)
+
+
+def test_models_sharing_name_in_namespace_raise_on_export():
+    """Two models of the same name in one namespace would define the same type twice."""
+
+    class Bowl(SchemaModel):
+        """A model in the namespace of this module."""
+
+        size: int
+
+    Other = create_model("Bowl", __base__=SchemaModel, color=(str, ...))
+    Home = create_model("Home", __base__=SchemaModel, bowl=(Bowl, ...), other=(Other, ...))
+    with pytest.raises(TypeError, match="share type name TestHelper.Schema.Bowl"):
+        export_schema(Home)
+
+
+def test_enum_sharing_model_typename_raises_on_export():
+    """An enumeration with the same type name as a model would define the same type twice."""
+
+    class Coat(SchemaEnum, sgen_typename=get_typename(derived.Cat)):
+        """Specifies the available coats."""
+
+        SHORT = 1
+
+    class Puppy(SchemaModel):
+        """A model referring to both types."""
+
+        cat: derived.Cat
+        coat: Coat
+
+    with pytest.raises(TypeError, match="Cat and Coat share type name TestHelper.Derived.Cat"):
+        export_schema(Puppy)
+
+
+def test_union_sharing_member_typename_raises_on_export():
+    """A union with the same type name as one of its members would define the same type twice."""
+
+    class Litter(SchemaUnion, sgen_typename=get_typename(derived.Cat)):
+        """A union with the type name of a member."""
+
+        root: Annotated[derived.Cat | derived.Hamster, Field(discriminator="kind")]
+
+    with pytest.raises(TypeError, match="Cat and Litter share type name TestHelper.Derived.Cat"):
+        export_schema(Litter)
+
+
+def test_identical_models_of_external_type_defined_once():
+    """Identical models describing one external type define it once."""
+
+    class Bowl(SchemaModel, sgen_typename="Home.Bowl"):
+        """A bowl defined elsewhere."""
+
+        size: int
+
+    Other = create_model(
+        "Bowl",
+        __base__=SchemaModel,
+        __doc__=Bowl.__doc__,
+        __cls_kwargs__={"sgen_typename": "Home.Bowl"},
+        size=(int, ...),
+    )
+    Home = create_model("Home", __base__=SchemaModel, bowl=(Bowl, ...), other=(Other, ...))
+    definitions = _definitions(Home)
+    assert [d.get("x-sgen-typename") for d in definitions.values()].count("Home.Bowl") == 1
+
+
 def test_dump_uses_schema_property_names():
     """A model with field aliases is serialized under the property names of its schema."""
 
