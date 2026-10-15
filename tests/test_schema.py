@@ -10,6 +10,7 @@ from typing import Annotated, Generic, Literal, TypeVar
 import pytest
 from models import base, derived, late, local, owners, plain, unnamed
 from pydantic import (
+    AfterValidator,
     AliasChoices,
     AliasGenerator,
     BaseModel,
@@ -23,6 +24,7 @@ from pydantic import (
     with_config,
 )
 from pydantic.alias_generators import to_camel, to_pascal
+from pydantic.json_schema import SkipJsonSchema
 from typing_extensions import TypeAliasType
 
 from bonsai.sgen import (
@@ -278,11 +280,24 @@ def test_abstract_base_marked_abstract():
     assert "x-abstract" not in definitions["Mole"]
 
 
-def test_subclass_redefining_base_field_repeats_fields():
-    """A model redefining a field of its base repeats every field instead of referring to it."""
+def test_subclass_of_derived_base_declares_only_own_fields():
+    """A model deriving from a derived model declares only its own fields."""
+
+    class Kit(local.Mole):
+        """A model deriving from a model that derives from another."""
+
+        whiskers: int = 0
+
+    definition = _definitions(Kit)["Kit"]
+    assert definition["allOf"] == [{"$ref": "#/$defs/Mole"}]
+    assert set(definition["properties"]) == {"whiskers"}
+
+
+def test_subclass_changing_base_field_default_repeats_fields():
+    """A model changing the default of a field of its base repeats every field of the base."""
 
     class Kit(local.Burrower):
-        """A model redefining a field of its base."""
+        """A model changing the default of a field of its base."""
 
         depth: int = 1
 
@@ -291,8 +306,8 @@ def test_subclass_redefining_base_field_repeats_fields():
     assert set(definition["properties"]) == {"name", "depth"}
 
 
-def test_subclass_changing_config_repeats_fields():
-    """A model changing the configuration of its base repeats every field of the base."""
+def test_subclass_changing_base_field_keys_repeats_fields():
+    """A model whose configuration changes the keys of its base fields repeats every field."""
 
     class Kit(local.Burrower):
         """A model changing the configuration of its base."""
@@ -302,6 +317,97 @@ def test_subclass_changing_config_repeats_fields():
     definition = _definitions(Kit)["Kit"]
     assert "allOf" not in definition
     assert set(definition["properties"]) == {"NAME", "DEPTH"}
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        ConfigDict(frozen=True),
+        ConfigDict(validate_assignment=True),
+        ConfigDict(extra="forbid"),
+        ConfigDict(title="Pup"),
+    ],
+    ids=["frozen", "validate_assignment", "extra", "title"],
+)
+def test_subclass_config_keeping_base_fields_refers_to_base(config: ConfigDict):
+    """A model whose configuration leaves the schema of its base fields unchanged refers to it."""
+
+    class Kit(local.Burrower):
+        """A model changing the configuration of its base."""
+
+        model_config = config
+
+    definition = _definitions(Kit)["Kit"]
+    assert definition["allOf"] == [{"$ref": "#/$defs/Burrower"}]
+    assert definition.get("properties", {}) == {}
+
+
+def test_subclass_redefining_base_field_schema_refers_to_base():
+    """A model redefining a field of its base with the same schema refers to the base."""
+
+    class Kit(local.Burrower):
+        """A model adding a validator to a field of its base."""
+
+        depth: Annotated[int, AfterValidator(abs)] = 0
+
+    definition = _definitions(Kit)["Kit"]
+    assert definition["allOf"] == [{"$ref": "#/$defs/Burrower"}]
+    assert definition.get("properties", {}) == {}
+
+
+def test_subclass_making_base_field_optional_repeats_fields():
+    """A model making a required field of its base optional repeats every field of the base."""
+
+    class Kit(local.Burrower):
+        """A model with a default for a required field of its base."""
+
+        name: str = Field(default_factory=str)
+
+    definition = _definitions(Kit)["Kit"]
+    assert "allOf" not in definition
+    assert "name" not in definition.get("required", [])
+
+
+def test_subclass_of_base_with_type_description_refers_to_base():
+    """A field described like its type is compared with the base after restoring its description."""
+
+    class Collar(SchemaModel):
+        """A collar."""
+
+        size: int
+
+    class Pup(SchemaModel):
+        """A model with a field described like its type."""
+
+        collar: Collar = Field(description="A collar.")
+
+    class Kit(Pup):
+        """A model adding no fields."""
+
+    assert Kit.model_json_schema()["allOf"] == [{"$ref": "#/$defs/Pup"}]
+
+
+def test_subclass_repeating_base_fields_omits_base():
+    """A model repeating the fields of its base exports no definition of the base."""
+
+    class Kit(local.Burrower):
+        """A model changing the configuration of its base."""
+
+        model_config = ConfigDict(alias_generator=str.upper)
+
+    assert set(_definitions(Kit)) == {"Kit"}
+
+
+def test_skipped_field_type_omitted_on_export():
+    """A type referred to only by a field left out of the schema is left out of the export."""
+
+    class Pond(SchemaModel):
+        """A model with a field left out of the schema."""
+
+        name: str
+        turtle: SkipJsonSchema[Turtle]
+
+    assert set(_definitions(Pond)) == {"Pond"}
 
 
 def test_subclass_sharing_base_typename_raises_on_export():

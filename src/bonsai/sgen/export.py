@@ -153,6 +153,32 @@ def _references(schema: JsonSchemaValue, path: str) -> Iterator[tuple[str, str]]
             yield from _references(member, path)
 
 
+def _definition_keys(value: object) -> Iterator[str]:
+    if isinstance(value, dict):
+        reference = value.get("$ref")
+        if isinstance(reference, str) and reference.startswith(_DEFINITION_PREFIX):
+            yield reference.removeprefix(_DEFINITION_PREFIX)
+        for item in value.values():
+            yield from _definition_keys(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _definition_keys(item)
+
+
+def _remove_unreferenced_definitions(
+    definitions: dict[str, JsonSchemaValue], roots: list[JsonSchemaValue]
+) -> None:
+    pending = list(_definition_keys(roots))
+    reachable: set[str] = set()
+    while pending:
+        key = pending.pop()
+        if key not in reachable:
+            reachable.add(key)
+            pending.extend(_definition_keys(definitions.get(key)))
+    for key in set(definitions) - reachable:
+        del definitions[key]
+
+
 def _warn_unions_from_other_namespaces(
     definitions: dict[str, JsonSchemaValue], local_namespace: str | None
 ) -> None:
@@ -230,11 +256,12 @@ def export_schema(*models: SchemaType, allow_local_types: bool = False) -> JsonS
         raise ValueError("No models to export.")
     namespaces = {_namespace(get_typename(model)) for model in models}
     with _exporting():
-        _, schema = TypeAdapter.json_schemas(
+        roots, schema = TypeAdapter.json_schemas(
             [(index, "validation", TypeAdapter(model)) for index, model in enumerate(models)],
             schema_generator=_SchemaGenerator,
         )
     definitions = schema["$defs"]
+    _remove_unreferenced_definitions(definitions, list(roots.values()))
     unsupported = [
         error
         for key, definition in definitions.items()
