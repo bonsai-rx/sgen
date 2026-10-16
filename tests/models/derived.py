@@ -136,6 +136,21 @@ class Tag(SchemaModel):
     counts: Counts = None
 
 
+class Kitten(Cat):
+    """A subclass of a union member that declares its own tag."""
+
+
+class Parakeet(Parrot):
+    """A subclass of a union member tagged by its union."""
+
+
+class Nursery(SchemaModel):
+    """A model with properties typed as subclasses of union members."""
+
+    kitten: Kitten | None = None
+    parakeet: Parakeet | None = None
+
+
 class Visit(SchemaModel):
     """A visit to the veterinarian."""
 

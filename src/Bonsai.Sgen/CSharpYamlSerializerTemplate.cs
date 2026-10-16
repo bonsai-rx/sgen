@@ -7,11 +7,11 @@ namespace Bonsai.Sgen
 {
     internal static class CSharpYamlDiscriminatorTemplateHelper
     {
-        public static string RenderDiscriminatorTypeInspector(IEnumerable<CodeArtifact> discriminatorTypes)
+        public static string RenderDiscriminatorTypeInspector(IEnumerable<CodeArtifact> discriminatorTypes, bool ignoreInheritedDiscriminators)
         {
             return discriminatorTypes.Any()
                 ?
-@$"                .WithTypeInspector(inspector => new YamlDiscriminatorTypeInspector(inspector))
+@$"                .WithTypeInspector(inspector => new YamlDiscriminatorTypeInspector(inspector{(ignoreInheritedDiscriminators ? ", true" : string.Empty)}))
 "
                 : string.Empty;
         }
@@ -31,12 +31,41 @@ namespace Bonsai.Sgen
             attr => attr.Type);
         o.AddKeyValueTypeDiscriminator<T>(discriminator, typeMapping);
     }
+
+    class UnionNodeDeserializer : YamlDotNet.Serialization.INodeDeserializer
+    {
+        readonly YamlDotNet.Serialization.INodeDeserializer innerDeserializer;
+
+        public UnionNodeDeserializer(YamlDotNet.Serialization.INodeDeserializer innerDeserializer)
+        {
+            this.innerDeserializer = innerDeserializer;
+        }
+
+        public bool Deserialize(
+            YamlDotNet.Core.IParser reader,
+            System.Type expectedType,
+            System.Func<YamlDotNet.Core.IParser, System.Type, object> nestedObjectDeserializer,
+            out object value,
+            YamlDotNet.Serialization.ObjectDeserializer rootDeserializer)
+        {
+            if (!System.Attribute.IsDefined(expectedType, typeof(YamlDiscriminatorAttribute), false))
+            {
+                value = null;
+                return false;
+            }
+
+            return innerDeserializer.Deserialize(reader, expectedType, nestedObjectDeserializer, out value, rootDeserializer);
+        }
+    }
 "));
                 return @$"                .WithTypeDiscriminatingNodeDeserializer(o =>
                 {{
 {string.Join(Environment.NewLine, discriminatorTypes.Select(type =>
                 $"                    AddTypeDiscriminator<{type.TypeName}>(o);"))}
                 }})
+                .WithNodeDeserializer(
+                    inner => new UnionNodeDeserializer(inner),
+                    s => s.InsteadOf<YamlDotNet.Serialization.BufferedDeserialization.TypeDiscriminatingNodeDeserializer>())
 ";
             }
 
@@ -73,7 +102,7 @@ namespace Bonsai.Sgen
                     "Transform"))));
             type.CustomAttributes.Add(new CodeAttributeDeclaration(
                 new CodeTypeReference("Bonsai.CombinatorAttribute")));
-            var typeInspector = CSharpYamlDiscriminatorTemplateHelper.RenderDiscriminatorTypeInspector(DiscriminatorTypes);
+            var typeInspector = CSharpYamlDiscriminatorTemplateHelper.RenderDiscriminatorTypeInspector(DiscriminatorTypes, false);
             type.Members.Add(new CodeSnippetTypeMember(
 @"    private System.IObservable<string> Process<T>(System.IObservable<T> source)
     {
@@ -124,7 +153,7 @@ namespace Bonsai.Sgen
         public override void BuildType(CodeTypeDeclaration type)
         {
             base.BuildType(type);
-            var typeInspector = CSharpYamlDiscriminatorTemplateHelper.RenderDiscriminatorTypeInspector(DiscriminatorTypes);
+            var typeInspector = CSharpYamlDiscriminatorTemplateHelper.RenderDiscriminatorTypeInspector(DiscriminatorTypes, true);
             var typeDiscriminators = CSharpYamlDiscriminatorTemplateHelper.RenderTypeDiscriminators(type, DiscriminatorTypes);
             var privateConstructors = HasUnionWrappers
                 ?

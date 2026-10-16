@@ -26,8 +26,14 @@ namespace Bonsai.Sgen
             type.BaseTypes.Add(typeof(ReflectionTypeInspector));
             type.Members.Add(new CodeSnippetTypeMember(
 @$"    readonly YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor;
+    readonly bool ignoreInheritedDiscriminators;
 
     public {TypeName}(YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor)
+        : this(innerTypeDescriptor, false)
+    {{
+    }}
+
+    public {TypeName}(YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor, bool ignoreInheritedDiscriminators)
     {{
         if (innerTypeDescriptor == null)
         {{
@@ -35,6 +41,7 @@ namespace Bonsai.Sgen
         }}
 
         this.innerTypeDescriptor = innerTypeDescriptor;
+        this.ignoreInheritedDiscriminators = ignoreInheritedDiscriminators;
     }}
 
     public override System.Collections.Generic.IEnumerable<YamlDotNet.Serialization.IPropertyDescriptor> GetProperties(System.Type type, object container)
@@ -43,7 +50,8 @@ namespace Bonsai.Sgen
 
         var discriminatorAttribute = (YamlDiscriminatorAttribute)System.Attribute.GetCustomAttribute(type, typeof(YamlDiscriminatorAttribute));
         var inheritanceAttributes = (JsonInheritanceAttribute[])System.Attribute.GetCustomAttributes(type, typeof(JsonInheritanceAttribute));
-        var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type);
+        var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type)
+            ?? System.Array.Find(inheritanceAttributes, attribute => attribute.Type.IsAssignableFrom(type));
         if (discriminatorAttribute != null && typeMatch != null)
         {{
 {(HasUnionWrappers ? UnionWrapperPropertiesSnippet : string.Empty)}            return System.Linq.Enumerable.Concat(new[]
@@ -52,7 +60,33 @@ namespace Bonsai.Sgen
             }}, innerProperties);
         }}
 
+        if (ignoreInheritedDiscriminators)
+        {{
+            var inheritedDiscriminator = GetInheritedDiscriminator(type);
+            if (inheritedDiscriminator != null)
+            {{
+                return System.Linq.Enumerable.Concat(new[]
+                {{
+                    new DiscriminatorPropertyDescriptor(inheritedDiscriminator, null)
+                }}, innerProperties);
+            }}
+        }}
+
         return innerProperties;
+    }}
+
+    static string GetInheritedDiscriminator(System.Type type)
+    {{
+        foreach (var attribute in type.GetCustomAttributes(true))
+        {{
+            var attributeType = attribute.GetType();
+            if (attributeType.Name == ""YamlDiscriminatorAttribute"")
+            {{
+                return (string)attributeType.GetProperty(""Discriminator"").GetValue(attribute, null);
+            }}
+        }}
+
+        return null;
     }}
 
     class DiscriminatorPropertyDescriptor : YamlDotNet.Serialization.IPropertyDescriptor

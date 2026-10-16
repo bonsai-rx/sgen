@@ -37,7 +37,7 @@ Every other type in the schema must derive from one of the base classes. Exporti
 
 ### Inheritance
 
-A model deriving from another model is generated as a class deriving from the class of its base, so `Cat` and `Dog` share the `age` property declared once in `PetBase`. A model with more than one base model, or one that redefines a field or changes the configuration of its base, includes the fields of its bases within its own schema instead.
+A model deriving from another model is generated as a class deriving from the class of its base, so `Cat` and `Dog` share the `age` property declared once in `PetBase`. A model with more than one base model, or one that changes the schema of a field it inherits, such as its type, default or key, includes the fields of its bases within its own schema instead.
 
 `PetBase` lists `ABC` among its bases, so it is generated as an abstract class. Only a model that lists `ABC` itself is generated as abstract, which leaves `Cat` and `Dog` concrete.
 

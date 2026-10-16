@@ -311,6 +311,57 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""puppy"":{""kind"":""Dog""}}")]
+        [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "puppy:\n  kind: Dog\n")]
+        public async Task GenerateFromDiscriminatorSchema_RoundTripMemberSubclass(SerializerLibraries serializerLibraries, string format, string text)
+        {
+            var members = SchemaTestHelper.CreateDerivedSchemas("kind", "Cat", "Dog");
+            var puppy = new JsonSchema { Type = JsonObjectType.Object, AllOf = { new JsonSchema { Reference = members[1].Value } } };
+            var animal = SchemaTestHelper.CreateDiscriminatorSchema("kind", members);
+            var schema = SchemaTestHelper.CreateContainerSchema(
+                members.Append(new("Animal", animal)).Append(new("Puppy", puppy)));
+            schema.Properties.Add("pet", new JsonSchemaProperty { Reference = animal });
+            schema.Properties.Add("puppy", new JsonSchemaProperty { Reference = puppy });
+
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            var containerType = SerializerTestHelper.GetGeneratedType(assembly, "Container");
+            var container = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, text);
+            var member = await WorkflowTestHelper.Select(container, "Puppy");
+            Assert.AreEqual("Puppy", member.GetType().Name, "Member subclass must deserialize as its own type.");
+
+            var output = await SerializerTestHelper.Serialize(assembly, $"SerializeTo{format}", containerType, container);
+            StringAssert.Contains(output, "Dog", "Member subclass must be written with the tag of its member.");
+            Assert.IsFalse(output.Contains("Puppy"), "Member subclass must not be written with a tag of its own.");
+            var roundTrip = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, output);
+            Assert.AreEqual("Puppy", (await WorkflowTestHelper.Select(roundTrip, "Puppy")).GetType().Name, "Member subclass must read back its own output.");
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""pet"":{""kind"":""Puppy""}}")]
+        [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "pet:\n  kind: Puppy\n")]
+        public async Task GenerateFromUnmappedDiscriminatorSchema_RoundTripSubclassThroughBase(SerializerLibraries serializerLibraries, string format, string text)
+        {
+            var animal = SchemaTestHelper.CreateDiscriminatorSchema("kind");
+            var members = SchemaTestHelper.CreateDerivedSchemas("kind", baseSchema: animal, "Cat", "Dog");
+            var puppy = new JsonSchema { Type = JsonObjectType.Object, AllOf = { new JsonSchema { Reference = members[1].Value } } };
+            var schema = SchemaTestHelper.CreateContainerSchema(
+                members.Append(new("Animal", animal)).Append(new("Puppy", puppy)));
+            schema.Properties.Add("pet", new JsonSchemaProperty { Reference = animal });
+
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            var containerType = SerializerTestHelper.GetGeneratedType(assembly, "Container");
+            var container = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, text);
+            Assert.AreEqual("Puppy", (await WorkflowTestHelper.Select(container, "Pet")).GetType().Name, "Tagged subclass must deserialize as its own type.");
+
+            var output = await SerializerTestHelper.Serialize(assembly, $"SerializeTo{format}", containerType, container);
+            StringAssert.Contains(output, "Puppy", "Subclass must be written with its own tag.");
+            var roundTrip = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, output);
+            Assert.AreEqual("Puppy", (await WorkflowTestHelper.Select(roundTrip, "Pet")).GetType().Name, "Subclass must read back its own output.");
+        }
+
+        [TestMethod]
         public async Task GenerateFromExternalDiscriminatorRefSharedByProperties_OmitPropertyBaseTypes()
         {
             var directory = Directory.CreateTempSubdirectory(nameof(DiscriminatorGenerationTests));
