@@ -214,11 +214,19 @@ def _inherit_base(
     definition: JsonSchemaValue, base: type["SchemaModel"], handler: GetJsonSchemaHandler
 ) -> None:
     base_schema = base.__pydantic_core_schema__
-    ref = base_schema.get("ref")
+    definitions: list[core_schema.CoreSchema] = []
+    if base_schema["type"] == "definitions":
+        definitions = base_schema["definitions"]
+        base_schema = base_schema["schema"]
+    if base_schema["type"] == "definition-ref":
+        ref = base_schema.get("schema_ref")
+    else:
+        ref = base_schema.get("ref")
+        definitions = [base_schema, *definitions]
     if ref is None:
         raise TypeError(f"{base.__qualname__} has no core schema reference.")
     base_ref = handler(
-        core_schema.definitions_schema(core_schema.definition_reference_schema(ref), [base_schema])
+        core_schema.definitions_schema(core_schema.definition_reference_schema(ref), definitions)
     )
     base_definition = handler.resolve_ref_schema(base_ref)
     inherited = _all_properties(base_definition, handler)
