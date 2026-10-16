@@ -18,6 +18,7 @@ from pydantic import (
     Field,
     HttpUrl,
     RootModel,
+    SerializeAsAny,
     TypeAdapter,
     ValidationError,
     create_model,
@@ -385,6 +386,88 @@ def test_subclass_of_base_with_type_description_refers_to_base():
         """A model adding no fields."""
 
     assert Kit.model_json_schema()["allOf"] == [{"$ref": "#/$defs/Pup"}]
+
+
+def test_subclass_refers_to_base_reusing_field_type():
+    """A model deriving from a base with two fields of the same type refers to the base."""
+
+    class Litter(SchemaModel):
+        """A model with two fields of the same type."""
+
+        first: derived.Cat
+        second: derived.Cat
+
+    class Kittens(Litter):
+        """A model deriving from a base with two fields of the same type."""
+
+        size: int
+
+    definitions = _definitions(Kittens)
+    assert Kittens.model_json_schema()["allOf"] == [{"$ref": "#/$defs/Litter"}]
+    assert definitions["Kittens"]["allOf"] == [{"$ref": "#/$defs/Litter"}]
+    assert set(definitions["Kittens"]["properties"]) == {"size"}
+    assert set(definitions) == {"Cat", "Kittens", "Litter"}
+
+
+def test_subclass_refers_to_recursive_base():
+    """A model deriving from a base with a field of its own type refers to the base."""
+
+    class Lineage(SchemaModel):
+        """A model with a field of its own type."""
+
+        parent: "Lineage | None" = None
+
+    class Pedigree(Lineage):
+        """A model deriving from a base with a field of its own type."""
+
+        name: str
+
+    definitions = _definitions(Pedigree)
+    assert Pedigree.model_json_schema()["allOf"] == [{"$ref": "#/$defs/Lineage"}]
+    assert definitions["Pedigree"]["allOf"] == [{"$ref": "#/$defs/Lineage"}]
+    assert set(definitions["Pedigree"]["properties"]) == {"name"}
+    assert set(definitions) == {"Lineage", "Pedigree"}
+
+
+def test_subclass_narrowing_recursive_base_field_repeats_fields():
+    """A model narrowing a field of its base to its own type repeats every field of the base."""
+
+    class Lineage(SchemaModel):
+        """A model with a field of its own type."""
+
+        parent: "Lineage | None" = None
+
+    class Pedigree(Lineage):
+        """A model narrowing a field of its base to its own type."""
+
+        parent: "Pedigree | None" = None  # pyright: ignore[reportIncompatibleVariableOverride]
+        name: str
+
+    definitions = _definitions(Pedigree)
+    assert "allOf" not in Pedigree.model_json_schema()
+    assert "allOf" not in definitions["Pedigree"]
+    assert set(definitions["Pedigree"]["properties"]) == {"parent", "name"}
+    assert set(definitions) == {"Pedigree"}
+
+
+def test_subclass_refers_to_serialize_as_any_base():
+    """A model deriving from a base with a field serialized as any subclass refers to the base."""
+
+    class Carrier(SchemaModel):
+        """A model with a field serialized as any subclass of its type."""
+
+        pet: SerializeAsAny[derived.Cat] | None = None
+
+    class Crate(Carrier):
+        """A model deriving from a base with a field serialized as any subclass."""
+
+        size: int
+
+    definitions = _definitions(Crate)
+    assert Crate.model_json_schema()["allOf"] == [{"$ref": "#/$defs/Carrier"}]
+    assert definitions["Crate"]["allOf"] == [{"$ref": "#/$defs/Carrier"}]
+    assert set(definitions["Crate"]["properties"]) == {"size"}
+    assert set(definitions) == {"Carrier", "Cat", "Crate"}
 
 
 def test_subclass_repeating_base_fields_omits_base():
