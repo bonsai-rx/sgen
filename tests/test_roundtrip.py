@@ -38,6 +38,8 @@ CASES: dict[str, BaseModel] = {
         animal=derived.Animal(CAT),
         creature=derived.Creature(derived.Parrot(name="Polly", words=12)),
     ),
+    "member-subclass-declared-tag": derived.Nursery(kitten=derived.Kitten(name="Tom")),
+    "member-subclass-assigned-tag": derived.Nursery(parakeet=derived.Parakeet(name="Polly")),
     "datetime": derived.Visit(start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC)),
     "duration": derived.Visit(
         start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC), duration=timedelta(seconds=90)
@@ -91,6 +93,9 @@ KNOWN_FAILURES: dict[tuple[str, str | None, str | None, str | None], str] = {
     ("datetime", "Yaml", None, None): "YAML reads date-time only in the round-trip format of .NET",
     ("duration", None, None, None): "durations are not written in ISO 8601, #85",
     ("union-from-other-namespace", "Yaml", None, None): YAML_UNION_FAILURE,
+    ("member-subclass-assigned-tag", None, None, "test_roundtrip_adds_no_members"): (
+        "generated code writes the union tag on a property typed as a subclass of a member"
+    ),
 }
 """Reasons for known failures by case, serializer, framework and test, where None matches any."""
 

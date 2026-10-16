@@ -376,6 +376,12 @@ namespace ExternalUnionMember
                     return attribute.Key;
             }
 
+            foreach (var attribute in System.Reflection.CustomAttributeExtensions.GetCustomAttributes<JsonInheritanceAttribute>(System.Reflection.IntrospectionExtensions.GetTypeInfo(objectType), true))
+            {
+                if (attribute.Type.IsAssignableFrom(objectType))
+                    return attribute.Key;
+            }
+
             return objectType.Name;
         }
     }
@@ -642,7 +648,8 @@ namespace ExternalUnionMember
 
             var discriminatorAttribute = (YamlDiscriminatorAttribute)System.Attribute.GetCustomAttribute(type, typeof(YamlDiscriminatorAttribute));
             var inheritanceAttributes = (JsonInheritanceAttribute[])System.Attribute.GetCustomAttributes(type, typeof(JsonInheritanceAttribute));
-            var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type);
+            var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type)
+                ?? System.Array.Find(inheritanceAttributes, attribute => attribute.Type.IsAssignableFrom(type));
             if (discriminatorAttribute != null && typeMatch != null)
             {
                 var unionWrapperAttribute = (YamlUnionWrapperAttribute)System.Attribute.GetCustomAttribute(type, typeof(YamlUnionWrapperAttribute));

@@ -397,7 +397,8 @@ namespace PersonAndDiscriminatedPets
 
             var discriminatorAttribute = (YamlDiscriminatorAttribute)System.Attribute.GetCustomAttribute(type, typeof(YamlDiscriminatorAttribute));
             var inheritanceAttributes = (JsonInheritanceAttribute[])System.Attribute.GetCustomAttributes(type, typeof(JsonInheritanceAttribute));
-            var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type);
+            var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type)
+                ?? System.Array.Find(inheritanceAttributes, attribute => attribute.Type.IsAssignableFrom(type));
             if (discriminatorAttribute != null && typeMatch != null)
             {
                 return System.Linq.Enumerable.Concat(new[]

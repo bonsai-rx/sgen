@@ -105,6 +105,27 @@ namespace Bonsai.Sgen
             return modelType;
         }
 
+        private static CodeArtifact WriteNearestMappedDiscriminator(CodeArtifact modelType)
+        {
+            if (modelType.TypeName == nameof(JsonInheritanceConverter))
+            {
+                const string ExactMatch = "attribute.Type == objectType";
+                var code = modelType.Code;
+                var method = code.IndexOf("string GetSubtypeDiscriminator(", StringComparison.Ordinal);
+                var loop = method >= 0 ? code.IndexOf("foreach", method, StringComparison.Ordinal) : -1;
+                var fallback = loop >= 0 ? code.IndexOf("return objectType.Name;", loop, StringComparison.Ordinal) : -1;
+                var exactLoop = fallback >= 0 ? code.Substring(loop, fallback - loop) : string.Empty;
+                if (!exactLoop.Contains(ExactMatch))
+                    throw new InvalidOperationException("The discriminator lookup of the JSON inheritance converter was not found.");
+
+                var baseLoop = exactLoop.Replace(ExactMatch, "attribute.Type.IsAssignableFrom(objectType)");
+                code = code.Insert(fallback, baseLoop);
+                modelType = new CodeArtifact(modelType.TypeName, modelType.Type, modelType.Language, modelType.Category, code);
+            }
+
+            return modelType;
+        }
+
         public override IEnumerable<CodeArtifact> GenerateTypes()
         {
             if (RootObject is JsonSchema jsonSchema)
@@ -178,6 +199,7 @@ namespace Bonsai.Sgen
                 .Where(type => type.Type != CodeArtifactType.Undefined)
                 .Select(ReplaceInitOnlyProperties)
                 .Select(ResolveDeclaredSubtypesOnly)
+                .Select(WriteNearestMappedDiscriminator)
                 .Concat(extraTypes);
         }
     }

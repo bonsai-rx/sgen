@@ -52,7 +52,10 @@ namespace Bonsai.Sgen
                             new CodeAttributeArgument(new CodePrimitiveExpression(discriminator.PropertyName))));
                     }
 
-                    foreach (var derivedModel in Model.DerivedClasses)
+                    var derivedModels = discriminator.Mapping.Count > 0
+                        ? Model.DerivedClasses.Where(derivedModel => discriminator.Mapping.ContainsKey(derivedModel.Discriminator))
+                        : Model.DerivedClasses;
+                    foreach (var derivedModel in derivedModels)
                     {
                         type.CustomAttributes.Add(new CodeAttributeDeclaration(
                             new CodeTypeReference(nameof(JsonInheritanceAttribute)),

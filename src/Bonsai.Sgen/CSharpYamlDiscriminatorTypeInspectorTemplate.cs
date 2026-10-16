@@ -50,7 +50,8 @@ namespace Bonsai.Sgen
 
         var discriminatorAttribute = (YamlDiscriminatorAttribute)System.Attribute.GetCustomAttribute(type, typeof(YamlDiscriminatorAttribute));
         var inheritanceAttributes = (JsonInheritanceAttribute[])System.Attribute.GetCustomAttributes(type, typeof(JsonInheritanceAttribute));
-        var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type);
+        var typeMatch = System.Array.Find(inheritanceAttributes, attribute => attribute.Type == type)
+            ?? System.Array.Find(inheritanceAttributes, attribute => attribute.Type.IsAssignableFrom(type));
         if (discriminatorAttribute != null && typeMatch != null)
         {{
 {(HasUnionWrappers ? UnionWrapperPropertiesSnippet : string.Empty)}            return System.Linq.Enumerable.Concat(new[]
