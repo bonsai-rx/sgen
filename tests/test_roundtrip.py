@@ -20,6 +20,9 @@ CASES: dict[str, BaseModel] = {
         name="Avery", age=41, weight=72.5, nicknames=["Av", "Ave"], animal=derived.Animal(CAT)
     ),
     "nulls": derived.Owner(name="Avery", age=None, animal=derived.Animal(CAT)),
+    "scalar-like-strings": derived.Owner(
+        name="1", nicknames=["true", "null", "1.5", "~"], animal=derived.Animal(CAT)
+    ),
     "integer-enum": derived.Palette(
         color=derived.Color.DARK_BLUE, favorite=derived.Color.LightGreen
     ),

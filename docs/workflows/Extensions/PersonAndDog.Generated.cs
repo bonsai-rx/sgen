@@ -328,6 +328,8 @@ namespace PersonAndDog
             return System.Reactive.Linq.Observable.Defer(() =>
             {
                 var serializer = new YamlDotNet.Serialization.SerializerBuilder()
+                    .WithQuotingNecessaryStrings()
+                    .WithYamlFormatter(new YamlDotNet.Serialization.YamlFormatter { PotentiallyQuoteEnums = _ => false })
                     .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
                     .Build();
                 return System.Reactive.Linq.Observable.Select(source, value => serializer.Serialize(value)); 
