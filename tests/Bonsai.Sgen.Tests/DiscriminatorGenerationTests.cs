@@ -311,6 +311,31 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""puppy"":{""kind"":""Dog""}}")]
+        [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "puppy:\n  kind: Dog\n")]
+        public async Task GenerateFromDiscriminatorSchema_RoundTripMemberSubclass(SerializerLibraries serializerLibraries, string format, string text)
+        {
+            var members = SchemaTestHelper.CreateDerivedSchemas("kind", "Cat", "Dog");
+            var puppy = new JsonSchema { Type = JsonObjectType.Object, AllOf = { new JsonSchema { Reference = members[1].Value } } };
+            var animal = SchemaTestHelper.CreateDiscriminatorSchema("kind", members);
+            var schema = SchemaTestHelper.CreateContainerSchema(
+                members.Append(new("Animal", animal)).Append(new("Puppy", puppy)));
+            schema.Properties.Add("pet", new JsonSchemaProperty { Reference = animal });
+            schema.Properties.Add("puppy", new JsonSchemaProperty { Reference = puppy });
+
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            var containerType = SerializerTestHelper.GetGeneratedType(assembly, "Container");
+            var container = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, text);
+            var member = await WorkflowTestHelper.Select(container, "Puppy");
+            Assert.AreEqual("Puppy", member.GetType().Name, "Member subclass must deserialize as its own type.");
+
+            var output = await SerializerTestHelper.Serialize(assembly, $"SerializeTo{format}", containerType, container);
+            var roundTrip = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, output);
+            Assert.AreEqual("Puppy", (await WorkflowTestHelper.Select(roundTrip, "Puppy")).GetType().Name, "Member subclass must read back its own output.");
+        }
+
+        [TestMethod]
         public async Task GenerateFromExternalDiscriminatorRefSharedByProperties_OmitPropertyBaseTypes()
         {
             var directory = Directory.CreateTempSubdirectory(nameof(DiscriminatorGenerationTests));

@@ -26,8 +26,14 @@ namespace Bonsai.Sgen
             type.BaseTypes.Add(typeof(ReflectionTypeInspector));
             type.Members.Add(new CodeSnippetTypeMember(
 @$"    readonly YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor;
+    readonly bool ignoreInheritedDiscriminators;
 
     public {TypeName}(YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor)
+        : this(innerTypeDescriptor, false)
+    {{
+    }}
+
+    public {TypeName}(YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor, bool ignoreInheritedDiscriminators)
     {{
         if (innerTypeDescriptor == null)
         {{
@@ -35,6 +41,7 @@ namespace Bonsai.Sgen
         }}
 
         this.innerTypeDescriptor = innerTypeDescriptor;
+        this.ignoreInheritedDiscriminators = ignoreInheritedDiscriminators;
     }}
 
     public override System.Collections.Generic.IEnumerable<YamlDotNet.Serialization.IPropertyDescriptor> GetProperties(System.Type type, object container)
@@ -52,7 +59,33 @@ namespace Bonsai.Sgen
             }}, innerProperties);
         }}
 
+        if (ignoreInheritedDiscriminators)
+        {{
+            var inheritedDiscriminator = GetInheritedDiscriminator(type);
+            if (inheritedDiscriminator != null)
+            {{
+                return System.Linq.Enumerable.Concat(new[]
+                {{
+                    new DiscriminatorPropertyDescriptor(inheritedDiscriminator, null)
+                }}, innerProperties);
+            }}
+        }}
+
         return innerProperties;
+    }}
+
+    static string GetInheritedDiscriminator(System.Type type)
+    {{
+        foreach (var attribute in type.GetCustomAttributes(true))
+        {{
+            var attributeType = attribute.GetType();
+            if (attributeType.Name == ""YamlDiscriminatorAttribute"")
+            {{
+                return (string)attributeType.GetProperty(""Discriminator"").GetValue(attribute, null);
+            }}
+        }}
+
+        return null;
     }}
 
     class DiscriminatorPropertyDescriptor : YamlDotNet.Serialization.IPropertyDescriptor

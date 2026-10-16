@@ -359,7 +359,7 @@ namespace ExternalUnionMember
 
         private System.Type GetObjectSubtype(System.Type objectType, string discriminator)
         {
-            foreach (var attribute in System.Reflection.CustomAttributeExtensions.GetCustomAttributes<JsonInheritanceAttribute>(System.Reflection.IntrospectionExtensions.GetTypeInfo(objectType), true))
+            foreach (var attribute in System.Reflection.CustomAttributeExtensions.GetCustomAttributes<JsonInheritanceAttribute>(System.Reflection.IntrospectionExtensions.GetTypeInfo(objectType), false))
             {
                 if (attribute.Key == discriminator)
                     return attribute.Type;
@@ -618,8 +618,14 @@ namespace ExternalUnionMember
     {
     
         readonly YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor;
+        readonly bool ignoreInheritedDiscriminators;
 
         public YamlDiscriminatorTypeInspector(YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor)
+            : this(innerTypeDescriptor, false)
+        {
+        }
+
+        public YamlDiscriminatorTypeInspector(YamlDotNet.Serialization.ITypeInspector innerTypeDescriptor, bool ignoreInheritedDiscriminators)
         {
             if (innerTypeDescriptor == null)
             {
@@ -627,6 +633,7 @@ namespace ExternalUnionMember
             }
 
             this.innerTypeDescriptor = innerTypeDescriptor;
+            this.ignoreInheritedDiscriminators = ignoreInheritedDiscriminators;
         }
 
         public override System.Collections.Generic.IEnumerable<YamlDotNet.Serialization.IPropertyDescriptor> GetProperties(System.Type type, object container)
@@ -656,7 +663,33 @@ namespace ExternalUnionMember
                 }, innerProperties);
             }
 
+            if (ignoreInheritedDiscriminators)
+            {
+                var inheritedDiscriminator = GetInheritedDiscriminator(type);
+                if (inheritedDiscriminator != null)
+                {
+                    return System.Linq.Enumerable.Concat(new[]
+                    {
+                        new DiscriminatorPropertyDescriptor(inheritedDiscriminator, null)
+                    }, innerProperties);
+                }
+            }
+
             return innerProperties;
+        }
+
+        static string GetInheritedDiscriminator(System.Type type)
+        {
+            foreach (var attribute in type.GetCustomAttributes(true))
+            {
+                var attributeType = attribute.GetType();
+                if (attributeType.Name == "YamlDiscriminatorAttribute")
+                {
+                    return (string)attributeType.GetProperty("Discriminator").GetValue(attribute, null);
+                }
+            }
+
+            return null;
         }
 
         class DiscriminatorPropertyDescriptor : YamlDotNet.Serialization.IPropertyDescriptor
@@ -883,16 +916,45 @@ namespace ExternalUnionMember
             o.AddKeyValueTypeDiscriminator<T>(discriminator, typeMapping);
         }
 
+        class UnionNodeDeserializer : YamlDotNet.Serialization.INodeDeserializer
+        {
+            readonly YamlDotNet.Serialization.INodeDeserializer innerDeserializer;
+
+            public UnionNodeDeserializer(YamlDotNet.Serialization.INodeDeserializer innerDeserializer)
+            {
+                this.innerDeserializer = innerDeserializer;
+            }
+
+            public bool Deserialize(
+                YamlDotNet.Core.IParser reader,
+                System.Type expectedType,
+                System.Func<YamlDotNet.Core.IParser, System.Type, object> nestedObjectDeserializer,
+                out object value,
+                YamlDotNet.Serialization.ObjectDeserializer rootDeserializer)
+            {
+                if (!System.Attribute.IsDefined(expectedType, typeof(YamlDiscriminatorAttribute), false))
+                {
+                    value = null;
+                    return false;
+                }
+
+                return innerDeserializer.Deserialize(reader, expectedType, nestedObjectDeserializer, out value, rootDeserializer);
+            }
+        }
+
         private static System.IObservable<T> Process<T>(System.IObservable<string> source)
         {
             return System.Reactive.Linq.Observable.Defer(() =>
             {
                 var serializer = new YamlDotNet.Serialization.DeserializerBuilder()
-                    .WithTypeInspector(inspector => new YamlDiscriminatorTypeInspector(inspector))
+                    .WithTypeInspector(inspector => new YamlDiscriminatorTypeInspector(inspector, true))
                     .WithTypeDiscriminatingNodeDeserializer(o =>
                     {
                         AddTypeDiscriminator<Pet>(o);
                     })
+                    .WithNodeDeserializer(
+                        inner => new UnionNodeDeserializer(inner),
+                        s => s.InsteadOf<YamlDotNet.Serialization.BufferedDeserialization.TypeDiscriminatingNodeDeserializer>())
                     .EnablePrivateConstructors()
                     .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
                     .Build();
