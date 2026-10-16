@@ -109,6 +109,8 @@ namespace Bonsai.Sgen
         return System.Reactive.Linq.Observable.Defer(() =>
         {
             var serializer = new YamlDotNet.Serialization.SerializerBuilder()
+                .WithQuotingNecessaryStrings()
+                .WithYamlFormatter(new YamlDotNet.Serialization.YamlFormatter { PotentiallyQuoteEnums = _ => false })
 " + typeInspector +
 @"                .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
                 .Build();

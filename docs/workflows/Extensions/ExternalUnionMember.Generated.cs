@@ -857,6 +857,8 @@ namespace ExternalUnionMember
             return System.Reactive.Linq.Observable.Defer(() =>
             {
                 var serializer = new YamlDotNet.Serialization.SerializerBuilder()
+                    .WithQuotingNecessaryStrings()
+                    .WithYamlFormatter(new YamlDotNet.Serialization.YamlFormatter { PotentiallyQuoteEnums = _ => false })
                     .WithTypeInspector(inspector => new YamlDiscriminatorTypeInspector(inspector))
                     .WithTypeConverter(new YamlDotNet.Serialization.Converters.DateTimeOffsetConverter())
                     .Build();
