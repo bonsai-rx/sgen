@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using NJsonSchema;
 using NJsonSchema.CodeGeneration.CSharp.Models;
@@ -155,6 +156,17 @@ namespace Bonsai.Sgen
                                 property.IsNullable ? nameof(Required.AllowNull) : nameof(Required.Always))));
                     }
                     propertyDeclaration.CustomAttributes.Add(jsonProperty);
+
+                    var enumSchema = propertySchema?.ActualTypeSchema;
+                    if (enumSchema?.IsEnumeration is true &&
+                        enumSchema.Type.HasFlag(JsonObjectType.String) &&
+                        enumSchema.TryGetExternalTypeName(out var enumTypeName) &&
+                        !CSharpTypeNameGenerator.NamespaceEquals(enumTypeName, Settings.Namespace))
+                    {
+                        propertyDeclaration.CustomAttributes.Add(new CodeAttributeDeclaration(
+                            new CodeTypeReference(typeof(JsonConverter)),
+                            new CodeAttributeArgument(new CodeTypeOfExpression(typeof(StringEnumConverter)))));
+                    }
                 }
                 if (yamlSerializer)
                 {

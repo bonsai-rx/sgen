@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Reactive.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NJsonSchema;
@@ -168,6 +169,46 @@ namespace Bonsai.Sgen.Tests
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("EventName.None"));
             CompilerTestHelper.CompileFromSource(code);
+        }
+
+        static JsonSchema CreateExternalEnumSchema()
+        {
+            var schema = JsonSchema.FromType<Foo>(new JsonSchemaGeneratorSettings
+            {
+                SerializerSettings = new JsonSerializerSettings { Converters = { new StringEnumConverter() } }
+            });
+            var enumSchema = schema.Definitions[nameof(Bar)];
+            enumSchema.ExtensionData ??= new Dictionary<string, object>();
+            enumSchema.ExtensionData[JsonSchemaExtensions.TypeNameAnnotation] = typeof(Bar).FullName!.Replace('+', '.');
+            return schema;
+        }
+
+        [TestMethod]
+        public void GenerateWithExternalStringEnumProperty_UseStringEnumConverter()
+        {
+            var schema = CreateExternalEnumSchema();
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsFalse(code.Contains("enum Bar"), "External enumeration must not be generated.");
+            Assert.IsTrue(code.Contains("StringEnumConverter"), "Property typed as an external string enumeration must declare the converter.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""Bar"":""B"",""Baz"":""C""}")]
+        [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "Bar: B\nBaz: C\n")]
+        public async Task GenerateWithExternalStringEnumProperty_RoundTripNames(SerializerLibraries serializerLibraries, string format, string text)
+        {
+            var schema = CreateExternalEnumSchema();
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            var containerType = SerializerTestHelper.GetGeneratedType(assembly, nameof(Foo));
+            var container = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, text);
+            Assert.AreEqual(Bar.B, await WorkflowTestHelper.Select(container, nameof(Foo.Bar)));
+            Assert.AreEqual(Bar.C, await WorkflowTestHelper.Select(container, nameof(Foo.Baz)), "Nullable external enumeration must read its name.");
+
+            var output = await SerializerTestHelper.Serialize(assembly, $"SerializeTo{format}", containerType, container);
+            Assert.IsFalse(output.Contains('5') || output.Contains('6'), "Serialized external enumeration must carry its name instead of its value.");
         }
     }
 }

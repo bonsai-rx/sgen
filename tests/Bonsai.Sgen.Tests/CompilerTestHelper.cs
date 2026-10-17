@@ -17,7 +17,8 @@ namespace Bonsai.Sgen.Tests
                 typeof(YamlDotNet.Core.Parser).Assembly.Location,
                 typeof(Newtonsoft.Json.JsonConvert).Assembly.Location,
                 typeof(System.Reactive.Linq.Observable).Assembly.Location,
-                typeof(Combinator).Assembly.Location
+                typeof(Combinator).Assembly.Location,
+                typeof(CompilerTestHelper).Assembly.Location
             };
             var assemblyReferences = serializerDependencies.Select(path => MetadataReference.CreateFromFile(path)).ToList();
             assemblyReferences.AddRange(Net80.References.All);
