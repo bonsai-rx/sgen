@@ -13,7 +13,7 @@ The first example models the `Person` record type from the [Data definition](dat
 
 ## Multiple objects
 
-Projects often need more than one record type. A single schema file can define several types, and `Bonsai.Sgen` generates all of them at once:
+Projects often need more than one record type. A single schema file can define several types, and `Bonsai.Sgen` generates them all at once:
 
 [person-and-dog.json](~/workflows/person-and-dog.json)
 
@@ -181,7 +181,7 @@ The JSON Schema [`required`](https://json-schema.org/learn/getting-started-step-
 
 ## Serialization and deserialization
 
-A schema guarantees that every record can be serialized and deserialized, so objects convert in both directions between C# types and a text format suited to specification and logging. When the `--serializer` option is specified, `Bonsai.Sgen` generates serialization and deserialization operators for every type in the schema. Two formats are supported: `json`, using [`Newtonsoft.Json`](https://github.com/JamesNK/Newtonsoft.Json), and `yaml`, using [`YamlDotNet`](https://github.com/aaubry/YamlDotNet).
+Every record described by a schema can be serialized and deserialized, so objects convert in both directions between C# types and a text format suited to specification and logging. When the `--serializer` option is specified, `Bonsai.Sgen` generates serialization and deserialization operators for every type in the schema. Two formats are supported: `json`, using [`Newtonsoft.Json`](https://github.com/JamesNK/Newtonsoft.Json), and `yaml`, using [`YamlDotNet`](https://github.com/aaubry/YamlDotNet).
 
 The `SerializeToJson` and `SerializeToYaml` operators convert an object of any type generated in the namespace into a `string`. The `DeserializeFromJson` and `DeserializeFromYaml` operators convert a `string` back into an object, and throw an exception if the string fails validation.
 
