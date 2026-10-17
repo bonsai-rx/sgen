@@ -43,6 +43,9 @@ CASES: dict[str, BaseModel] = {
     ),
     "member-subclass-declared-tag": derived.Nursery(kitten=derived.Kitten(name="Tom")),
     "member-subclass-assigned-tag": derived.Nursery(parakeet=derived.Parakeet(name="Polly")),
+    "member-derived-from-member": derived.Aviary(
+        songbird=derived.Canary(name="Tweety", song="trill")
+    ),
     "datetime": derived.Visit(start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC)),
     "duration": derived.Visit(
         start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC), duration=timedelta(seconds=90)

@@ -47,9 +47,15 @@ A base class with no type name, such as a base in a module that declares no name
 
 The `Pet` union is discriminated by the constant tag that each member declares in its `pet_type` property. Since `Pet` is a type alias rather than a model, the `pet` property holds the `Cat` or `Dog` object itself. From Python 3.12, the `type` statement declares the same alias, as in `type Pet = Annotated[Cat | Dog, Field(discriminator="pet_type")]`.
 
-Since `Cat` and `Dog` both derive from `PetBase`, the generated `Pet` union derives from `PetBase` too, and `Cat` and `Dog` derive from `Pet`. The common `age` property is therefore available on every `Pet`.
-
 A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
+
+### Unions as base classes
+
+A union is generated as an abstract base class, and each member derives from it. Since `Cat` and `Dog` both derive from `PetBase`, `Pet` derives from `PetBase` too, and the common `age` property is available on every `Pet`.
+
+Python and C# both have inheritance, so a field typed as `PetBase` can hold a `Cat` in either language, and the object carries its own class. JSON Schema describes data, not classes. The schema of a field typed as `PetBase` is the schema of `PetBase`, so the data written for the field records nothing about the model it came from. A `Cat` written to such a field is read back as a `PetBase`, in Python and in the generated code alike. A discriminated union is how JSON Schema describes a field that can hold one of several types, and the tag each member declares is how the data records which one. Such a field must therefore be typed as the union, even when its members share a base.
+
+A member can also derive from another member of the same union, such as a `Kitten` deriving from `Cat`. A `Kitten` is then also a `Cat`, so a [match operator](advanced-usage.md#tagged-unions) selecting `Cat` also matches `Kitten` objects.
 
 ### Enumerations
 

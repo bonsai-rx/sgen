@@ -151,6 +151,28 @@ class Nursery(SchemaModel):
     parakeet: Parakeet | None = None
 
 
+class Finch(SchemaModel):
+    """A union member that declares no tag."""
+
+    name: str
+
+
+class Canary(Finch):
+    """A union member deriving from another member of the same union."""
+
+    song: str = ""
+
+
+Songbird = TypeAliasType("Songbird", Annotated[Canary | Finch, DiscriminatedUnion("species")])
+"""A union with a member deriving from another member."""
+
+
+class Aviary(SchemaModel):
+    """A model referring to a union with a member deriving from another member."""
+
+    songbird: Songbird
+
+
 class Visit(SchemaModel):
     """A visit to the veterinarian."""
 
