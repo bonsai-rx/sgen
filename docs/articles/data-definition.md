@@ -80,9 +80,9 @@ public class CreatePerson : Source<Person>
 
 The `CreatePerson` source operator creates a new `Person` from the values of its properties. Because it is a regular operator, it appears in the editor toolbox and can be placed and configured in the workflow as usual.
 
-This may be enough for an occasional type in a project, but it does not scale to other common requirements of domain-specific record types, such as type hierarchies, serialization, or polymorphism. Each of these requires additional boilerplate code on top of the type itself.
+This may be enough for an occasional type in a project. It does not scale to other common requirements of domain-specific record types, such as type hierarchies, serialization or polymorphism. Each of these requires additional boilerplate code on top of the type itself.
 
-As a project grows, writing this boilerplate code quickly becomes cumbersome and error prone.
+As a project grows, writing this boilerplate code becomes cumbersome and error prone.
 
 ## JSON Schema
 

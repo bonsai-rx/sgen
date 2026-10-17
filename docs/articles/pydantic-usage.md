@@ -37,7 +37,7 @@ Every other type in the schema must derive from one of the base classes. Exporti
 
 ### Inheritance
 
-A model deriving from another model is generated as a class deriving from the class of its base, so `Cat` and `Dog` share the `age` property declared once in `PetBase`. A model with more than one base model, or one that changes the schema of a field it inherits, such as its type, default or key, includes the fields of its bases within its own schema instead.
+A model deriving from another model is generated as a class deriving from the class of its base, so `Cat` and `Dog` share the `age` property declared once in `PetBase`. A model with more than one base model includes the fields of its bases within its own schema instead. So does a model that changes the schema of an inherited field, such as its type, default or key.
 
 `PetBase` lists `ABC` among its bases, so it is generated as an abstract class. Only a model that lists `ABC` itself is generated as abstract, which leaves `Cat` and `Dog` concrete.
 
@@ -46,6 +46,8 @@ A base class with no type name, such as a base in a module that declares no name
 ### Discriminated unions
 
 The `Pet` union is discriminated by the constant tag that each member declares in its `pet_type` property. Since `Pet` is a type alias rather than a model, the `pet` property holds the `Cat` or `Dog` object itself. From Python 3.12, the `type` statement declares the same alias, as in `type Pet = Annotated[Cat | Dog, Field(discriminator="pet_type")]`.
+
+When the members are defined elsewhere, or belong to more than one union, the union assigns the tags instead of the members declaring them, through `DiscriminatedUnion`, as in `Annotated[Cat | Dog, DiscriminatedUnion("pet_type")]`. The tag of a member is its class name, or its fully qualified type name when `qualified` is set, so the members need no tag property.
 
 A union declared as a type alias is generated as a local union in each namespace referring to it, over the same member types. To share a single union across namespaces instead, mark the alias with `SchemaAlias`, as in `Annotated[Cat | Dog, Field(discriminator="pet_type"), SchemaAlias()]`. A shared union can also be declared as a subclass of `SchemaUnion`, which makes it a Pydantic model whose `root` property holds the member object.
 
@@ -132,7 +134,7 @@ The option affects only the type name check. A type that generated code cannot r
 
 The same model classes create and manipulate objects directly in Python, write them to a JSON file, and read a JSON file back into objects.
 
-Schema models follow a camelCase convention for keys. The key of each field, in data and in the exported schema, is the camelCase form of its Python name, such as `canMeow` for `can_meow`. Schema models accept both forms of a key when reading data, so a file can use either the camelCase keys or the Python names. A local type such as a plain Pydantic model or dataclass follows the convention by applying [`CAMEL_CASE_CONFIG`](xref:bonsai.sgen.CAMEL_CASE_CONFIG).
+Schema models follow a camelCase convention for keys. The key of each field, in data and in the exported schema, is the camelCase form of its Python name, such as `canMeow` for `can_meow`. Schema models accept both forms of a key when reading data, so a file can use either the camelCase keys or the Python names. A local type such as a plain Pydantic model or dataclass follows the convention by applying [`CAMEL_CASE_CONFIG`](xref:bonsai.sgen.CAMEL_CASE_CONFIG). Generated code reads and writes each property under a single key, so exporting a field whose validation and serialization aliases differ raises an error.
 
 ### Serialize to JSON
 

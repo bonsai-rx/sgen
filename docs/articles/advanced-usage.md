@@ -27,7 +27,7 @@ Running `Bonsai.Sgen` on this schema generates the following type signature for 
 public object FooProperty
 ```
 
-A statically typed language such as C# needs a single type for the property at compile time, so the generated property has type `object`, and its value has to be downcast to the correct type at runtime.
+A statically typed language such as C# needs a single type for the property at compile time, so the generated property has type `object`. Its value has to be downcast to the correct type at runtime.
 
 ## Tagged unions
 
@@ -68,7 +68,7 @@ Match operators also accept a sequence of any other type, such as `object`, and 
 
 ## Unions of independent types
 
-A tagged union can include either a member type that is defined outside the generated code, such as a type generated from another schema, or a type that already derives from another type, such as a member of another union.
+A tagged union can include a member type that is defined outside the generated code, such as a type generated from another schema. It can also include a type that already derives from another type, such as a member of another union.
 
 C# has no union types of its own, so `Bonsai.Sgen` models a tagged union as a base type that each member derives from. A type can derive from only one base, and only if it is generated in the same schema, so `Bonsai.Sgen` generates a wrapper type for each of the other members instead. The wrapper changes neither the data format nor how the union is used in a workflow. When every member derives from the same base type through `allOf`, no member is wrapped. The union base derives from the shared base type instead, and each member derives from the union base, so the shared properties are available on the union base.
 
@@ -121,7 +121,7 @@ A `Dog` is serialized with its `petType` discriminator tag next to its own prope
 { "owner": "Ana", "pet": { "petType": "dog", "name": "Rex", "breed": "Collie", "age": 3 } }
 ```
 
-In a workflow, a `MatchPet` operator with its `Type` set to `Dog` specifies a sequence that keeps only the `PetDog` wrappers of the `Pet` sequence and emits the `Dog` object held in each of them. For a sequence of `object`, it also keeps any plain `Dog` values. The implicit conversion shown above wraps a `Dog` in a `PetDog` whenever it is assigned to a property of type `Pet`.
+In a workflow, a `MatchPet` operator with its `Type` set to `Dog` specifies a sequence that keeps only the `PetDog` wrappers of the `Pet` sequence and emits the `Dog` object held in each of them. For a sequence of `object`, it also keeps any plain `Dog` values. The implicit conversion from `Dog` wraps a `Dog` in a `PetDog` whenever it is assigned to a property of type `Pet`.
 
 Wrapper types are internal to the generated code, although a wrapped member still appears in visualizers under the name of its wrapper, such as `PetDog { Value = Dog { Name = Rex, Breed = Collie, Age = 3 } }`. A custom operator written in C# can read the member held by a wrapper through the generated `IUnionWrapper<T>` interface, for example by testing a `Pet` with `as IUnionWrapper<PersonAndDog.Dog>`.
 
@@ -133,7 +133,7 @@ Wrapper types are internal to the generated code, although a wrapped member stil
 > - A wrapped member whose ordinary property has the same name as the discriminator, since its value would be lost. Declare the property as a constant or rename it.
 
 > [!TIP]
-> To use a tagged union in another schema, define the union again in that schema and refer to its members through `x-sgen-typename`, rather than referring to the union type itself. A union type from another schema currently round-trips only with the JSON serializer, since the YAML serializer of a schema handles only the unions defined in that schema.
+> To use a tagged union in another schema, define the union again in that schema and refer to its members through `x-sgen-typename`, rather than referring to the union type itself. A union type from another schema round-trips only with the JSON serializer, since the YAML serializer of a schema handles only the unions defined in that schema.
 
 ## Extending generated code with `partial` classes
 
