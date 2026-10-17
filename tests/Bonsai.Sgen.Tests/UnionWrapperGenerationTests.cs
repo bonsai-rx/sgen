@@ -21,6 +21,12 @@ namespace TestHelper.Base
             Kind = ""hamster"";
         }
 
+        protected Hamster(Hamster other)
+        {
+            Kind = other.Kind;
+            Name = other.Name;
+        }
+
         [Newtonsoft.Json.JsonPropertyAttribute(""kind"")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias=""kind"")]
         public string Kind { get; set; }
@@ -28,6 +34,12 @@ namespace TestHelper.Base
         [Newtonsoft.Json.JsonPropertyAttribute(""name"")]
         [YamlDotNet.Serialization.YamlMemberAttribute(Alias=""name"")]
         public string Name { get; set; }
+
+        protected virtual bool PrintMembers(System.Text.StringBuilder stringBuilder)
+        {
+            stringBuilder.Append(""Name = "" + Name);
+            return true;
+        }
     }
 }
 ";
@@ -124,6 +136,60 @@ namespace TestHelper.Base
   ""type"": ""object""
 }
 ");
+        }
+
+        static (KeyValuePair<string, JsonSchema> Cat, KeyValuePair<string, JsonSchema> Kitten) CreateMemberSubclasses()
+        {
+            var cat = SchemaTestHelper.CreateDerivedSchemas("kind", "Cat")[0];
+            cat.Value.Properties.Add("name", new JsonSchemaProperty { Type = JsonObjectType.String });
+            var kitten = SchemaTestHelper.CreateDerivedSchemas("kind", baseSchema: cat.Value, "Kitten")[0];
+            kitten.Value.Properties.Add("whiskers", new JsonSchemaProperty { Type = JsonObjectType.Integer });
+            return (cat, kitten);
+        }
+
+        static JsonSchema CreateMemberSubclassSchema()
+        {
+            var (cat, kitten) = CreateMemberSubclasses();
+            var animal = SchemaTestHelper.CreateDiscriminatorSchema("kind", kitten, cat);
+            var schema = SchemaTestHelper.CreateContainerSchema([new("Animal", animal), cat, kitten]);
+            schema.Properties.Add("pet", new JsonSchemaProperty { Reference = animal });
+            return schema;
+        }
+
+        static JsonSchema CreateInlineMemberSubclassSchema()
+        {
+            var (cat, kitten) = CreateMemberSubclasses();
+            var schema = SchemaTestHelper.CreateContainerSchema([cat, kitten]);
+            schema.Properties.Add("pet", SchemaTestHelper.CreateDiscriminatorSchema<JsonSchemaProperty>("kind", kitten, cat));
+            return schema;
+        }
+
+        static JsonSchema CreateSharedMemberSubclassSchema(bool sharedUnionFirst)
+        {
+            var (cat, kitten) = CreateMemberSubclasses();
+            var dog = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog")[0];
+            var animal = new KeyValuePair<string, JsonSchema>("Animal", SchemaTestHelper.CreateDiscriminatorSchema("kind", cat, dog));
+            var litter = new KeyValuePair<string, JsonSchema>("Litter", SchemaTestHelper.CreateDiscriminatorSchema("kind", kitten, cat));
+            KeyValuePair<string, JsonSchema>[] unions = sharedUnionFirst ? [animal, litter] : [litter, animal];
+            var schema = SchemaTestHelper.CreateContainerSchema([.. unions, cat, kitten, dog]);
+            foreach (var union in unions)
+            {
+                schema.Properties.Add(union.Key.ToLowerInvariant(), new JsonSchemaProperty { Reference = union.Value });
+            }
+            return schema;
+        }
+
+        static async Task<JsonSchema> CreateExternalMemberSubclassSchema()
+        {
+            var schema = await CreateExternalMemberSchema();
+            var hamster = schema.Definitions["Hamster"];
+            var dwarfHamster = new JsonSchema { Type = JsonObjectType.Object, Title = "DwarfHamster" };
+            dwarfHamster.AllOf.Add(new JsonSchema { Reference = hamster });
+            schema.Definitions["DwarfHamster"] = dwarfHamster;
+            var animal = schema.Definitions["Animal"];
+            animal.OneOf.Add(new JsonSchema { Reference = dwarfHamster });
+            animal.DiscriminatorObject.Mapping["dwarf"] = new JsonSchema { Reference = dwarfHamster };
+            return schema;
         }
 
         static JsonSchema CreateInheritedMemberSchema()
@@ -451,6 +517,76 @@ namespace TestHelper.Base
             StringAssert.Contains(output, "Dog", "Serialized wrapper must carry its tag.");
             StringAssert.Contains(output, "3", "Serialized wrapper must carry inherited properties.");
             Assert.IsFalse(output.Contains("Value"), "Serialized wrapper must use the flat format.");
+        }
+
+        [TestMethod]
+        public void GenerateWithMemberSubclass_InheritUnionThroughMember()
+        {
+            var schema = CreateMemberSubclassSchema();
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("class Cat : Animal"), "Member must inherit from union base type.");
+            Assert.IsTrue(code.Contains("class Kitten : Cat"), "Member subclass must inherit the union through its base member.");
+            Assert.IsFalse(code.Contains("AnimalKitten"), "Member subclass must not be wrapped.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""pet"":{""kind"":""Kitten"",""name"":""Tom"",""whiskers"":12}}")]
+        [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "pet:\n  kind: Kitten\n  name: Tom\n  whiskers: 12\n")]
+        public async Task GenerateWithMemberSubclass_RoundTripOwnTag(SerializerLibraries serializerLibraries, string format, string text)
+        {
+            var schema = CreateMemberSubclassSchema();
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries, SchemaNamespace);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            var containerType = SerializerTestHelper.GetGeneratedType(assembly, "Container");
+            var container = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, text);
+            var member = await WorkflowTestHelper.Select(container, "Pet");
+            Assert.AreEqual("Kitten", member.GetType().Name, "Tagged member subclass must deserialize as its own type.");
+            Assert.AreEqual(12, await WorkflowTestHelper.Select(member, "Whiskers"));
+
+            var output = await SerializerTestHelper.Serialize(assembly, $"SerializeTo{format}", containerType, container);
+            StringAssert.Contains(output, "Kitten", "Serialized member subclass must carry its own tag.");
+            Assert.IsFalse(output.Contains("\"Cat\"") || output.Contains("kind: Cat"), "Serialized member subclass must not carry the tag of its base member.");
+        }
+
+        [TestMethod]
+        public void GenerateWithInlineMemberSubclass_TypePropertyAsUnion()
+        {
+            var schema = CreateInlineMemberSubclassSchema();
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("class Cat : Pet"), "Member must inherit from union base type.");
+            Assert.IsTrue(code.Contains("class Kitten : Cat"), "Member subclass must inherit the union through its base member.");
+            Assert.IsTrue(code.Contains("public Pet Pet"), "Inline union property must have the union base type.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(false, "AnimalCat")]
+        [DataRow(true, "LitterCat,LitterKitten")]
+        public void GenerateWithSharedMemberSubclass_WrapMemberInLaterUnion(bool sharedUnionFirst, string wrapperTypeNames)
+        {
+            var schema = CreateSharedMemberSubclassSchema(sharedUnionFirst);
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var code = generator.GenerateFile();
+            foreach (var wrapperTypeName in wrapperTypeNames.Split(','))
+            {
+                Assert.IsTrue(code.Contains($"class {wrapperTypeName} :"), "Shared member must be wrapped in the union resolved last.");
+            }
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        public async Task GenerateWithExternalMemberSubclass_WrapMember()
+        {
+            var schema = await CreateExternalMemberSubclassSchema();
+            var generator = TestHelper.CreateGenerator(schema, schemaNamespace: SchemaNamespace);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("class DwarfHamster : TestHelper.Base.Hamster"), "Member subclass must keep its external base type.");
+            Assert.IsTrue(code.Contains("class AnimalHamster : Animal, IUnionWrapper"), "Missing wrapper type for external member.");
+            Assert.IsTrue(code.Contains("class AnimalDwarf : Animal, IUnionWrapper"), "Missing wrapper type for subclass of external member.");
+            CompilerTestHelper.CompileFromSource(ExternalCode, code);
         }
 
         [TestMethod]

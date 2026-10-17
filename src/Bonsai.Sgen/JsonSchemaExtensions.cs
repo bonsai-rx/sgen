@@ -125,17 +125,11 @@ namespace Bonsai.Sgen
                     !CSharpTypeNameGenerator.NamespaceEquals(typeName, Settings.Namespace);
             }
 
-            private static bool InheritsOtherType(JsonSchema schema, JsonSchema baseSchema)
-            {
-                var inheritedSchema = schema.InheritedSchema;
-                return inheritedSchema != null && inheritedSchema.ActualSchema != baseSchema;
-            }
-
-            private void ResolveUnionInheritance(JsonSchema schema, JsonSchema baseSchema, string baseTypeNameHint)
+            private void ResolveUnionInheritance(JsonSchema baseSchema, string baseTypeNameHint)
             {
                 if (IsExternal(baseSchema))
                 {
-                    foreach (var derivedSchema in schema.OneOf)
+                    foreach (var derivedSchema in baseSchema.OneOf)
                     {
                         if (derivedSchema.IsNullable(SchemaType.JsonSchema))
                             continue;
@@ -150,23 +144,29 @@ namespace Bonsai.Sgen
                 }
 
                 baseSchema.IsAbstract = true;
-                ResolveCommonBaseInheritance(schema, baseSchema);
+                ResolveCommonBaseInheritance(baseSchema);
                 var baseTypeName = Settings.TypeNameGenerator.Generate(baseSchema, baseTypeNameHint, Array.Empty<string>());
-                foreach (var derivedSchema in schema.OneOf.ToList())
+                foreach (var derivedSchema in baseSchema.OneOf)
                 {
                     if (derivedSchema.IsNullable(SchemaType.JsonSchema))
                         continue;
 
                     var memberSchema = derivedSchema.ActualSchema;
-                    if (memberSchema.AllOf.Any(schema => schema.Reference == baseSchema) ||
-                        memberSchema.TryGetUnionWrapperTag(out _))
-                        continue;
-
-                    if (!IsExternal(memberSchema) && !InheritsOtherType(memberSchema, baseSchema))
+                    if (!IsExternal(memberSchema) && memberSchema.InheritedSchema == null)
                     {
                         memberSchema.AllOf.Add(new JsonSchema { Reference = baseSchema });
-                        continue;
                     }
+                }
+
+                foreach (var derivedSchema in baseSchema.OneOf.ToList())
+                {
+                    if (derivedSchema.IsNullable(SchemaType.JsonSchema))
+                        continue;
+
+                    var memberSchema = derivedSchema.ActualSchema;
+                    if (memberSchema.AllInheritedSchemas.Contains(baseSchema) ||
+                        memberSchema.TryGetUnionWrapperTag(out _))
+                        continue;
 
                     if (memberSchema.DiscriminatorObject != null)
                     {
@@ -177,7 +177,7 @@ namespace Bonsai.Sgen
                     }
 
                     var wrapperSchema = CreateUnionWrapper(baseSchema, baseTypeName, memberSchema);
-                    ReplaceUnionMember(schema.OneOf, derivedSchema, wrapperSchema);
+                    ReplaceUnionMember(baseSchema.OneOf, derivedSchema, wrapperSchema);
                     if (baseSchema.DiscriminatorObject is OpenApiDiscriminator discriminator)
                     {
                         foreach (var mapping in discriminator.Mapping.ToList())
@@ -189,9 +189,9 @@ namespace Bonsai.Sgen
                 }
             }
 
-            private void ResolveCommonBaseInheritance(JsonSchema schema, JsonSchema baseSchema)
+            private void ResolveCommonBaseInheritance(JsonSchema baseSchema)
             {
-                var memberSchemas = schema.OneOf
+                var memberSchemas = baseSchema.OneOf
                     .Where(derivedSchema => !derivedSchema.IsNullable(SchemaType.JsonSchema))
                     .Select(derivedSchema => derivedSchema.ActualSchema)
                     .ToList();
@@ -321,24 +321,32 @@ namespace Bonsai.Sgen
                             {
                                 discriminatorSchema.ExtensionData = new Dictionary<string, object>(actualSchema.ExtensionData);
                             }
-                            RootObject.Definitions.Add(typeNameHint, discriminatorSchema);
-                            ResolveUnionInheritance(actualSchema, discriminatorSchema, typeNameHint);
-                        }
-                        else
-                        {
-                            if (discriminatorSchema.OneOf.Count > 0)
+                            foreach (var derivedSchema in actualSchema.OneOf)
                             {
-                                var baseTypeNameHint = definitionTypeNameLookup.TryGetValue(discriminatorSchema, out var definitionName)
-                                    ? definitionName
-                                    : typeNameHint;
-                                ResolveUnionInheritance(discriminatorSchema, discriminatorSchema, baseTypeNameHint);
+                                if (!derivedSchema.IsNullable(SchemaType.JsonSchema))
+                                    discriminatorSchema.OneOf.Add(derivedSchema);
                             }
+                            RootObject.Definitions.Add(typeNameHint, discriminatorSchema);
                         }
 
                         if (!isDefinition)
                         {
                             actualSchema.DiscriminatorObject = null;
                             actualSchema.IsAbstract = false;
+                            foreach (var derivedSchema in actualSchema.OneOf.ToList())
+                            {
+                                if (!derivedSchema.IsNullable(SchemaType.JsonSchema))
+                                    actualSchema.OneOf.Remove(derivedSchema);
+                            }
+                            actualSchema.OneOf.Add(new JsonSchema { Reference = discriminatorSchema });
+                        }
+
+                        if (discriminatorSchema.OneOf.Count > 0)
+                        {
+                            var baseTypeNameHint = definitionTypeNameLookup.TryGetValue(discriminatorSchema, out var definitionName)
+                                ? definitionName
+                                : typeNameHint;
+                            ResolveUnionInheritance(discriminatorSchema, baseTypeNameHint);
                         }
                     }
                 }

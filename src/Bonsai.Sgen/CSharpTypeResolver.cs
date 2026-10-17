@@ -69,6 +69,9 @@ namespace Bonsai.Sgen
 
         private JsonSchema ResolveBaseTypeSchema(JsonSchema schema)
         {
+            if (schema.DiscriminatorObject != null)
+                return schema;
+
             if (!_baseTypeCache.TryGetValue(schema, out JsonSchema? baseSchema))
             {
                 foreach (JsonSchema o in schema.OneOf)
