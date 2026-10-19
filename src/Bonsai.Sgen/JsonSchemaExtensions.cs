@@ -301,6 +301,15 @@ namespace Bonsai.Sgen
 
             protected override JsonSchema VisitSchema(JsonSchema schema, string path, string? typeNameHint)
             {
+                if (schema.DiscriminatorObject != null &&
+                    schema.OneOf.Count(derivedSchema => !derivedSchema.IsNullable(SchemaType.JsonSchema)) == 1)
+                {
+                    var unionName = definitionTypeNameLookup.TryGetValue(schema, out var name) ? name : typeNameHint;
+                    throw new InvalidOperationException(
+                        $"The discriminated union '{unionName}' has a single member. " +
+                        "A discriminated union requires at least two members.");
+                }
+
                 var actualSchema = schema.ActualSchema;
                 if (actualSchema.DiscriminatorObject != null)
                 {
