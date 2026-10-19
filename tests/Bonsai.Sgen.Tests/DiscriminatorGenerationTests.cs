@@ -362,6 +362,23 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void GenerateFromSingleMemberDiscriminatorSchema_ThrowsNamingUnion(bool nullable)
+        {
+            var dog = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog")[0];
+            var animal = SchemaTestHelper.CreateDiscriminatorSchema("kind", dog);
+            if (!nullable) animal.OneOf.Remove(animal.OneOf.Last());
+            var schema = SchemaTestHelper.CreateContainerSchema([new("Animal", animal), dog]);
+            schema.Properties.Add("pet", new JsonSchemaProperty { Reference = animal });
+
+            var exception = Assert.ThrowsException<InvalidOperationException>(
+                () => TestHelper.CreateGenerator(schema).GenerateFile());
+            StringAssert.Contains(exception.Message, "Animal");
+            StringAssert.Contains(exception.Message, "single member");
+        }
+
+        [TestMethod]
         public async Task GenerateFromExternalDiscriminatorRefSharedByProperties_OmitPropertyBaseTypes()
         {
             var directory = Directory.CreateTempSubdirectory(nameof(DiscriminatorGenerationTests));
