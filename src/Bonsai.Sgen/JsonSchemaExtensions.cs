@@ -231,7 +231,7 @@ namespace Bonsai.Sgen
                         $"The discriminated union '{baseTypeName}' has a member with no discriminator mapping.");
                 }
 
-                var wrapperTypeName = baseTypeName + ToIdentifier(tag);
+                var wrapperTypeName = baseTypeName + CSharpNamingConvention.Instance.Apply(tag);
                 var clashesWithDefinition = RootObject.Definitions.Any(definition =>
                     definition.Key == wrapperTypeName ||
                     definition.Value.TryGetExternalTypeName(out var typeName) &&
@@ -288,15 +288,6 @@ namespace Bonsai.Sgen
                 {
                     members.Add(schema);
                 }
-            }
-
-            private static string ToIdentifier(string value)
-            {
-                var parts = System.Text.RegularExpressions.Regex.Split(value, "[^A-Za-z0-9]+")
-                    .Where(part => part.Length > 0)
-                    .Select(part => char.ToUpperInvariant(part[0]) + part[1..]);
-                var identifier = string.Concat(parts);
-                return identifier.Length == 0 || char.IsDigit(identifier[0]) ? "_" + identifier : identifier;
             }
 
             protected override JsonSchema VisitSchema(JsonSchema schema, string path, string? typeNameHint)

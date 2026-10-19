@@ -22,7 +22,6 @@ from pydantic import (
     RootModel,
     SerializerFunctionWrapHandler,
 )
-from pydantic.alias_generators import to_camel, to_pascal
 from pydantic.fields import ComputedFieldInfo, FieldInfo
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema, core_schema
@@ -39,8 +38,19 @@ ABSTRACT_KEY = "x-abstract"
 NAMESPACE_ATTRIBUTE = "SGEN_NAMESPACE"
 """Module attribute declaring the generated namespace of the schema types in the module."""
 
+
+def _pascal_case(name: str) -> str:
+    pascal = "".join(part[:1].upper() + part[1:] for part in re.split(r"[\W_]+", name))
+    return pascal if pascal[:1].isalpha() else "_" + pascal
+
+
+def _camel_case(name: str) -> str:
+    pascal = _pascal_case(name)
+    return pascal[:1].lower() + pascal[1:]
+
+
 CAMEL_CASE_CONFIG = ConfigDict(
-    alias_generator=to_camel, validate_by_name=True, serialize_by_alias=True
+    alias_generator=_camel_case, validate_by_name=True, serialize_by_alias=True
 )
 """Model configuration writing camelCase keys and reading either camelCase or Python names."""
 
@@ -162,7 +172,7 @@ def _alias_marker(alias: Any) -> "SchemaAlias | None":
 def _add_enum_names(cls: type[Enum], definition: JsonSchemaValue) -> None:
     if definition.get("type") == "integer":
         definition[ENUM_NAMES_KEY] = [
-            to_pascal(name) if name.isupper() else name for name in cls.__members__
+            _pascal_case(name.lower()) if name.isupper() else name for name in cls.__members__
         ]
 
 
@@ -183,7 +193,7 @@ def _field_key(name: str, field: FieldInfo) -> str:
 
 def _field_title(name: str, field: FieldInfo | ComputedFieldInfo) -> str:
     key = _field_key(name, field) if isinstance(field, FieldInfo) else field.alias or name
-    return "".join(part[:1].upper() + part[1:] for part in re.split(r"[-_.]", key))
+    return _pascal_case(key)
 
 
 def _schema_base(cls: type["SchemaModel"]) -> type["SchemaModel"] | None:
