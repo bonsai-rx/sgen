@@ -46,6 +46,9 @@ namespace Bonsai.Sgen
 
         public override JsonSchema RemoveNullability(JsonSchema schema)
         {
+            if (schema.ActualSchema.DiscriminatorObject != null)
+                return schema;
+
             JsonSchema? selectedSchema = null;
             foreach (JsonSchema o in schema.ActualSchema.OneOf)
             {

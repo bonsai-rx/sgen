@@ -46,6 +46,10 @@ CASES: dict[str, BaseModel] = {
     "member-derived-from-member": derived.Aviary(
         songbird=derived.Canary(name="Tweety", song="trill")
     ),
+    "single-member-union": derived.Roost(
+        nightbird=derived.Nightbird(derived.Owl(name="Hedwig")),
+        flightless=derived.Kiwi(name="Kiri"),
+    ),
     "datetime": derived.Visit(start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC)),
     "duration": derived.Visit(
         start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC), duration=timedelta(seconds=90)

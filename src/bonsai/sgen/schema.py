@@ -251,13 +251,7 @@ def _tag_key(member: Any, name: str) -> str:
 
 
 def _check_union_members(name: str, annotation: Any) -> None:
-    members = _union_members(annotation)
-    if len(members) < 2:
-        raise TypeError(
-            f"Union {name} has a single member, which generated code "
-            "represents as the member itself rather than as a union."
-        )
-    for member in members:
+    for member in _union_members(annotation):
         if not (isinstance(member, type) and issubclass(member, SchemaModel)):
             raise TypeError(f"Union {name} member {member!r} is not a SchemaModel.")
 
@@ -486,8 +480,8 @@ class SchemaUnion(RootModel[Any]):
         """Ensures the union can be generated.
 
         Raises:
-            TypeError: If the union is not discriminated, has a single member, or has a
-                member that is not a `SchemaModel`.
+            TypeError: If the union is not discriminated, or has a member that is not a
+                `SchemaModel`.
         """
         super().__pydantic_init_subclass__(**kwargs)
         field = cls.model_fields["root"]
@@ -532,17 +526,19 @@ class SchemaAlias:
         """Ensures the alias is a union that can be generated.
 
         Raises:
-            TypeError: If the alias is not a union, or has a member that is not a
-                `SchemaModel`.
+            TypeError: If the alias is not a discriminated union, or has a member that is not
+                a `SchemaModel`.
         """
-        if get_origin(source_type) not in (Union, types.UnionType):
+        schema = handler(source_type)
+        is_union = get_origin(source_type) in (Union, types.UnionType)
+        if not is_union and schema["type"] != "tagged-union":
             raise TypeError(
                 f"SchemaAlias supports only aliases of discriminated unions, not {source_type!r}, "
                 "since Bonsai.Sgen cannot represent any other alias as a type of its own. "
                 "Refer to the aliased type directly instead."
             )
         _check_union_members(repr(source_type), source_type)
-        return handler(source_type)
+        return schema
 
     def __get_pydantic_json_schema__(
         self, core_schema: CoreSchema, handler: GetJsonSchemaHandler

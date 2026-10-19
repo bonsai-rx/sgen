@@ -173,6 +173,39 @@ class Aviary(SchemaModel):
     songbird: Songbird
 
 
+class Owl(SchemaModel):
+    """The only member of a union."""
+
+    kind: Literal["owl"] = "owl"
+    name: str
+
+
+class Nightbird(SchemaUnion):
+    """A union with a single member, kept as a union so members can be added."""
+
+    root: Annotated[Owl, Field(discriminator="kind")]
+
+
+class Kiwi(SchemaModel):
+    """The only member of a union alias."""
+
+    kind: Literal["kiwi"] = "kiwi"
+    name: str
+
+
+Flightless = TypeAliasType(
+    "Flightless", Annotated[Kiwi, Field(discriminator="kind"), SchemaAlias()]
+)
+"""A union alias with a single member."""
+
+
+class Roost(SchemaModel):
+    """A model referring to unions with a single member."""
+
+    nightbird: Nightbird | None = None
+    flightless: Flightless | None = None
+
+
 class Visit(SchemaModel):
     """A visit to the veterinarian."""
 

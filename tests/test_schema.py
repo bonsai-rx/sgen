@@ -1354,14 +1354,19 @@ def test_union_without_discriminator_raises():
             root: derived.Cat | derived.Hamster
 
 
-def test_union_single_member_raises():
-    """A union with a single member raises on definition."""
-    with pytest.raises(TypeError, match="single member"):
-
-        class Solo(SchemaUnion):
-            """A single parrot."""
-
-            root: Annotated[derived.Parrot, DiscriminatedUnion("species")]
+@pytest.mark.parametrize(
+    ("union", "member", "tag"),
+    [("Nightbird", "Owl", "owl"), ("Flightless", "Kiwi", "kiwi")],
+    ids=["class", "alias"],
+)
+def test_union_single_member_exports_union(union: str, member: str, tag: str):
+    """A union with a single member exports as a discriminated union of that member."""
+    definition = _definitions(derived.Roost)[union]
+    assert definition["oneOf"] == [{"$ref": f"#/$defs/{member}"}]
+    assert definition["discriminator"] == {
+        "mapping": {tag: f"#/$defs/{member}"},
+        "propertyName": "kind",
+    }
 
 
 def test_union_plain_member_raises():
@@ -1538,7 +1543,7 @@ def test_schema_types_exclude_generic_models():
 def test_schema_types_include_marked_aliases():
     """The schema types of a module include the aliases marked for generation."""
     aliases = [value for value in schema_types(derived) if not isinstance(value, type)]
-    assert aliases == [derived.Companion, derived.Flock]
+    assert aliases == [derived.Companion, derived.Flock, derived.Flightless]
     assert Plain not in schema_types(sys.modules[__name__])
 
 
