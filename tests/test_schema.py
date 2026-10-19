@@ -5,7 +5,7 @@ import json
 import sys
 import warnings
 from enum import Enum, StrEnum, auto
-from typing import Annotated, Generic, Literal, TypeVar
+from typing import Annotated, Any, Generic, Literal, TypeVar
 
 import pytest
 from models import base, derived, late, local, owners, plain, unnamed
@@ -811,10 +811,12 @@ def test_field_titles_match_property_names():
     """The title of each field is the name of the generated property, unless set explicitly."""
 
     class Dog(SchemaModel):
-        """A model with an explicit alias and an explicit title."""
+        """A model with explicit aliases and an explicit title."""
 
         favorite_toy: str = "ball"
         toy_count: int = Field(0, alias="toy-total")
+        paw_count: int = Field(0, alias="paw2d")
+        owner_id: str = Field("", alias="_id")
         nickname: str = Field("", title="Pet name")
 
     class Cat(SchemaModel):
@@ -833,6 +835,8 @@ def test_field_titles_match_property_names():
     assert titles == {
         "favoriteToy": "FavoriteToy",
         "toy-total": "ToyTotal",
+        "paw2d": "Paw2d",
+        "_id": "Id",
         "nickname": "Pet name",
         "x": "X",
         "paw1": "Paw1",
@@ -1043,7 +1047,7 @@ def test_generic_model_from_other_namespace_exports_as_local_type():
     assert definitions["Crate"]["x-sgen-typename"] == "TestHelper.Schema.Crate"
 
 
-def test_local_integer_enum_names_values():
+def test_local_integer_enum_specifies_value_names():
     """A local integer enumeration specifies the names of its values like a SchemaEnum."""
     definitions = export_schema(plain.Puppy, allow_local_types=True)["$defs"]
     assert definitions["Coat"]["x-enumNames"] == ["Short", "LongHair"]
@@ -1124,7 +1128,7 @@ def test_union_from_other_namespace_warns():
     assert len(record) == 1
 
 
-def test_integer_enum_names_members():
+def test_integer_enum_specifies_value_names():
     """An integer enumeration specifies the names of its values, converting only upper case."""
     assert _definitions(derived.Palette)["Color"]["x-enumNames"] == [
         "Red",
@@ -1133,7 +1137,43 @@ def test_integer_enum_names_members():
     ]
 
 
-def test_integer_enum_names_aliases():
+@pytest.mark.parametrize(
+    ("name", "key", "title"),
+    [
+        ("can_meow", "canMeow", "CanMeow"),
+        ("canMeow", "canMeow", "CanMeow"),
+        ("CanMeow", "canMeow", "CanMeow"),
+        ("paw_2d", "paw2d", "Paw2d"),
+    ],
+    ids=["snake_case", "camelCase", "PascalCase", "digit"],
+)
+def test_field_key_and_title_keep_capitals(name: str, key: str, title: str):
+    """A field key and title keep the capitals of a camelCase or PascalCase name."""
+    fields: dict[str, Any] = {name: (bool, False)}
+    Cat = create_model("Cat", __base__=SchemaModel, **fields)
+    properties = _definitions(Cat)["Cat"]["properties"]
+    assert set(properties) == {key}
+    assert properties[key]["title"] == title
+
+
+def test_integer_enum_value_names_keep_underscore():
+    """Integer enumeration value names keep an underscore before a leading digit."""
+
+    class Shape(SchemaEnum):
+        """Specifies the available shapes."""
+
+        RGB_2D = 0
+        _2D = 1
+
+    class Canvas(SchemaModel):
+        """A canvas with a shape."""
+
+        shape: Shape
+
+    assert _definitions(Canvas)["Shape"]["x-enumNames"] == ["Rgb2d", "_2d"]
+
+
+def test_integer_enum_value_names_follow_aliases():
     """Names stay aligned with aliased values, since the schema keeps a value for each alias."""
 
     class Size(SchemaEnum):
@@ -1182,7 +1222,7 @@ def test_str_enum_values_from_member_names():
     assert _definitions(Diary)["Mood"]["enum"] == ["very_happy"]
 
 
-def test_string_enum_names_no_members():
+def test_string_enum_specifies_no_value_names():
     """The names of a string enumeration are derived directly from its values."""
     definition = _definitions(derived.Palette)["Mood"]
     assert "x-enumNames" not in definition

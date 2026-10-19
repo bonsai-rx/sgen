@@ -58,5 +58,42 @@ namespace Bonsai.Sgen.Tests
             Assert.IsTrue(code.Contains("HyphenCaseWith3Numbers = 3"), "Incorrect casing for enum name.");
             CompilerTestHelper.CompileFromSource(code);
         }
+
+        [TestMethod]
+        public async Task GenerateFromCamelCaseAndDigits_KeepCapitals()
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+    ""$schema"": ""http://json-schema.org/draft-04/schema#"",
+    ""type"": ""object"",
+    ""title"": ""Container"",
+    ""properties"": {
+      ""paw_2d"": { ""type"": ""string"" },
+      ""claw2d"": { ""type"": ""string"" },
+      ""digitalIO"": { ""type"": ""string"" },
+      ""activityCenter"": { ""type"": ""string"" },
+      ""_2d"": { ""type"": ""string"" },
+      ""_id"": { ""type"": ""string"" },
+      ""__dunder"": { ""type"": ""string"" },
+      ""shape"": {
+        ""enum"": [""rgb_2d"", ""flat""],
+        ""title"": ""Shape"",
+        ""type"": ""string""
+      }
+    }
+}
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("public string Paw2d"), "Letter after digit must keep its case.");
+            Assert.IsTrue(code.Contains("public string Claw2d"), "Letter after digit must keep its case without separator.");
+            Assert.IsTrue(code.Contains("public string DigitalIO"), "Capitals of camelCase name must be kept.");
+            Assert.IsTrue(code.Contains("public string ActivityCenter"), "Capitals of camelCase name must be kept.");
+            Assert.IsTrue(code.Contains("public string _2d"), "Leading digit must be prefixed with underscore.");
+            Assert.IsTrue(code.Contains("public string Id"), "Leading underscore must be dropped before letter.");
+            Assert.IsTrue(code.Contains("public string Dunder"), "Leading underscores must be dropped before letter.");
+            Assert.IsTrue(code.Contains("Rgb2d = 0"), "Incorrect casing for enum name.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
     }
 }
