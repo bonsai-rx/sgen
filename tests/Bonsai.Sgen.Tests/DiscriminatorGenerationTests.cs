@@ -364,7 +364,7 @@ namespace Bonsai.Sgen.Tests
         [TestMethod]
         [DataRow(false)]
         [DataRow(true)]
-        public void GenerateFromSingleMemberDiscriminatorSchema_ThrowsNamingUnion(bool nullable)
+        public void GenerateFromSingleMemberDiscriminatorSchema_GenerateUnion(bool nullable)
         {
             var dog = SchemaTestHelper.CreateDerivedSchemas("kind", "Dog")[0];
             var animal = SchemaTestHelper.CreateDiscriminatorSchema("kind", dog);
@@ -372,10 +372,41 @@ namespace Bonsai.Sgen.Tests
             var schema = SchemaTestHelper.CreateContainerSchema([new("Animal", animal), dog]);
             schema.Properties.Add("pet", new JsonSchemaProperty { Reference = animal });
 
-            var exception = Assert.ThrowsException<InvalidOperationException>(
-                () => TestHelper.CreateGenerator(schema).GenerateFile());
-            StringAssert.Contains(exception.Message, "Animal");
-            StringAssert.Contains(exception.Message, "single member");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("abstract partial class Animal"), "Single member union must generate its base type.");
+            Assert.IsTrue(code.Contains("class Dog : Animal"), "Single member must inherit from union base type.");
+            Assert.IsTrue(code.Contains("public Animal Pet"), "Property must be typed as the union.");
+            Assert.IsTrue(code.Contains("[JsonInheritanceAttribute(\"Dog\", typeof(Dog))]"), "Union must map the member tag.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        [DataRow(SerializerLibraries.NewtonsoftJson, "Json", @"{""pet"":{""kind"":""dog"",""name"":""Rex""}}")]
+        [DataRow(SerializerLibraries.YamlDotNet, "Yaml", "pet:\n  kind: dog\n  name: Rex\n")]
+        public async Task GenerateFromSingleMemberDiscriminatorSchema_RoundTripTaggedMember(SerializerLibraries serializerLibraries, string format, string text)
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+  ""$defs"": {
+    ""Dog"": { ""properties"": { ""kind"": { ""const"": ""dog"", ""default"": ""dog"", ""type"": ""string"" }, ""name"": { ""type"": ""string"" } }, ""title"": ""Dog"", ""type"": ""object"" },
+    ""Animal"": { ""discriminator"": { ""mapping"": { ""dog"": ""#/$defs/Dog"" }, ""propertyName"": ""kind"" }, ""oneOf"": [ { ""$ref"": ""#/$defs/Dog"" } ], ""title"": ""Animal"" }
+  },
+  ""properties"": { ""pet"": { ""anyOf"": [ { ""$ref"": ""#/$defs/Animal"" }, { ""type"": ""null"" } ], ""default"": null } },
+  ""title"": ""Container"",
+  ""type"": ""object""
+}
+");
+            var generator = TestHelper.CreateGenerator(schema, serializerLibraries);
+            var assembly = CompilerTestHelper.CompileToAssembly(generator.GenerateFile());
+            var containerType = SerializerTestHelper.GetGeneratedType(assembly, "Container");
+            var container = await SerializerTestHelper.Deserialize(assembly, $"DeserializeFrom{format}", containerType, text);
+            var member = await WorkflowTestHelper.Select(container, "Pet");
+            Assert.AreEqual("Dog", member.GetType().Name, "Tagged member must deserialize as member type.");
+
+            var output = await SerializerTestHelper.Serialize(assembly, $"SerializeTo{format}", containerType, container);
+            StringAssert.Contains(output, "dog", "Serialized member must carry its tag.");
+            StringAssert.Contains(output, "Rex", "Serialized member must carry its properties.");
         }
 
         [TestMethod]
