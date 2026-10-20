@@ -320,6 +320,51 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        public async Task GenerateFromNullableValuesInPropertyDefault_EnsureFieldInitializer()
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+  ""$defs"": {
+    ""Collar"": { ""type"": ""object"", ""title"": ""Collar"", ""properties"": {
+      ""size"": { ""anyOf"": [{ ""type"": ""integer"" }, { ""type"": ""null"" }], ""default"": 1 },
+      ""weight"": { ""anyOf"": [{ ""type"": ""number"" }, { ""type"": ""null"" }], ""default"": null },
+      ""color"": { ""anyOf"": [{ ""type"": ""string"" }, { ""type"": ""null"" }], ""default"": null },
+      ""fitted"": { ""type"": ""string"", ""format"": ""date-time"", ""default"": ""2026-01-01T00:00:00Z"" } } }
+  },
+  ""type"": ""object"",
+  ""title"": ""Dog"",
+  ""properties"": {
+    ""collar"": { ""$ref"": ""#/$defs/Collar"", ""default"": { ""size"": null, ""weight"": 2.5, ""color"": ""red"", ""fitted"": ""2026-01-02T00:00:00Z"" } }
+  }
+}
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("_collar.Size = null"), "Missing null field initializer.");
+            Assert.IsTrue(code.Contains("_collar.Weight = 2.5D"), "Missing nullable number initializer.");
+            Assert.IsTrue(code.Contains("_collar.Color = \"red\""), "Missing nullable string initializer.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
+        public async Task GenerateFromNullableStringPropertyDefault_EnsureDefaultInitializer()
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+  ""type"": ""object"",
+  ""title"": ""Dog"",
+  ""properties"": {
+    ""name"": { ""anyOf"": [{ ""type"": ""string"" }, { ""type"": ""null"" }], ""default"": ""Rex"" }
+  }
+}
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("_name = \"Rex\""), "Missing field initializer.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
         public async Task GenerateFromAdditionalPropertiesWithPropertyNames_EnsureKeyIsEnumType()
         {
             var schema = await SchemaTestHelper.FromJsonAsync(@"

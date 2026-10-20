@@ -218,10 +218,11 @@ class Bed(SchemaModel):
 
     size: int = 1
     is_heated: bool = False
+    cover: str | None = "wool"
 
 
 class Lodge(SchemaModel):
     """A model whose fields default to models."""
 
     bed: Bed = Bed()
-    spare_bed: Bed = Bed(size=2, is_heated=True)
+    spare_bed: Bed = Bed(size=2, is_heated=True, cover=None)
