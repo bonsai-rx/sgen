@@ -297,6 +297,29 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        [DataRow(@"""$ref"": ""#/$defs/Collar""")]
+        [DataRow(@"""anyOf"": [{ ""$ref"": ""#/$defs/Collar"" }, { ""type"": ""null"" }]")]
+        public async Task GenerateFromReferencePropertyDefault_EnsureFieldInitializer(string reference)
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync($@"
+{{
+  ""$defs"": {{
+    ""Collar"": {{ ""type"": ""object"", ""title"": ""Collar"", ""properties"": {{ ""size"": {{ ""type"": ""integer"", ""default"": 1 }} }} }}
+  }},
+  ""type"": ""object"",
+  ""title"": ""Dog"",
+  ""properties"": {{
+    ""collar"": {{ {reference}, ""default"": {{ ""size"": 2 }} }}
+  }}
+}}
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("_collar.Size = 2"), "Missing nested field initializer.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
         public async Task GenerateFromAdditionalPropertiesWithPropertyNames_EnsureKeyIsEnumType()
         {
             var schema = await SchemaTestHelper.FromJsonAsync(@"

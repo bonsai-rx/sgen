@@ -82,6 +82,9 @@ dotnet bonsai.sgen "schemas/PersonAndDiscriminatedPets.json" -o Extensions --ser
 
 Run `bonsai-sgen --help` for the options of each command. From Python, the [`export_schema`](xref:bonsai.sgen.export_schema) and [`write_schema`](xref:bonsai.sgen.write_schema) functions produce the same schemas.
 
+> [!TIP]
+> Pydantic does not export a `default_factory`, so the field has no default in generated code. To initialize a model field, use an instance of its type as the default.
+
 ## Code generation
 
 The `generate` command exports each schema in memory and passes it to `Bonsai.Sgen` directly, so no schema file is written:

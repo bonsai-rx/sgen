@@ -211,3 +211,17 @@ class Visit(SchemaModel):
 
     start: datetime
     duration: timedelta | None = None
+
+
+class Bed(SchemaModel):
+    """A bed."""
+
+    size: int = 1
+    is_heated: bool = False
+
+
+class Lodge(SchemaModel):
+    """A model whose fields default to models."""
+
+    bed: Bed = Bed()
+    spare_bed: Bed = Bed(size=2, is_heated=True)

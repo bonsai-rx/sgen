@@ -426,7 +426,7 @@ namespace Bonsai.Sgen
                 targetObject,
                 new CodeObjectCreateExpression(targetType)));
 
-            var innerSchemaProperties = propertySchema.ActualProperties;
+            var innerSchemaProperties = propertySchema.ActualTypeSchema.ActualProperties;
             foreach (var jsonProperty in jsonObject.Properties())
             {
                 if (!innerSchemaProperties.TryGetValue(
