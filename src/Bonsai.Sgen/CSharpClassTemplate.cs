@@ -85,7 +85,7 @@ namespace Bonsai.Sgen
                 modelSchemaProperties.TryGetValue(property.Name, out var propertySchema);
                 var propertyType = ResolvePropertyType(property);
                 var isPrimitive = PrimitiveTypes.TryGetValue(propertyType, out string? underlyingType);
-                var isNullablePrimitive = property.Type.EndsWith('?') && PrimitiveTypes.ContainsKey(propertyType.TrimEnd('?'));
+                var isNullablePrimitive = IsNullablePrimitive(property);
                 var fieldDeclaration = new CodeMemberField(
                     isPrimitive ? underlyingType : propertyType,
                     property.FieldName);
@@ -154,6 +154,14 @@ namespace Bonsai.Sgen
                             new CodeFieldReferenceExpression(
                                 new CodeTypeReferenceExpression(typeof(Required)),
                                 property.IsNullable ? nameof(Required.AllowNull) : nameof(Required.Always))));
+                    }
+                    if (propertySchema?.Default is JObject)
+                    {
+                        jsonProperty.Arguments.Add(new CodeAttributeArgument(
+                            nameof(JsonPropertyAttribute.ObjectCreationHandling),
+                            new CodeFieldReferenceExpression(
+                                new CodeTypeReferenceExpression(typeof(ObjectCreationHandling)),
+                                nameof(ObjectCreationHandling.Replace))));
                     }
                     propertyDeclaration.CustomAttributes.Add(jsonProperty);
 
@@ -449,23 +457,48 @@ namespace Bonsai.Sgen
                 if (jsonProperty.Value is not JValue jsonValue)
                     continue;
 
-                var schemaDefault = defaultPropertySchema.Default;
-                try
+                var defaultValue = GetDefaultValueExpression(defaultProperty, defaultPropertySchema, jsonValue.Value);
+                if (defaultValue is not null)
                 {
-                    defaultPropertySchema.Default = jsonValue.Value;
-                    var defaultValue = Settings.ValueGenerator.GetDefaultValue(
-                        defaultPropertySchema,
-                        defaultProperty.IsNullable,
-                        defaultProperty.Type,
-                        defaultProperty.Name,
-                        Settings.GenerateDefaultValues,
-                        Model.Resolver);
                     defaultConstructor.Statements.Add(new CodeAssignStatement(
                         new CodePropertyReferenceExpression(targetObject, defaultProperty.PropertyName),
-                        new CodeSnippetExpression(defaultValue)));
+                        defaultValue));
                 }
-                finally { defaultPropertySchema.Default = schemaDefault; }
             }
+        }
+
+        private CodeExpression? GetDefaultValueExpression(
+            PropertyModel property,
+            JsonSchemaProperty propertySchema,
+            object? value)
+        {
+            if (value is null)
+                return new CodePrimitiveExpression(null);
+
+            var schemaDefault = propertySchema.Default;
+            try
+            {
+                propertySchema.Default = value;
+                var defaultValue = Settings.ValueGenerator.GetDefaultValue(
+                    propertySchema,
+                    property.IsNullable,
+                    property.Type,
+                    property.Name,
+                    Settings.GenerateDefaultValues,
+                    Model.Resolver);
+                if (!string.IsNullOrEmpty(defaultValue))
+                    return new CodeSnippetExpression(defaultValue);
+            }
+            finally { propertySchema.Default = schemaDefault; }
+
+            return IsNullablePrimitive(property) ? new CodePrimitiveExpression(value) : null;
+        }
+
+        static bool IsNullablePrimitive(PropertyModel property)
+        {
+            var propertyType = ResolvePropertyType(property);
+            return propertyType == "string" ||
+                propertyType.EndsWith('?') && PrimitiveTypes.ContainsKey(propertyType.TrimEnd('?'));
         }
 
         static string ResolvePropertyType(PropertyModel property)

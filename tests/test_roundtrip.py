@@ -176,3 +176,11 @@ def test_roundtrip_reads_omitted_defaults(runner: Runner, framework: str, serial
     """A document omitting fields defaulted to models is read with the defaults of pydantic."""
     text = runner.roundtrip(framework, serializer, get_typename(derived.Lodge), "{}")
     assert derived.Lodge.model_validate(_load(text, serializer)) == derived.Lodge()
+
+
+def test_roundtrip_reads_partial_defaults(runner: Runner, framework: str, serializer: str):
+    """A document setting some fields of a model with a default reads the rest from its type."""
+    document = '{"spareBed": {"isHeated": true}}'
+    text = runner.roundtrip(framework, serializer, get_typename(derived.Lodge), document)
+    expected = derived.Lodge.model_validate_json(document)
+    assert derived.Lodge.model_validate(_load(text, serializer)) == expected
