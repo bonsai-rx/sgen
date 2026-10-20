@@ -170,3 +170,9 @@ def test_roundtrip_adds_no_members(runner: Runner, framework: str, serializer: s
     )
     expected = _member_paths(_load(_dump(value, serializer), serializer))
     assert _member_paths(_load(text, serializer)) - expected == set()
+
+
+def test_roundtrip_reads_omitted_defaults(runner: Runner, framework: str, serializer: str):
+    """A document omitting fields defaulted to models is read with the defaults of pydantic."""
+    text = runner.roundtrip(framework, serializer, get_typename(derived.Lodge), "{}")
+    assert derived.Lodge.model_validate(_load(text, serializer)) == derived.Lodge()
