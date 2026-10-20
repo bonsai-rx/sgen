@@ -155,6 +155,14 @@ namespace Bonsai.Sgen
                                 new CodeTypeReferenceExpression(typeof(Required)),
                                 property.IsNullable ? nameof(Required.AllowNull) : nameof(Required.Always))));
                     }
+                    if (propertySchema?.Default is JObject)
+                    {
+                        jsonProperty.Arguments.Add(new CodeAttributeArgument(
+                            nameof(JsonPropertyAttribute.ObjectCreationHandling),
+                            new CodeFieldReferenceExpression(
+                                new CodeTypeReferenceExpression(typeof(ObjectCreationHandling)),
+                                nameof(ObjectCreationHandling.Replace))));
+                    }
                     propertyDeclaration.CustomAttributes.Add(jsonProperty);
 
                     var enumSchema = propertySchema?.ActualTypeSchema;

@@ -316,6 +316,9 @@ namespace Bonsai.Sgen.Tests
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
             Assert.IsTrue(code.Contains("_collar.Size = 2"), "Missing nested field initializer.");
+            Assert.IsTrue(
+                code.Contains("ObjectCreationHandling=Newtonsoft.Json.ObjectCreationHandling.Replace"),
+                "Object defaults must be replaced when deserializing.");
             CompilerTestHelper.CompileFromSource(code);
         }
 
