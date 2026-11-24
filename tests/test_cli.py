@@ -34,6 +34,10 @@ def _fake_generator(directory: Path, reported_version: str) -> list[str]:
     return [sys.executable, str(script)]
 
 
+def _write_settings(folder: Path, settings: str) -> None:
+    (folder / "pyproject.toml").write_text(f"[tool.bonsai-sgen]\n{settings}")
+
+
 def test_module_entry_point_runs():
     """The package runs as a module with python -m."""
     command = [sys.executable, "-m", "bonsai.sgen", "export", "--help"]
@@ -167,6 +171,14 @@ def test_export_allows_local_types(tmp_path: Path):
     assert "x-sgen-typename" not in definitions["Basket"]
 
 
+def test_export_allows_local_types_from_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Local types are exported when the settings allow them."""
+    _write_settings(tmp_path, 'modules = ["models.plain"]\nallow-local-types = true\n')
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["export"]) == 0
+    assert (tmp_path / "TestHelper.Plain.json").exists()
+
+
 def test_export_module_without_namespace_raises(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     """A module that declares no namespace raises an error."""
     assert cli.main(["export", "models.unnamed", "-o", str(tmp_path)]) == 1
@@ -179,10 +191,89 @@ def test_export_missing_module_raises(tmp_path: Path, capsys: pytest.CaptureFixt
     assert "No module named 'models.missing'" in capsys.readouterr().err
 
 
+def test_export_reads_settings_from_parent_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """The nearest pyproject.toml with settings is used, with paths relative to its folder."""
+    _write_settings(tmp_path, 'modules = ["models.base"]\nschemas = "schemas"\n')
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "pyproject.toml").write_text('[project]\nname = "src"\n')
+    monkeypatch.chdir(tmp_path / "src")
+    assert cli.main(["export"]) == 0
+    assert (tmp_path / "schemas" / "TestHelper.Base.json").exists()
+
+
+def test_arguments_override_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Each argument on the command line overrides its own setting and keeps the others."""
+    _write_settings(tmp_path, 'modules = ["models.base"]\noutput = "out"\n')
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["export", "models.derived"]) == 0
+    assert cli.main(["export", "-o", "other"]) == 0
+    assert sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*.json")) == [
+        "other/TestHelper.Base.json",
+        "out/TestHelper.Derived.json",
+    ]
+
+
+def test_export_schemas_location_takes_precedence_over_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Export uses the schemas setting over the output setting, and its argument over both."""
+    _write_settings(tmp_path, 'modules = ["models.base"]\noutput = "out"\nschemas = "schemas"\n')
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["export"]) == 0
+    assert cli.main(["export", "models.derived", "-o", "other"]) == 0
+    assert sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*.json")) == [
+        "other/TestHelper.Derived.json",
+        "schemas/TestHelper.Base.json",
+    ]
+
+
+def test_unknown_setting_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """An unknown setting raises an error."""
+    _write_settings(tmp_path, 'module = ["models.base"]\n')
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["export"]) == 1
+    assert "Unknown setting module" in capsys.readouterr().err
+
+
+def test_setting_of_wrong_type_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """A setting of the wrong type raises an error."""
+    _write_settings(tmp_path, 'modules = "models.base"\n')
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["export"]) == 1
+    assert "Setting modules" in capsys.readouterr().err
+
+
+def test_unknown_serializer_setting_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """An unsupported serializer raises an error."""
+    _write_settings(tmp_path, 'modules = ["models.base"]\nserializer = ["xml"]\n')
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["generate"]) == 1
+    assert "Unknown serializer xml" in capsys.readouterr().err
+
+
+def test_export_without_modules_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """A command with no modules on the command line or in the settings raises an error."""
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["export"])
+    assert raised.value.code == 2
+    message = capsys.readouterr().err
+    assert message.startswith("usage: bonsai-sgen export")
+    assert "error: no modules specified" in message
+
+
 def test_generate_version_mismatch_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ):
-    """A generator from another minor release raises an error naming both versions."""
+    """A generator from another minor release raises an error."""
     monkeypatch.delenv("BONSAI_SGEN", raising=False)
     monkeypatch.setattr(cli, "_DEFAULT_COMMAND", tuple(_fake_generator(tmp_path, "99.0.0")))
     assert cli.main(["generate", "models.derived", "-o", str(tmp_path)]) == 1
@@ -203,7 +294,7 @@ def test_generate_matching_minor_release_runs(tmp_path: Path, monkeypatch: pytes
 def test_generate_missing_generator_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ):
-    """A generator that does not run raises an error explaining how to install it."""
+    """A generator that does not run raises an error."""
     monkeypatch.delenv("BONSAI_SGEN", raising=False)
     monkeypatch.setattr(cli, "_DEFAULT_COMMAND", (sys.executable, "-c", "raise SystemExit(1)"))
     assert cli.main(["generate", "models.derived", "-o", str(tmp_path)]) == 1
@@ -244,4 +335,40 @@ def test_generate_writes_namespace_folders(
     assert sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*.cs")) == [
         "TestHelper.Base/Generated/TestHelper.Base.Generated.cs",
         "TestHelper.Derived/Generated/TestHelper.Derived.Generated.cs",
+    ]
+
+
+@requires_dotnet
+def test_generate_writes_code_and_schemas_from_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, generator: list[str]
+):
+    """Generating with a schemas setting writes the schema of each namespace beside its code."""
+    monkeypatch.setenv("BONSAI_SGEN", _command_line(generator))
+    _write_settings(
+        tmp_path,
+        'modules = ["models.base"]\noutput = "src/{namespace}"\n'
+        'schemas = "schemas"\nserializer = ["yaml"]\n',
+    )
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["generate"]) == 0
+    code = tmp_path / "src" / "TestHelper.Base" / "TestHelper.Base.Generated.cs"
+    assert "YamlDotNet" in code.read_text()
+    assert (tmp_path / "schemas" / "TestHelper.Base.json").exists()
+
+
+@requires_dotnet
+def test_generate_writes_schemas_beside_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, generator: list[str]
+):
+    """A schemas location matching the output location writes each schema beside its code."""
+    monkeypatch.setenv("BONSAI_SGEN", _command_line(generator))
+    _write_settings(
+        tmp_path,
+        'modules = ["models.base"]\noutput = "src/{namespace}"\nschemas = "src/{namespace}"\n',
+    )
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["generate"]) == 0
+    assert sorted(path.name for path in (tmp_path / "src" / "TestHelper.Base").iterdir()) == [
+        "TestHelper.Base.Generated.cs",
+        "TestHelper.Base.json",
     ]
