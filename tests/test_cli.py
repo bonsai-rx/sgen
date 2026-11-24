@@ -70,6 +70,16 @@ def test_export_writes_schema_per_namespace(tmp_path: Path):
     ]
 
 
+def test_export_writes_namespace_folders(tmp_path: Path):
+    """A namespace placeholder in the output location writes each namespace to its own folder."""
+    output = str(tmp_path / "{namespace}" / "Schemas")
+    assert cli.main(["export", "models.derived", "models.base", "-o", output]) == 0
+    assert sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*.json")) == [
+        "TestHelper.Base/Schemas/TestHelper.Base.json",
+        "TestHelper.Derived/Schemas/TestHelper.Derived.json",
+    ]
+
+
 def test_export_modules_sharing_namespace_write_one_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
@@ -221,3 +231,17 @@ def test_generate_matches_code_from_schema_file(
     assert cli.main(arguments) == 0
     name = "TestHelper.Derived.Generated.cs"
     assert (stdin_output / name).read_bytes() == (file_output / name).read_bytes()
+
+
+@requires_dotnet
+def test_generate_writes_namespace_folders(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, generator: list[str]
+):
+    """A namespace placeholder in the output location writes each namespace to its own folder."""
+    monkeypatch.setenv("BONSAI_SGEN", _command_line(generator))
+    output = str(tmp_path / "{namespace}" / "Generated")
+    assert cli.main(["generate", "models.derived", "models.base", "-o", output]) == 0
+    assert sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*.cs")) == [
+        "TestHelper.Base/Generated/TestHelper.Base.Generated.cs",
+        "TestHelper.Derived/Generated/TestHelper.Derived.Generated.cs",
+    ]

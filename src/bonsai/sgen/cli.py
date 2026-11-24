@@ -31,6 +31,9 @@ _COMMAND_VARIABLE = "BONSAI_SGEN"
 _DEFAULT_COMMAND: tuple[str, ...] = ("dotnet", "bonsai.sgen")
 """Command line running Bonsai.Sgen from the local tool manifest of a repository."""
 
+_NAMESPACE_PLACEHOLDER = "{namespace}"
+"""Placeholder in the output location replaced by the namespace of each output."""
+
 
 class _CommandError(Exception):
     """Reports a failure that the command describes without a traceback."""
@@ -146,11 +149,15 @@ def _sgen_command() -> list[str]:
     return command
 
 
+def _output_folder(output: str, namespace: str) -> str:
+    return output.replace(_NAMESPACE_PLACEHOLDER, namespace)
+
+
 def _export(arguments: argparse.Namespace) -> int:
     schemas = _export_schemas(arguments.modules, arguments.allow_local_types)
-    output = Path(arguments.output)
-    output.mkdir(parents=True, exist_ok=True)
     for namespace, schema in schemas.items():
+        output = Path(_output_folder(arguments.output, namespace))
+        output.mkdir(parents=True, exist_ok=True)
         path = _write_schema_file(output, namespace, schema)
         print(f"Writing schema to {path}...")
     return 0
@@ -160,7 +167,8 @@ def _generate(arguments: argparse.Namespace) -> int:
     command = _sgen_command()
     schemas = _export_schemas(arguments.modules, arguments.allow_local_types)
     for namespace, schema in schemas.items():
-        options = ["--namespace", namespace, "--output", arguments.output]
+        output = _output_folder(arguments.output, namespace)
+        options = ["--namespace", namespace, "--output", output]
         if arguments.serializer:
             options += ["--serializer", *arguments.serializer]
         result = subprocess.run([*command, *options], input=json.dumps(schema).encode())
@@ -181,7 +189,8 @@ def _parser() -> argparse.ArgumentParser:
         "-o",
         "--output",
         default=".",
-        help="Location to place the generated output. The default is the current directory.",
+        help="Location to place the generated output. The default is the current directory. "
+        f"A {_NAMESPACE_PLACEHOLDER} placeholder is replaced by the namespace of each output.",
     )
     shared.add_argument(
         "--allow-local-types",

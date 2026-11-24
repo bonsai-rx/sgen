@@ -93,6 +93,12 @@ The `generate` command exports each schema in memory and passes it to `Bonsai.Sg
 uv run bonsai-sgen generate person_and_discriminated_pets -o Extensions --serializer json
 ```
 
+A `{namespace}` placeholder in the output location writes each namespace to its own folder:
+
+```powershell
+uv run bonsai-sgen generate mypackage -o "src/{namespace}" --serializer json
+```
+
 The command runs `dotnet bonsai.sgen`, so `Bonsai.Sgen` must be installed as a local tool of the repository, from the same minor release as `bonsai-sgen`. To run another build of `Bonsai.Sgen`, such as a global install or a local build, set the `BONSAI_SGEN` environment variable to the command line that runs it.
 
 ## Local types
