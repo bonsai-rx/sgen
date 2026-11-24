@@ -203,13 +203,27 @@ def test_export_reads_settings_from_parent_folder(tmp_path: Path, monkeypatch: p
 
 def test_arguments_override_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Each argument on the command line overrides its own setting and keeps the others."""
-    _write_settings(tmp_path, 'modules = ["models.base"]\nschemas = "schemas"\n')
+    _write_settings(tmp_path, 'modules = ["models.base"]\noutput = "out"\n')
     monkeypatch.chdir(tmp_path)
     assert cli.main(["export", "models.derived"]) == 0
     assert cli.main(["export", "-o", "other"]) == 0
     assert sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*.json")) == [
         "other/TestHelper.Base.json",
-        "schemas/TestHelper.Derived.json",
+        "out/TestHelper.Derived.json",
+    ]
+
+
+def test_export_schemas_location_takes_precedence_over_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Export uses the schemas setting over the output setting, and its argument over both."""
+    _write_settings(tmp_path, 'modules = ["models.base"]\noutput = "out"\nschemas = "schemas"\n')
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["export"]) == 0
+    assert cli.main(["export", "models.derived", "-o", "other"]) == 0
+    assert sorted(path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*.json")) == [
+        "other/TestHelper.Derived.json",
+        "schemas/TestHelper.Base.json",
     ]
 
 
@@ -248,8 +262,12 @@ def test_export_without_modules_raises(
 ):
     """A command with no modules on the command line or in the settings raises an error."""
     monkeypatch.chdir(tmp_path)
-    assert cli.main(["export"]) == 1
-    assert "No modules specified" in capsys.readouterr().err
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["export"])
+    assert raised.value.code == 2
+    message = capsys.readouterr().err
+    assert message.startswith("usage: bonsai-sgen export")
+    assert "error: no modules specified" in message
 
 
 def test_generate_version_mismatch_raises(
@@ -336,3 +354,21 @@ def test_generate_writes_code_and_schemas_from_settings(
     code = tmp_path / "src" / "TestHelper.Base" / "TestHelper.Base.Generated.cs"
     assert "YamlDotNet" in code.read_text()
     assert (tmp_path / "schemas" / "TestHelper.Base.json").exists()
+
+
+@requires_dotnet
+def test_generate_writes_schemas_beside_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, generator: list[str]
+):
+    """A schemas location matching the output location writes each schema beside its code."""
+    monkeypatch.setenv("BONSAI_SGEN", _command_line(generator))
+    _write_settings(
+        tmp_path,
+        'modules = ["models.base"]\noutput = "src/{namespace}"\nschemas = "src/{namespace}"\n',
+    )
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["generate"]) == 0
+    assert sorted(path.name for path in (tmp_path / "src" / "TestHelper.Base").iterdir()) == [
+        "TestHelper.Base.Generated.cs",
+        "TestHelper.Base.json",
+    ]

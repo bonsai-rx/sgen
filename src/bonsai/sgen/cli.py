@@ -211,24 +211,22 @@ def _read_settings() -> tuple[Path, dict[str, Any]]:
 def _apply_settings(arguments: argparse.Namespace) -> None:
     root, settings = _read_settings()
 
-    def location(argument: str | None, key: str) -> str | None:
-        if argument is not None:
-            return argument
+    def location(key: str) -> str | None:
         return str(root / settings[key]) if key in settings else None
 
     arguments.modules = arguments.modules or settings.get("modules")
     if not arguments.modules:
-        raise _CommandError(
-            f"No modules specified on the command line or in [tool.{_SETTINGS_TABLE}]."
+        arguments.command_parser.error(
+            f"no modules specified on the command line or in [tool.{_SETTINGS_TABLE}]"
         )
     arguments.allow_local_types = arguments.allow_local_types or settings.get(
         "allow-local-types", False
     )
     if arguments.command == "export":
-        arguments.output = location(arguments.output, "schemas") or "."
+        arguments.output = arguments.output or location("schemas") or location("output") or "."
     else:
-        arguments.output = location(arguments.output, "output") or "."
-        arguments.schemas = location(arguments.schemas, "schemas")
+        arguments.output = arguments.output or location("output") or "."
+        arguments.schemas = arguments.schemas or location("schemas")
         arguments.serializer = arguments.serializer or settings.get("serializer")
 
 
@@ -241,7 +239,7 @@ def _write_schemas(location: str, schemas: dict[str, JsonSchemaValue]) -> None:
         output = Path(_output_folder(location, namespace))
         output.mkdir(parents=True, exist_ok=True)
         path = _write_schema_file(output, namespace, schema)
-        print(f"Writing schema to {path}...")
+        print(f"Writing schema to {path}...", flush=True)
 
 
 def _export(arguments: argparse.Namespace) -> int:
@@ -277,6 +275,7 @@ def _parser() -> argparse.ArgumentParser:
     shared.add_argument(
         "-o",
         "--output",
+        metavar="LOCATION",
         help="Location to place the generated output. The default is the current directory. "
         f"A {_NAMESPACE_PLACEHOLDER} placeholder is replaced by the namespace of each output.",
     )
@@ -293,12 +292,13 @@ def _parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser(
+    export = commands.add_parser(
         "export",
         parents=[shared],
         help="Writes the schema of each namespace to a file.",
         description="Writes the schema of each namespace to a file.",
     )
+    export.set_defaults(command_parser=export)
     generate = commands.add_parser(
         "generate",
         parents=[shared],
@@ -308,6 +308,7 @@ def _parser() -> argparse.ArgumentParser:
             f"{_COMMAND_VARIABLE} environment variable overrides the command line."
         ),
     )
+    generate.set_defaults(command_parser=generate)
     generate.add_argument(
         "--serializer",
         nargs="+",
@@ -316,6 +317,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     generate.add_argument(
         "--schemas",
+        metavar="LOCATION",
         help="Location to write the schema of each namespace. "
         f"A {_NAMESPACE_PLACEHOLDER} placeholder is replaced by the namespace of each schema.",
     )

@@ -113,7 +113,9 @@ schemas = "schemas"
 serializer = ["json"]
 ```
 
-The nearest `pyproject.toml` with this table, in the current folder or above, is used. Paths are relative to that file. An argument given on the command line overrides the corresponding setting. With this table, `uv run bonsai-sgen generate` writes both the classes and the schemas, and `uv run bonsai-sgen export` writes the schemas only.
+The nearest `pyproject.toml` with this table, in the current folder or above, is used. Paths are relative to that file. An argument given on the command line overrides the corresponding setting.
+
+The `generate` command writes the schemas only when a `schemas` location is set, so with this table it writes both the classes and the schemas. The `export` command writes the schemas to the `schemas` location when one is set, and to the output location otherwise.
 
 ## Local types
 
