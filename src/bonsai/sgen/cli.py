@@ -4,6 +4,10 @@ Each module or package is specified by its fully qualified name and imported
 from the current environment. Each module declares the namespace of its types
 in its SGEN_NAMESPACE attribute. Modules that declare the same namespace are
 exported together.
+
+Arguments not specified on the command line are read from a [tool.bonsai-sgen]
+table. The nearest pyproject.toml file with this table is used, in the current
+folder or above, and its paths are relative to that file.
 """
 
 import argparse
@@ -15,10 +19,12 @@ import re
 import shlex
 import subprocess
 import sys
+import tomllib
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 from pydantic.json_schema import JsonSchemaValue
 
@@ -33,6 +39,28 @@ _DEFAULT_COMMAND: tuple[str, ...] = ("dotnet", "bonsai.sgen")
 
 _NAMESPACE_PLACEHOLDER = "{namespace}"
 """Placeholder in the output location replaced by the namespace of each output."""
+
+_SETTINGS_TABLE = "bonsai-sgen"
+"""Name of the table in pyproject.toml specifying the arguments of the command."""
+
+_SETTING_TYPES: dict[str, type] = {
+    "modules": list,
+    "output": str,
+    "schemas": str,
+    "serializer": list,
+    "allow-local-types": bool,
+}
+"""Type of each setting in the table."""
+
+_TYPE_DESCRIPTIONS: dict[type, str] = {
+    list: "a list of strings",
+    str: "a string",
+    bool: "a boolean",
+}
+"""Description of each setting type in error messages."""
+
+_SERIALIZERS = ("json", "yaml")
+"""Serializers whose data annotations can be included in the generated classes."""
 
 
 class _CommandError(Exception):
@@ -149,23 +177,84 @@ def _sgen_command() -> list[str]:
     return command
 
 
+def _check_settings(path: Path, settings: dict[str, Any]) -> None:
+    for key, value in settings.items():
+        expected = _SETTING_TYPES.get(key)
+        if expected is None:
+            raise _CommandError(f"Unknown setting {key} in {path}.")
+        if not isinstance(value, expected) or (
+            expected is list and not all(isinstance(item, str) for item in value)
+        ):
+            raise _CommandError(f"Setting {key} in {path} must be {_TYPE_DESCRIPTIONS[expected]}.")
+    invalid = [name for name in settings.get("serializer", []) if name not in _SERIALIZERS]
+    if invalid:
+        raise _CommandError(f"Unknown serializer {', '.join(invalid)} in {path}.")
+
+
+def _read_settings() -> tuple[Path, dict[str, Any]]:
+    current_folder = Path.cwd()
+    for folder in (current_folder, *current_folder.parents):
+        path = folder / "pyproject.toml"
+        if not path.is_file():
+            continue
+        try:
+            document = tomllib.loads(path.read_text(encoding="utf-8"))
+        except tomllib.TOMLDecodeError as error:
+            raise _CommandError(f"Cannot read {path}: {error}.") from error
+        settings = document.get("tool", {}).get(_SETTINGS_TABLE)
+        if settings is not None:
+            _check_settings(path, settings)
+            return Path(os.path.relpath(folder)), settings
+    return Path(), {}
+
+
+def _apply_settings(arguments: argparse.Namespace) -> None:
+    root, settings = _read_settings()
+
+    def location(argument: str | None, key: str) -> str | None:
+        if argument is not None:
+            return argument
+        return str(root / settings[key]) if key in settings else None
+
+    arguments.modules = arguments.modules or settings.get("modules")
+    if not arguments.modules:
+        raise _CommandError(
+            f"No modules specified on the command line or in [tool.{_SETTINGS_TABLE}]."
+        )
+    arguments.allow_local_types = arguments.allow_local_types or settings.get(
+        "allow-local-types", False
+    )
+    if arguments.command == "export":
+        arguments.output = location(arguments.output, "schemas") or "."
+    else:
+        arguments.output = location(arguments.output, "output") or "."
+        arguments.schemas = location(arguments.schemas, "schemas")
+        arguments.serializer = arguments.serializer or settings.get("serializer")
+
+
 def _output_folder(output: str, namespace: str) -> str:
     return output.replace(_NAMESPACE_PLACEHOLDER, namespace)
 
 
-def _export(arguments: argparse.Namespace) -> int:
-    schemas = _export_schemas(arguments.modules, arguments.allow_local_types)
+def _write_schemas(location: str, schemas: dict[str, JsonSchemaValue]) -> None:
     for namespace, schema in schemas.items():
-        output = Path(_output_folder(arguments.output, namespace))
+        output = Path(_output_folder(location, namespace))
         output.mkdir(parents=True, exist_ok=True)
         path = _write_schema_file(output, namespace, schema)
         print(f"Writing schema to {path}...")
+
+
+def _export(arguments: argparse.Namespace) -> int:
+    schemas = _export_schemas(arguments.modules, arguments.allow_local_types)
+    _write_schemas(arguments.output, schemas)
     return 0
 
 
 def _generate(arguments: argparse.Namespace) -> int:
     command = _sgen_command()
     schemas = _export_schemas(arguments.modules, arguments.allow_local_types)
+    if arguments.schemas is not None:
+        _write_schemas(arguments.schemas, schemas)
     for namespace, schema in schemas.items():
         output = _output_folder(arguments.output, namespace)
         options = ["--namespace", namespace, "--output", output]
@@ -181,14 +270,13 @@ def _parser() -> argparse.ArgumentParser:
     shared = argparse.ArgumentParser(add_help=False)
     shared.add_argument(
         "modules",
-        nargs="+",
+        nargs="*",
         metavar="module",
         help="The name of a module or package to export, such as pkg.schema.",
     )
     shared.add_argument(
         "-o",
         "--output",
-        default=".",
         help="Location to place the generated output. The default is the current directory. "
         f"A {_NAMESPACE_PLACEHOLDER} placeholder is replaced by the namespace of each output.",
     )
@@ -223,8 +311,13 @@ def _parser() -> argparse.ArgumentParser:
     generate.add_argument(
         "--serializer",
         nargs="+",
-        choices=["json", "yaml"],
+        choices=_SERIALIZERS,
         help="Specifies the serializer data annotations to include in the generated classes.",
+    )
+    generate.add_argument(
+        "--schemas",
+        help="Location to write the schema of each namespace. "
+        f"A {_NAMESPACE_PLACEHOLDER} placeholder is replaced by the namespace of each schema.",
     )
     return parser
 
@@ -251,6 +344,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         with warnings.catch_warnings():
             warnings.showwarning = show_warning
+            _apply_settings(arguments)
             if arguments.command == "export":
                 return _export(arguments)
             return _generate(arguments)

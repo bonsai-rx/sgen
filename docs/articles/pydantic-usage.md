@@ -101,6 +101,20 @@ uv run bonsai-sgen generate mypackage -o "src/{namespace}" --serializer json
 
 The command runs `dotnet bonsai.sgen`, so `Bonsai.Sgen` must be installed as a local tool of the repository, from the same minor release as `bonsai-sgen`. To run another build of `Bonsai.Sgen`, such as a global install or a local build, set the `BONSAI_SGEN` environment variable to the command line that runs it.
 
+## Command settings
+
+The arguments of both commands, including whether to allow [local types](#local-types), can be recorded in a `[tool.bonsai-sgen]` table in `pyproject.toml`:
+
+```toml
+[tool.bonsai-sgen]
+modules = ["mypackage"]
+output = "src/{namespace}"
+schemas = "schemas"
+serializer = ["json"]
+```
+
+The nearest `pyproject.toml` with this table, in the current folder or above, is used. Paths are relative to that file. An argument given on the command line overrides the corresponding setting. With this table, `uv run bonsai-sgen generate` writes both the classes and the schemas, and `uv run bonsai-sgen export` writes the schemas only.
+
 ## Local types
 
 A schema can also refer to types that do not derive from the base classes, such as plain Pydantic models, dataclasses, typed dictionaries and enumerations from another library. These types have no namespace of their own, so they would be exported as local types in the schema of each namespace that refers to them. In the following module, `dog_and_basket.py`, `Basket` is a local type:
