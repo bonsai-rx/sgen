@@ -219,6 +219,7 @@ class Bed(SchemaModel):
     size: int = 1
     is_heated: bool = False
     cover: str | None = "wool"
+    blankets: list[str] = ["fleece"]
 
 
 class Lodge(SchemaModel):
@@ -226,3 +227,12 @@ class Lodge(SchemaModel):
 
     bed: Bed = Bed()
     spare_bed: Bed = Bed(size=2, is_heated=True, cover=None)
+
+
+class Kennel(SchemaModel):
+    """A model whose fields default to collections."""
+
+    sizes: list[int] = [1, 2]
+    names: set[str] = {"rex"}
+    weights: dict[str, float] = {"rex": 2.5}
+    beds: list[Bed] = [Bed(size=3, blankets=["wool", "cotton"])]

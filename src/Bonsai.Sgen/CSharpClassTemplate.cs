@@ -89,7 +89,19 @@ namespace Bonsai.Sgen
                 var fieldDeclaration = new CodeMemberField(
                     isPrimitive ? underlyingType : propertyType,
                     property.FieldName);
-                if (property.HasDefaultValue)
+                if (propertySchema?.Default is JContainer defaultContainer)
+                {
+                    var fieldReference = new CodeVariableReferenceExpression(property.FieldName);
+                    defaultConstructor.Statements.Add(new CodeAssignStatement(
+                        fieldReference,
+                        new CodeObjectCreateExpression(fieldDeclaration.Type)));
+                    BuildDefaultValueInitializer(
+                        defaultConstructor.Statements,
+                        fieldReference,
+                        propertySchema,
+                        defaultContainer);
+                }
+                else if (property.HasDefaultValue)
                 {
                     defaultConstructor.Statements.Add(new CodeAssignStatement(
                         new CodeVariableReferenceExpression(property.FieldName),
@@ -100,16 +112,6 @@ namespace Bonsai.Sgen
                     defaultConstructor.Statements.Add(new CodeAssignStatement(
                         new CodeVariableReferenceExpression(property.FieldName),
                         new CodePrimitiveExpression(defaultValue)));
-                }
-                else if (propertySchema?.Default is JObject jsonObject)
-                {
-                    var targetObject = new CodeVariableReferenceExpression(property.FieldName);
-                    BuildDefaultPropertyInitializer(
-                        defaultConstructor,
-                        targetObject,
-                        fieldDeclaration.Type,
-                        propertySchema,
-                        jsonObject);
                 }
                 else if (propertySchema?.IsArray is true)
                 {
@@ -155,7 +157,7 @@ namespace Bonsai.Sgen
                                 new CodeTypeReferenceExpression(typeof(Required)),
                                 property.IsNullable ? nameof(Required.AllowNull) : nameof(Required.Always))));
                     }
-                    if (propertySchema?.Default is JObject)
+                    if (propertySchema?.Default is JContainer)
                     {
                         jsonProperty.Arguments.Add(new CodeAttributeArgument(
                             nameof(JsonPropertyAttribute.ObjectCreationHandling),
@@ -423,80 +425,125 @@ namespace Bonsai.Sgen
             }
         }
 
-        private void BuildDefaultPropertyInitializer(
-            CodeConstructor defaultConstructor,
-            CodeExpression targetObject,
-            CodeTypeReference targetType,
-            JsonSchemaProperty propertySchema,
-            JObject jsonObject)
+        private void BuildDefaultValueInitializer(
+            CodeStatementCollection statements,
+            CodeExpression target,
+            JsonSchema schema,
+            JContainer value)
         {
-            defaultConstructor.Statements.Add(new CodeAssignStatement(
-                targetObject,
-                new CodeObjectCreateExpression(targetType)));
-
-            var innerSchemaProperties = propertySchema.ActualTypeSchema.ActualProperties;
-            foreach (var jsonProperty in jsonObject.Properties())
+            var actualSchema = schema.ActualTypeSchema;
+            if (value is JArray items)
             {
-                if (!innerSchemaProperties.TryGetValue(
-                    jsonProperty.Name,
-                    out JsonSchemaProperty? defaultPropertySchema))
-                    continue;
+                if (actualSchema.Item is not JsonSchema itemSchema)
+                    return;
 
-                var defaultProperty = new PropertyModel(Model, defaultPropertySchema, Model.Resolver, Settings);
-                if (jsonProperty.Value is JObject nestedObject)
+                var itemType = ResolveType(itemSchema);
+                for (int i = 0; i < items.Count; i++)
                 {
-                    var nestedTarget = new CodePropertyReferenceExpression(targetObject, defaultProperty.PropertyName);
-                    BuildDefaultPropertyInitializer(
-                        defaultConstructor,
-                        nestedTarget,
-                        new CodeTypeReference(defaultProperty.Type),
-                        defaultPropertySchema,
-                        nestedObject);
+                    var itemTarget = actualSchema.UniqueItems
+                        ? null
+                        : new CodeIndexerExpression(target, new CodePrimitiveExpression(i));
+                    BuildDefaultValue(statements, itemSchema, itemType, items[i], itemTarget, item =>
+                        new CodeExpressionStatement(new CodeMethodInvokeExpression(target, "Add", item)));
                 }
+            }
+            else if (value is JObject entries && actualSchema.IsDictionary)
+            {
+                if (actualSchema.AdditionalPropertiesSchema is not JsonSchema valueSchema)
+                    return;
 
-                if (jsonProperty.Value is not JValue jsonValue)
-                    continue;
-
-                var defaultValue = GetDefaultValueExpression(defaultProperty, defaultPropertySchema, jsonValue.Value);
-                if (defaultValue is not null)
+                var valueType = ResolveType(valueSchema);
+                var keySchema = actualSchema.ExtensionData?.TryGetValue(
+                    JsonSchemaExtensions.PropertyNamesSchema,
+                    out var propertyNames) is true ? propertyNames as JsonSchema : null;
+                foreach (var entry in entries.Properties())
                 {
-                    defaultConstructor.Statements.Add(new CodeAssignStatement(
-                        new CodePropertyReferenceExpression(targetObject, defaultProperty.PropertyName),
-                        defaultValue));
+                    var key = keySchema is null
+                        ? new CodePrimitiveExpression(entry.Name)
+                        : GetDefaultValueExpression(keySchema, ResolveType(keySchema), entry.Name);
+                    if (key is null)
+                        continue;
+
+                    var entryTarget = new CodeIndexerExpression(target, key);
+                    BuildDefaultValue(statements, valueSchema, valueType, entry.Value, entryTarget, entryValue =>
+                        new CodeExpressionStatement(new CodeMethodInvokeExpression(target, "Add", key, entryValue)));
+                }
+            }
+            else if (value is JObject members)
+            {
+                var memberSchemaProperties = actualSchema.ActualProperties;
+                foreach (var member in members.Properties())
+                {
+                    if (!memberSchemaProperties.TryGetValue(member.Name, out JsonSchemaProperty? memberSchema))
+                        continue;
+
+                    var memberProperty = new PropertyModel(Model, memberSchema, Model.Resolver, Settings);
+                    var memberTarget = new CodePropertyReferenceExpression(target, memberProperty.PropertyName);
+                    BuildDefaultValue(statements, memberSchema, memberProperty.Type, member.Value, memberTarget, memberValue =>
+                        new CodeAssignStatement(memberTarget, memberValue));
                 }
             }
         }
 
-        private CodeExpression? GetDefaultValueExpression(
-            PropertyModel property,
-            JsonSchemaProperty propertySchema,
-            object? value)
+        private void BuildDefaultValue(
+            CodeStatementCollection statements,
+            JsonSchema schema,
+            string type,
+            JToken value,
+            CodeExpression? target,
+            Func<CodeExpression, CodeStatement> store)
+        {
+            if (value is JContainer container)
+            {
+                if (target is null)
+                    return;
+
+                statements.Add(store(new CodeObjectCreateExpression(type)));
+                BuildDefaultValueInitializer(statements, target, schema, container);
+            }
+            else if (value is JValue jsonValue &&
+                GetDefaultValueExpression(schema, type, jsonValue.Value) is CodeExpression defaultValue)
+            {
+                statements.Add(store(defaultValue));
+            }
+        }
+
+        private CodeExpression? GetDefaultValueExpression(JsonSchema schema, string type, object? value)
         {
             if (value is null)
                 return new CodePrimitiveExpression(null);
 
-            var schemaDefault = propertySchema.Default;
+            var schemaDefault = schema.Default;
             try
             {
-                propertySchema.Default = value;
+                schema.Default = value;
                 var defaultValue = Settings.ValueGenerator.GetDefaultValue(
-                    propertySchema,
-                    property.IsNullable,
-                    property.Type,
-                    property.Name,
+                    schema,
+                    schema.IsNullable(Settings.SchemaType),
+                    type,
+                    string.Empty,
                     Settings.GenerateDefaultValues,
                     Model.Resolver);
                 if (!string.IsNullOrEmpty(defaultValue))
                     return new CodeSnippetExpression(defaultValue);
             }
-            finally { propertySchema.Default = schemaDefault; }
+            finally { schema.Default = schemaDefault; }
 
-            return IsNullablePrimitive(property) ? new CodePrimitiveExpression(value) : null;
+            return IsNullablePrimitive(type) ? new CodePrimitiveExpression(value) : null;
+        }
+
+        private string ResolveType(JsonSchema schema)
+        {
+            return Model.Resolver.Resolve(schema, schema.IsNullable(Settings.SchemaType), string.Empty);
         }
 
         static bool IsNullablePrimitive(PropertyModel property)
         {
-            var propertyType = ResolvePropertyType(property);
+            return IsNullablePrimitive(ResolvePropertyType(property));
+        }
+
+        static bool IsNullablePrimitive(string propertyType)
+        {
             return propertyType == "string" ||
                 propertyType.EndsWith('?') && PrimitiveTypes.ContainsKey(propertyType.TrimEnd('?'));
         }

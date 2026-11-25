@@ -178,6 +178,22 @@ def test_roundtrip_reads_omitted_defaults(runner: Runner, framework: str, serial
     assert derived.Lodge.model_validate(_load(text, serializer)) == derived.Lodge()
 
 
+def test_roundtrip_reads_omitted_collection_defaults(
+    runner: Runner, framework: str, serializer: str
+):
+    """A document omitting fields defaulted to collections is read with the defaults of pydantic."""
+    text = runner.roundtrip(framework, serializer, get_typename(derived.Kennel), "{}")
+    assert derived.Kennel.model_validate(_load(text, serializer)) == derived.Kennel()
+
+
+def test_roundtrip_replaces_collection_defaults(runner: Runner, framework: str, serializer: str):
+    """A document setting fields defaulted to collections replaces the defaults."""
+    document = '{"sizes": [3], "names": [], "weights": {"max": 1.0}, "beds": []}'
+    text = runner.roundtrip(framework, serializer, get_typename(derived.Kennel), document)
+    expected = derived.Kennel.model_validate_json(document)
+    assert derived.Kennel.model_validate(_load(text, serializer)) == expected
+
+
 def test_roundtrip_reads_partial_defaults(runner: Runner, framework: str, serializer: str):
     """A document setting some fields of a model with a default reads the rest from its type."""
     document = '{"spareBed": {"isHeated": true}}'

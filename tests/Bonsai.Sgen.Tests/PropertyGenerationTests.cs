@@ -350,6 +350,43 @@ namespace Bonsai.Sgen.Tests
         }
 
         [TestMethod]
+        public async Task GenerateFromCollectionPropertyDefault_EnsureItemInitializers()
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+  ""$defs"": {
+    ""Mood"": { ""type"": ""string"", ""title"": ""Mood"", ""enum"": [""happy"", ""very sad""] },
+    ""Collar"": { ""type"": ""object"", ""title"": ""Collar"", ""properties"": {
+      ""size"": { ""type"": ""integer"", ""default"": 1 },
+      ""tags"": { ""type"": ""array"", ""items"": { ""type"": ""string"" }, ""default"": [] } } }
+  },
+  ""type"": ""object"",
+  ""title"": ""Dog"",
+  ""properties"": {
+    ""sizes"": { ""type"": ""array"", ""items"": { ""type"": ""integer"" }, ""default"": [1, 2] },
+    ""moods"": { ""type"": ""array"", ""items"": { ""$ref"": ""#/$defs/Mood"" }, ""default"": [""very sad""] },
+    ""names"": { ""type"": ""array"", ""uniqueItems"": true, ""items"": { ""type"": ""string"" }, ""default"": [""rex""] },
+    ""weights"": { ""type"": ""object"", ""additionalProperties"": { ""type"": ""number"" }, ""default"": { ""rex"": 2.5 } },
+    ""collars"": { ""type"": ""array"", ""items"": { ""$ref"": ""#/$defs/Collar"" }, ""default"": [{ ""size"": 2, ""tags"": [""red""] }] },
+    ""grid"": { ""type"": ""array"", ""items"": { ""type"": ""array"", ""items"": { ""type"": ""integer"" } }, ""default"": [[3]] }
+  }
+}
+");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("_sizes.Add(2)"), "Missing list item initializer.");
+            Assert.IsTrue(code.Contains("_moods.Add(Mood.VerySad)"), "Missing enumeration item initializer.");
+            Assert.IsTrue(code.Contains("_names.Add(\"rex\")"), "Missing set item initializer.");
+            Assert.IsTrue(code.Contains("_weights.Add(\"rex\", 2.5D)"), "Missing dictionary entry initializer.");
+            Assert.IsTrue(code.Contains("_collars[0].Size = 2"), "Missing model item initializer.");
+            Assert.IsTrue(code.Contains("_collars[0].Tags.Add(\"red\")"), "Missing nested list item initializer.");
+            Assert.IsTrue(code.Contains("_grid[0].Add(3)"), "Missing nested list item initializer.");
+            Assert.IsTrue(code.Contains("JsonPropertyAttribute(\"sizes\", ObjectCreationHandling=Newtonsoft.Json.ObjectCreationHandling.Replace)"),
+                "Missing replace handling for a collection default.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
+
+        [TestMethod]
         public async Task GenerateFromNullableStringPropertyDefault_EnsureDefaultInitializer()
         {
             var schema = await SchemaTestHelper.FromJsonAsync(@"
