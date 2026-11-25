@@ -424,9 +424,10 @@ namespace Bonsai.Sgen
         {
             protected override JsonSchema VisitSchema(JsonSchema schema, string path, string typeNameHint)
             {
-                if (schema.OneOf.Count == 0 && schema.AnyOf.Count == 2)
+                if (schema.OneOf.Count == 0 && schema.AnyOf.Count >= 2)
                 {
-                    if (schema.AnyOf.Count(anyOf => anyOf.IsNullable(SchemaType.JsonSchema)) == 1)
+                    var nullableCount = schema.AnyOf.Count(anyOf => anyOf.IsNullable(SchemaType.JsonSchema));
+                    if (schema.AnyOf.Count == 2 && nullableCount == 1 || schema.AnyOf.All(IsScalar))
                     {
                         foreach (var anyOf in schema.AnyOf)
                         {
@@ -437,6 +438,14 @@ namespace Bonsai.Sgen
                 }
 
                 return schema;
+            }
+
+            static bool IsScalar(JsonSchema schema)
+            {
+                var type = schema.ActualSchema.Type;
+                return type != JsonObjectType.None &&
+                    !type.HasFlag(JsonObjectType.Object) &&
+                    !type.HasFlag(JsonObjectType.Array);
             }
         }
 
