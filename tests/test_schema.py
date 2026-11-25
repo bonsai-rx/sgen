@@ -987,7 +987,7 @@ def test_plain_class_typename_raises():
 
         x: int
 
-    with pytest.raises(TypeError, match="not a subclass of SchemaModel, SchemaEnum or SchemaUnion"):
+    with pytest.raises(TypeError, match="SchemaModel, SchemaEnum, or SchemaUnion"):
         get_typename(Point)
 
 

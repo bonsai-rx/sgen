@@ -1,6 +1,6 @@
 # Bonsai - Serializer Generator
 
-Tools for defining record data types in the [Bonsai visual reactive programming language](https://bonsai-rx.org) with [JSON Schema](https://json-schema.org/). Each type is specified once in a schema, and the generated C# code includes operators to create, serialize and deserialize records of that type in a workflow.
+Tools for defining record data types in the [Bonsai visual reactive programming language](https://bonsai-rx.org) with [JSON Schema](https://json-schema.org/). Each type is specified once in a schema, and the generated C# code includes operators to create, serialize, and deserialize records of that type in a workflow.
 
 ## Packages
 
@@ -11,7 +11,7 @@ Both packages are released together, and each release of `bonsai-sgen` matches t
 
 ## Additional Documentation
 
-For installation steps, examples and the reference of both packages, refer to the [official Bonsai.Sgen documentation](https://bonsai-rx.org/sgen).
+For installation steps, examples, and the reference of both packages, refer to the [official Bonsai.Sgen documentation](https://bonsai-rx.org/sgen).
 
 ## Feedback & Contributing
 

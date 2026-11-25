@@ -10,7 +10,7 @@ The `bonsai-sgen` package provides base classes for Pydantic models that follow 
 
 ## Setup instructions
 
-[`uv`](https://docs.astral.sh/uv/) is the recommended tool for managing Python versions, environments and package dependencies. Create a self-contained virtual environment with `uv venv`, then install `bonsai-sgen` into it, which also installs Pydantic:
+[`uv`](https://docs.astral.sh/uv/) is the recommended tool for managing Python versions, environments, and package dependencies. Create a self-contained virtual environment with `uv venv`, then install `bonsai-sgen` into it, which also installs Pydantic:
 
 ```powershell
 uv pip install bonsai-sgen
@@ -30,7 +30,7 @@ Each module declares the namespace of its generated types in the `SGEN_NAMESPACE
 
 A model describing a type generated elsewhere, for example in an external package, provides its fully qualified type name in the class definition, as in `class Dog(SchemaModel, sgen_typename="Home.Dog")`. Code generated for any other namespace then refers to the existing `Home.Dog` class instead of defining a new one. `SchemaEnum` and `SchemaUnion` accept the same keyword, and `SchemaAlias` accepts it as an argument. Type names must be unique.
 
-Every other type in the schema must derive from one of the base classes. Exporting a schema that refers to a plain Pydantic model or enumeration raises an error, unless the export allows [local types](#local-types). An alias of a scalar type, a list or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.
+Every other type in the schema must derive from one of the base classes. Exporting a schema that refers to a plain Pydantic model or enumeration raises an error, unless the export allows [local types](#local-types). An alias of a scalar type, a list, or a dictionary, nullable or not, as in `Label = TypeAliasType("Label", str)`, needs no base class.
 
 > [!WARNING]
 > Generated code cannot represent tuples, unions without a discriminator such as `int | str`, or anonymous discriminated unions declared in a field. Exporting a schema that refers to any of them raises an error.
@@ -80,14 +80,14 @@ Each module is specified by its fully qualified name, and a package exports all 
 dotnet bonsai.sgen "schemas/PersonAndDiscriminatedPets.json" -o Extensions --serializer json
 ```
 
-Run `bonsai-sgen --help` for the options of each command. From Python, the [`export_schema`](xref:bonsai.sgen.export_schema) and [`write_schema`](xref:bonsai.sgen.write_schema) functions produce the same schemas.
+Run `bonsai-sgen export --help` or `bonsai-sgen generate --help` for the arguments of each command. From Python, the [`export_schema`](xref:bonsai.sgen.export_schema) and [`write_schema`](xref:bonsai.sgen.write_schema) functions produce the same schemas.
 
 > [!TIP]
 > Pydantic does not export a `default_factory`, so the field has no default in generated code. To initialize a model or collection field, use an instance of its type as the default.
 
 ## Code generation
 
-The `generate` command exports each schema in memory and passes it to `Bonsai.Sgen` directly, so no schema file is written:
+The `generate` command exports each schema in memory and passes it to `Bonsai.Sgen` directly, without an intermediate schema file:
 
 ```powershell
 uv run bonsai-sgen generate person_and_discriminated_pets -o Extensions --serializer json
@@ -129,7 +129,7 @@ A stale output is a file of generated classes in an output folder, with `{namesp
 
 ## Local types
 
-A schema can also refer to types that do not derive from the base classes, such as plain Pydantic models, dataclasses, typed dictionaries and enumerations from another library. These types have no namespace of their own, so they would be exported as local types in the schema of each namespace that refers to them. In the following module, `dog_and_basket.py`, `Basket` is a local type:
+A schema can also refer to types that do not derive from the base classes, such as plain Pydantic models, dataclasses, typed dictionaries, and enumerations from another library. These types have no namespace of their own, so they would be exported as local types in the schema of each namespace that refers to them. In the following module, `dog_and_basket.py`, `Basket` is a local type:
 
 ```python
 from dataclasses import dataclass

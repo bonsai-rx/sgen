@@ -205,7 +205,7 @@ def _warn_unions_from_other_namespaces(
 
 
 def schema_types(module: ModuleType) -> list[SchemaType]:
-    """Returns the models, unions and union aliases defined in a module, in declaration order.
+    """Returns the models, unions, and union aliases defined in a module, in declaration order.
 
     Generic models are left out, since they have no type name.
     """
@@ -237,7 +237,7 @@ def export_schema(*models: SchemaType, allow_local_types: bool = False) -> JsonS
     Args:
         models: The models and union aliases to define.
         allow_local_types: True to allow types with no type name, such as plain pydantic
-            models, dataclasses and enumerations, as local types; otherwise such types raise
+            models, dataclasses, and enumerations, as local types; otherwise such types raise
             an error. Each namespace that refers to a local type defines its own copy of it.
 
     Raises:
@@ -291,7 +291,7 @@ def export_schema(*models: SchemaType, allow_local_types: bool = False) -> JsonS
     if unnamed and not allow_local_types:
         raise TypeError(
             f"Missing type names for {', '.join(sorted(unnamed))}. Declare these types as "
-            "subclasses of SchemaModel, SchemaEnum or SchemaUnion, or allow them as local "
+            "subclasses of SchemaModel, SchemaEnum, or SchemaUnion, or allow them as local "
             "types."
         )
     local_namespace = next(iter(namespaces)) if len(namespaces) == 1 else None
