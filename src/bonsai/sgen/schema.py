@@ -62,7 +62,7 @@ _EXPORTING: ContextVar[bool] = ContextVar("_EXPORTING", default=False)
 
 if sys.version_info >= (3, 12):
     SchemaType: TypeAlias = type[BaseModel] | typing_extensions.TypeAliasType | typing.TypeAliasType
-    """A model, union or union alias from which a schema can be exported."""
+    """A model, union, or union alias from which a schema can be exported."""
 
     _ALIAS_TYPES = (typing_extensions.TypeAliasType, typing.TypeAliasType)
 else:
@@ -90,7 +90,7 @@ def get_typename(schema_type: type | SchemaType) -> str:
         if not issubclass(schema_type, SchemaModel | SchemaEnum | SchemaUnion):
             raise TypeError(
                 f"{schema_type.__qualname__} has no type name, since it is not a subclass "
-                "of SchemaModel, SchemaEnum or SchemaUnion."
+                "of SchemaModel, SchemaEnum, or SchemaUnion."
             )
         if issubclass(schema_type, BaseModel) and _is_generic(schema_type):
             raise TypeError(

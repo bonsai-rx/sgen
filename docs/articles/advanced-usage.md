@@ -21,7 +21,7 @@ JSON Schema allows union types using the `oneOf` keyword. For example:
 }
 ```
 
-Running `Bonsai.Sgen` on this schema generates the following type signature for `FooProperty`:
+Running `Bonsai.Sgen` on this schema, or on the same schema with `anyOf` in place of `oneOf`, generates the following type signature for `FooProperty`:
 
 ```csharp
 public object FooProperty

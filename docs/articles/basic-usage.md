@@ -69,7 +69,7 @@ Some points to note in this example:
 
 ## Nested objects
 
-Generated types can hold other generated types, as the `PersonAndPet` record holds a `Person` and a `Dog`. Workflows can create, compose and manipulate these nested objects directly:
+Generated types can hold other generated types, as the `PersonAndPet` record holds a `Person` and a `Dog`. Workflows can create, compose, and manipulate these nested objects directly:
 
 :::workflow
 ![Person And Dog Nested Building](~/workflows/person-and-dog-nested-building.bonsai)
