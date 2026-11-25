@@ -38,6 +38,20 @@ def _write_settings(folder: Path, settings: str) -> None:
     (folder / "pyproject.toml").write_text(f"[tool.bonsai-sgen]\n{settings}")
 
 
+_CHECK_SETTINGS = 'modules = ["models.base"]\noutput = "src/{namespace}"\nschemas = "schemas"\n'
+"""Settings generating one namespace with its schema, as checked by the check mode tests."""
+
+_CHECK_CODE = Path("src", "TestHelper.Base", "TestHelper.Base.Generated.cs")
+"""Code generated from the check mode settings, relative to their folder."""
+
+
+def _generate_for_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, generator: list[str]):
+    monkeypatch.setenv("BONSAI_SGEN", _command_line(generator))
+    _write_settings(tmp_path, _CHECK_SETTINGS)
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["generate"]) == 0
+
+
 def test_module_entry_point_runs():
     """The package runs as a module with python -m."""
     command = [sys.executable, "-m", "bonsai.sgen", "export", "--help"]
@@ -372,3 +386,135 @@ def test_generate_writes_schemas_beside_code(
         "TestHelper.Base.Generated.cs",
         "TestHelper.Base.json",
     ]
+
+
+@requires_dotnet
+def test_generator_standard_output_matches_file(tmp_path: Path, generator: list[str]):
+    """Code written to the standard output has the same bytes as code written to a file."""
+    schema = {"type": "object", "description": "Café", "properties": {"a": {"type": "integer"}}}
+    command = [*generator, "--namespace", "Probe"]
+    text = json.dumps(schema).encode()
+    subprocess.run([*command, "-o", str(tmp_path)], input=text, capture_output=True, check=True)
+    piped = subprocess.run([*command, "--stdout"], input=text, capture_output=True, check=True)
+    assert piped.stdout == (tmp_path / "Probe.Generated.cs").read_bytes()
+    assert "Café".encode() in piped.stdout
+
+
+@requires_dotnet
+def test_generator_standard_output_with_output_location_raises(
+    tmp_path: Path, generator: list[str]
+):
+    """Writing to the standard output and to an output location at once raises an error."""
+    command = [*generator, "--namespace", "Probe", "--stdout", "-o", str(tmp_path / "output")]
+    result = subprocess.run(command, input=b'{"type": "object"}', capture_output=True)
+    assert result.returncode != 0
+    assert b"cannot be used together" in result.stderr
+    assert not (tmp_path / "output").exists()
+
+
+@requires_dotnet
+def test_generate_code_file_matches_csharp_namespace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, generator: list[str]
+):
+    """The file of generated code and its namespace declaration use the C# form of the namespace."""
+    module = types.ModuleType("lower_dogs")
+    module.SGEN_NAMESPACE = "test_helper.lower_case"  # pyright: ignore[reportAttributeAccessIssue]
+    monkeypatch.setitem(sys.modules, "lower_dogs", module)
+    exec(
+        "from bonsai.sgen import SchemaModel\nclass Dog(SchemaModel):\n    name: str\n",
+        module.__dict__,
+    )
+    monkeypatch.setenv("BONSAI_SGEN", _command_line(generator))
+    assert cli.main(["generate", "lower_dogs", "-o", str(tmp_path)]) == 0
+    code = tmp_path / "TestHelper.LowerCase.Generated.cs"
+    assert "namespace TestHelper.LowerCase" in code.read_text()
+
+
+def test_generate_failure_writes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A generator failing on one namespace leaves every output unwritten."""
+    script = tmp_path / "failing generator.py"
+    script.write_text("import sys\nsys.exit(1 if 'TestHelper.Derived' in sys.argv else 0)\n")
+    monkeypatch.setenv("BONSAI_SGEN", _command_line([sys.executable, str(script)]))
+    output = tmp_path / "output"
+    assert cli.main(["generate", "models.base", "models.derived", "-o", str(output)]) == 1
+    assert not output.exists()
+
+
+@requires_dotnet
+def test_generate_check_passes_on_generated_outputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    generator: list[str],
+):
+    """Checking outputs just generated passes and reports nothing."""
+    _generate_for_check(tmp_path, monkeypatch, generator)
+    capsys.readouterr()
+    assert cli.main(["generate", "--check"]) == 0
+    assert capsys.readouterr().out == ""
+
+
+@requires_dotnet
+def test_generate_check_ignores_line_endings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, generator: list[str]
+):
+    """Outputs differing only in their line endings pass the check."""
+    _generate_for_check(tmp_path, monkeypatch, generator)
+    for path in (_CHECK_CODE, Path("schemas", "TestHelper.Base.json")):
+        text = path.read_bytes().replace(b"\r\n", b"\n")
+        path.write_bytes(text.replace(b"\n", b"\r\n"))
+    assert cli.main(["generate", "--check"]) == 0
+
+
+@requires_dotnet
+def test_generate_check_reports_missing_outputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    generator: list[str],
+):
+    """Checking outputs not yet generated reports each one as missing and writes nothing."""
+    monkeypatch.setenv("BONSAI_SGEN", _command_line(generator))
+    _write_settings(tmp_path, _CHECK_SETTINGS)
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["generate", "--check"]) == 1
+    assert capsys.readouterr().out.splitlines() == [
+        f"missing: {_CHECK_CODE}",
+        f"missing: {Path('schemas', 'TestHelper.Base.json')}",
+    ]
+    assert [path.name for path in tmp_path.iterdir()] == ["pyproject.toml"]
+
+
+@requires_dotnet
+def test_generate_check_reports_changed_outputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    generator: list[str],
+):
+    """An output whose contents differ from the generated ones is reported as changed."""
+    _generate_for_check(tmp_path, monkeypatch, generator)
+    with _CHECK_CODE.open("a") as file:
+        file.write("// Edited.\n")
+    capsys.readouterr()
+    assert cli.main(["generate", "--check"]) == 1
+    assert capsys.readouterr().out.splitlines() == [f"would change: {_CHECK_CODE}"]
+
+
+@requires_dotnet
+def test_generate_check_reports_stale_code(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    generator: list[str],
+):
+    """Generated code in an output folder of a namespace no longer generated is stale."""
+    _generate_for_check(tmp_path, monkeypatch, generator)
+    stale = Path("src", "TestHelper.Old", "TestHelper.Old.Generated.cs")
+    stale.parent.mkdir()
+    stale.write_bytes(_CHECK_CODE.read_bytes())
+    (stale.parent / "Extensions.cs").write_text("namespace TestHelper.Old {}\n")
+    capsys.readouterr()
+    assert cli.main(["generate", "--check"]) == 1
+    assert capsys.readouterr().out.splitlines() == [f"stale: {stale}"]
+    assert stale.exists()

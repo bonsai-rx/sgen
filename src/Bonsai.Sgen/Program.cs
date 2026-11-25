@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.Text;
 
 namespace Bonsai.Sgen
 {
@@ -24,6 +25,11 @@ namespace Bonsai.Sgen
                 Description = "Name of the generated output file. If not specified, the namespace will be used."
             };
 
+            var standardOutputOption = new Option<bool>("--stdout")
+            {
+                Description = "Writes the generated output to the standard output instead of a file."
+            };
+
             var serializerLibrariesOption = new Option<SerializerOptions>("--serializer")
             {
                 Description = "Specifies the serializer data annotations to include in the generated classes.",
@@ -47,6 +53,18 @@ namespace Bonsai.Sgen
             rootCommand.Options.Add(outputPathOption);
             rootCommand.Options.Add(nameOption);
             rootCommand.Options.Add(serializerLibrariesOption);
+            rootCommand.Options.Add(standardOutputOption);
+            rootCommand.Validators.Add(result =>
+            {
+                if (!result.GetValue(standardOutputOption))
+                    return;
+
+                foreach (var option in new[] { outputPathOption, nameOption })
+                {
+                    if (result.GetResult(option) is not null)
+                        result.AddError($"Options '{standardOutputOption.Name}' and '{option.Name}' cannot be used together.");
+                }
+            });
             rootCommand.SetAction(async (parseResult, cancellationToken) =>
             {
                 var referenceResolverFactory = JsonSchemaExtensions.CreateJsonReferenceResolverFactory();
@@ -70,6 +88,13 @@ namespace Bonsai.Sgen
                 }
 
                 var code = generator.GenerateFile(generatorTypeName);
+
+                if (parseResult.GetValue(standardOutputOption))
+                {
+                    using var writer = new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false));
+                    writer.Write(code);
+                    return;
+                }
 
                 var outputFilePath = parseResult.GetValue(nameOption);
                 if (string.IsNullOrEmpty(outputFilePath))

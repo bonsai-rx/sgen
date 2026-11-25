@@ -326,9 +326,17 @@ def write_schema(
     return _write_schema_file(directory, namespaces[0], schema)
 
 
+def _schema_path(directory: str | PathLike[str], namespace: str) -> Path:
+    return Path(directory) / f"{namespace}.json"
+
+
+def _schema_text(schema: JsonSchemaValue) -> str:
+    return json.dumps(schema, indent=2) + "\n"
+
+
 def _write_schema_file(
     directory: str | PathLike[str], namespace: str, schema: JsonSchemaValue
 ) -> Path:
-    path = Path(directory) / f"{namespace}.json"
-    path.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
+    path = _schema_path(directory, namespace)
+    path.write_text(_schema_text(schema), encoding="utf-8")
     return path
