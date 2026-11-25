@@ -99,7 +99,7 @@ A `{namespace}` placeholder in the output location writes each namespace to its 
 uv run bonsai-sgen generate mypackage -o "src/{namespace}" --serializer json
 ```
 
-The command runs `dotnet bonsai.sgen`, so `Bonsai.Sgen` must be installed as a local tool of the repository, from the same minor release as `bonsai-sgen`. To run another build of `Bonsai.Sgen`, such as a global install or a local build, set the `BONSAI_SGEN` environment variable to the command line that runs it.
+The command runs `dotnet bonsai.sgen` for every namespace before writing any file, so a failed run leaves the outputs as they were. `Bonsai.Sgen` must be installed as a local tool of the repository, from the same minor release as `bonsai-sgen`. To run another build of `Bonsai.Sgen`, such as a global install or a local build, set the `BONSAI_SGEN` environment variable to the command line that runs it.
 
 ## Command settings
 
@@ -116,6 +116,16 @@ serializer = ["json"]
 The nearest `pyproject.toml` with this table, in the current folder or above, is used. Paths are relative to that file. An argument given on the command line overrides the corresponding setting.
 
 The `generate` command writes the schemas only when a `schemas` location is set, so with this table it writes both the classes and the schemas. The `export` command writes the schemas to the `schemas` location when one is set, and to the output location otherwise.
+
+## Checking generated code
+
+With the `--check` option, the `generate` command writes nothing, and exits with an error if any output would change, is missing, or is stale, listing each one. Line endings are ignored in the comparison, so a continuous integration workflow can check that the committed code matches the models:
+
+```powershell
+uv run bonsai-sgen generate --check
+```
+
+A stale output is a file of generated classes in an output folder, with `{namespace}` matching any folder, whose namespace is no longer generated. Stale outputs are reported but never deleted. Schema files carry no mark of the generator, so a stale schema file is not reported.
 
 ## Local types
 
