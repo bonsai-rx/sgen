@@ -615,5 +615,29 @@ namespace Bonsai.Sgen.Tests
                 $"Nullable primitive properties must omit {nameof(XmlIgnoreAttribute)}.");
             CompilerTestHelper.CompileFromSource(code);
         }
+
+        [TestMethod]
+        public async Task GenerateScalarUnionProperties_EnsureAnyOfResolvesToObject()
+        {
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+    ""properties"": {
+      ""size"": {
+        ""anyOf"": [{ ""type"": ""integer"" }, { ""type"": ""string"" }]
+      },
+      ""label"": {
+        ""anyOf"": [{ ""type"": ""integer"" }, { ""type"": ""string"" }, { ""type"": ""null"" }]
+      }
+    },
+    ""title"": ""Collar"",
+    ""type"": ""object""
+}");
+            var generator = TestHelper.CreateGenerator(schema);
+            var code = generator.GenerateFile();
+            Assert.IsTrue(code.Contains("private object _size"), "Scalar union must resolve to object.");
+            Assert.IsTrue(code.Contains("private object _label"), "Nullable scalar union must resolve to object.");
+            Assert.IsFalse(code.Contains("class Size") || code.Contains("class Label"), "Scalar unions must not generate a class.");
+            CompilerTestHelper.CompileFromSource(code);
+        }
     }
 }
