@@ -29,7 +29,7 @@ include = ["bonsai*"]
 "bonsai.sgen" = ["README.md"]
 
 [dependency-groups]
-dev = ["pyright>=1.1.400", "pytest>=8", "pyyaml>=6", "ruff>=0.11"]
+dev = ["jsonschema>=4.18", "pyright>=1.1.400", "pytest>=8", "pyyaml>=6", "ruff>=0.11"]
 
 [tool.ruff]
 line-length = 100
