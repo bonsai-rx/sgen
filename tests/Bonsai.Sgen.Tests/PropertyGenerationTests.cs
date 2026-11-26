@@ -7,41 +7,69 @@ namespace Bonsai.Sgen.Tests
     [TestClass]
     public class PropertyGenerationTests
     {
-        public class FooTimeSpan
+        static string GetAttributes(string code, string declaration)
         {
-            public TimeSpan Bar { get; set; }
-
-            public TimeSpan? Baz { get; set; }
-        }
-
-        public class FooDateTime
-        {
-            public DateTimeOffset Bar { get; set; }
-
-            public DateTimeOffset? Baz { get; set; }
+            var end = code.IndexOf(declaration);
+            var start = code.LastIndexOf('}', end);
+            return code.Substring(start, end - start);
         }
 
         [TestMethod]
-        public void GenerateTimeSpanProperties_EnsureKnownTypesAndXmlSerialization()
+        public async Task GenerateTimeSpanProperties_SerializeStringProxy()
         {
-            var schema = JsonSchema.FromType<FooTimeSpan>();
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+  ""type"": ""object"",
+  ""title"": ""Dog"",
+  ""properties"": {
+    ""nap"": { ""type"": ""string"", ""format"": ""duration"" },
+    ""walk"": { ""anyOf"": [{ ""type"": ""string"", ""format"": ""duration"" }, { ""type"": ""null"" }] }
+  },
+  ""required"": [""nap""]
+}
+");
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
-            Assert.IsTrue(code.Contains("public string BarXml"));
-            Assert.IsTrue(code.Contains("JsonIgnoreAttribute"), "JsonIgnoreAttribute is missing.");
-            Assert.IsTrue(code.Contains("YamlIgnoreAttribute"), "YamlIgnoreAttribute is missing.");
+            var property = GetAttributes(code, "public System.TimeSpan Nap");
+            var proxy = GetAttributes(code, "public string NapXml");
+            var nullableProperty = GetAttributes(code, "public System.TimeSpan? Walk");
+            var nullableProxy = GetAttributes(code, "public string WalkXml");
+            Assert.IsTrue(property.Contains("JsonIgnoreAttribute"), "Duration must not be written as TimeSpan in JSON.");
+            Assert.IsTrue(property.Contains("YamlIgnoreAttribute"), "Duration must not be written as TimeSpan in YAML.");
+            Assert.IsTrue(proxy.Contains("JsonPropertyAttribute(\"nap\""), "Duration proxy must be written in JSON.");
+            Assert.IsTrue(proxy.Contains("YamlMemberAttribute(Alias=\"nap\")"), "Duration proxy must be written in YAML.");
+            Assert.IsTrue(nullableProperty.Contains("JsonIgnoreAttribute"), "Nullable duration must not be written as TimeSpan in JSON.");
+            Assert.IsTrue(nullableProxy.Contains("JsonPropertyAttribute(\"walk\")"), "Nullable duration proxy must be written in JSON.");
+            Assert.IsTrue(nullableProxy.Contains("YamlMemberAttribute(Alias=\"walk\")"), "Nullable duration proxy must be written in YAML.");
             CompilerTestHelper.CompileFromSource(code);
         }
 
         [TestMethod]
-        public void GenerateDateTimeProperties_EnsureKnownTypesAndXmlSerialization()
+        public async Task GenerateDateTimeProperties_SerializeStringProxyInYaml()
         {
-            var schema = JsonSchema.FromType<FooDateTime>();
+            var schema = await SchemaTestHelper.FromJsonAsync(@"
+{
+  ""type"": ""object"",
+  ""title"": ""Dog"",
+  ""properties"": {
+    ""born"": { ""type"": ""string"", ""format"": ""date-time"" },
+    ""adopted"": { ""anyOf"": [{ ""type"": ""string"", ""format"": ""date-time"" }, { ""type"": ""null"" }] }
+  },
+  ""required"": [""born""]
+}
+");
             var generator = TestHelper.CreateGenerator(schema);
             var code = generator.GenerateFile();
-            Assert.IsTrue(code.Contains("public string BarXml"));
-            Assert.IsTrue(code.Contains("JsonIgnoreAttribute"), "JsonIgnoreAttribute is missing.");
-            Assert.IsTrue(code.Contains("YamlIgnoreAttribute"), "YamlIgnoreAttribute is missing.");
+            var property = GetAttributes(code, "public System.DateTimeOffset Born");
+            var proxy = GetAttributes(code, "public string BornXml");
+            var nullableProperty = GetAttributes(code, "public System.DateTimeOffset? Adopted");
+            var nullableProxy = GetAttributes(code, "public string AdoptedXml");
+            Assert.IsTrue(property.Contains("JsonPropertyAttribute(\"born\""), "Date-time must be written as DateTimeOffset in JSON.");
+            Assert.IsTrue(property.Contains("YamlIgnoreAttribute"), "Date-time must not be written as DateTimeOffset in YAML.");
+            Assert.IsTrue(proxy.Contains("JsonIgnoreAttribute"), "Date-time proxy must not be written in JSON.");
+            Assert.IsTrue(proxy.Contains("YamlMemberAttribute(Alias=\"born\")"), "Date-time proxy must be written in YAML.");
+            Assert.IsTrue(nullableProperty.Contains("JsonPropertyAttribute(\"adopted\")"), "Nullable date-time must be written as DateTimeOffset in JSON.");
+            Assert.IsTrue(nullableProxy.Contains("YamlMemberAttribute(Alias=\"adopted\")"), "Nullable date-time proxy must be written in YAML.");
             CompilerTestHelper.CompileFromSource(code);
         }
 
