@@ -226,6 +226,14 @@ def test_roundtrip_reads_omitted_scalar_defaults(runner: Runner, framework: str,
     assert derived.Visit.model_validate(_load(text, serializer)) == derived.Visit(start=START)
 
 
+def test_roundtrip_reads_dotnet_durations(runner: Runner, framework: str, serializer: str):
+    """A duration in the format written by .NET is read."""
+    document = '{"start": "2026-10-04T12:30:00Z", "duration": "00:01:30"}'
+    text = runner.roundtrip(framework, serializer, get_typename(derived.Visit), document)
+    expected = derived.Visit(start=START, duration=timedelta(seconds=90))
+    assert derived.Visit.model_validate(_load(text, serializer)) == expected
+
+
 def _schema(model: type[BaseModel]) -> dict[str, Any]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", SgenWarning)

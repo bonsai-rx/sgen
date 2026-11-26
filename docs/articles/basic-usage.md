@@ -145,7 +145,7 @@ JSON Schema represents dates and times as strings with the `date` or `date-time`
 
 Both formats generate a [`DateTimeOffset`](https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset) property. JSON and YAML store a `date-time` value in the [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339) form, which requires the offset from UTC stored by `DateTimeOffset`. A `date` value has no offset, but .NET Framework has no type that holds only a date, so the generated property uses `DateTimeOffset` as well. A date stored as a `DateTime` converts implicitly to `DateTimeOffset`.
 
-JSON Schema represents a length of time as a string with the `duration` format, which generates a [`TimeSpan`](https://learn.microsoft.com/en-us/dotnet/api/system.timespan) property. JSON and YAML store a duration in the ISO 8601 form, such as `PT1M30S` for 90 seconds.
+JSON Schema represents a length of time as a string with the `duration` format, which generates a [`TimeSpan`](https://learn.microsoft.com/en-us/dotnet/api/system.timespan) property. JSON and YAML store a duration in the ISO 8601 form, such as `PT1M30S` for 90 seconds. The generated code also reads durations in the `HH:MM:SS` form.
 
 ## Nullable types
 
