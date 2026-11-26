@@ -222,6 +222,9 @@ namespace Bonsai.Sgen
                 type.Members.Add(fieldDeclaration);
                 type.Members.Add(propertyDeclaration);
 
+                const string ParseDuration = @"value.IndexOf('P') >= 0
+                ? System.Xml.XmlConvert.ToTimeSpan(value)
+                : System.TimeSpan.Parse(value, System.Globalization.CultureInfo.InvariantCulture)";
                 var xmlPropertyDeclaration = format switch
                 {
                     "date-time" => new CodeMemberProperty
@@ -254,8 +257,8 @@ namespace Bonsai.Sgen
                             new CodeAssignStatement(
                                 new CodeVariableReferenceExpression(property.FieldName),
                                 new CodeSnippetExpression(property.IsNullable
-                                    ? $"!string.IsNullOrEmpty(value) ? System.Xml.XmlConvert.ToTimeSpan(value) : (System.TimeSpan?)null"
-                                    : "System.Xml.XmlConvert.ToTimeSpan(value)"))
+                                    ? $"!string.IsNullOrEmpty(value) ? ({ParseDuration}) : (System.TimeSpan?)null"
+                                    : ParseDuration))
                         }
                     },
                     _ => null
