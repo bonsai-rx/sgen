@@ -1,16 +1,18 @@
 """Tests that data written by pydantic round-trips through generated C# types."""
 
 import json
+import warnings
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 import yaml
 from conftest import Runner
+from jsonschema import Draft202012Validator
 from models import base, derived, local, owners, plain
 from pydantic import BaseModel
 
-from bonsai.sgen import get_typename
+from bonsai.sgen import TYPENAME_KEY, SgenWarning, export_schema, get_typename
 
 CAT = derived.Cat(name="Tom", lives=3)
 DOG = base.Dog(name="Rex", can_bark=False)
@@ -94,7 +96,7 @@ YAML_ENUM_FAILURE = "YAML writes enum member names on .NET Framework, #115"
 YAML_UNION_FAILURE = "YAML cannot read or write a union defined in another package"
 """Reason for the failure of a union referred to from another namespace in YAML."""
 
-KNOWN_FAILURES: dict[tuple[str, str | None, str | None, str | None], str] = {
+ROUNDTRIP_KNOWN_FAILURES: dict[tuple[str, str | None, str | None, str | None], str] = {
     ("integer-enum", "Yaml", "net472", "test_roundtrip_preserves_value"): YAML_ENUM_FAILURE,
     ("null-enum", "Yaml", "net472", "test_roundtrip_preserves_value"): YAML_ENUM_FAILURE,
     ("string-enum", "Yaml", "net472", None): YAML_ENUM_FAILURE,
@@ -108,6 +110,12 @@ KNOWN_FAILURES: dict[tuple[str, str | None, str | None, str | None], str] = {
     ),
 }
 """Reasons for known failures by case, serializer, framework and test, where None matches any."""
+
+SCHEMA_KNOWN_FAILURES: dict[str, str] = {
+    name: "union tags assigned by the union are not constrained in exported schemas, #185"
+    for name in ("union-tags", "member-derived-from-member", "alias-union")
+}
+"""Reasons for known failures of documents under their exported schema, by case."""
 
 
 def _dump(value: BaseModel, serializer: str) -> str:
@@ -139,10 +147,11 @@ def serializer(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture(params=list(CASES))
-def case(request: pytest.FixtureRequest, serializer: str, framework: str) -> str:
+def roundtrip_case(request: pytest.FixtureRequest, serializer: str, framework: str) -> str:
     """The name of a value in `CASES`, marked if its round trip is known to fail."""
     test = request.node.originalname
-    for (name, known_serializer, known_framework, known_test), reason in KNOWN_FAILURES.items():
+    for key, reason in ROUNDTRIP_KNOWN_FAILURES.items():
+        name, known_serializer, known_framework, known_test = key
         if (
             name == request.param
             and known_serializer in (None, serializer)
@@ -153,18 +162,31 @@ def case(request: pytest.FixtureRequest, serializer: str, framework: str) -> str
     return request.param
 
 
-def test_roundtrip_preserves_value(runner: Runner, framework: str, serializer: str, case: str):
+@pytest.fixture(params=list(CASES))
+def schema_case(request: pytest.FixtureRequest) -> str:
+    """The name of a value in `CASES`, marked if its document is known to fail its schema."""
+    reason = SCHEMA_KNOWN_FAILURES.get(request.param)
+    if reason is not None:
+        request.applymarker(pytest.mark.xfail(reason=reason, strict=True))
+    return request.param
+
+
+def test_roundtrip_preserves_value(
+    runner: Runner, framework: str, serializer: str, roundtrip_case: str
+):
     """Data written by pydantic and rewritten by the generated code validates to the same value."""
-    value = CASES[case]
+    value = CASES[roundtrip_case]
     text = runner.roundtrip(
         framework, serializer, get_typename(type(value)), _dump(value, serializer)
     )
     assert type(value).model_validate(_load(text, serializer)) == value
 
 
-def test_roundtrip_adds_no_members(runner: Runner, framework: str, serializer: str, case: str):
+def test_roundtrip_adds_no_members(
+    runner: Runner, framework: str, serializer: str, roundtrip_case: str
+):
     """The generated code writes no member that pydantic does not write, so extra="forbid" holds."""
-    value = CASES[case]
+    value = CASES[roundtrip_case]
     text = runner.roundtrip(
         framework, serializer, get_typename(type(value)), _dump(value, serializer)
     )
@@ -200,3 +222,20 @@ def test_roundtrip_reads_partial_defaults(runner: Runner, framework: str, serial
     text = runner.roundtrip(framework, serializer, get_typename(derived.Lodge), document)
     expected = derived.Lodge.model_validate_json(document)
     assert derived.Lodge.model_validate(_load(text, serializer)) == expected
+
+
+def _schema(model: type[BaseModel]) -> dict[str, Any]:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SgenWarning)
+        schema = export_schema(model, allow_local_types=True)
+    typename = get_typename(model)
+    key = next(k for k, v in schema["$defs"].items() if v.get(TYPENAME_KEY) == typename)
+    return {"$schema": Draft202012Validator.META_SCHEMA["$id"], **schema, "$ref": f"#/$defs/{key}"}
+
+
+def test_schema_accepts_case(serializer: str, schema_case: str):
+    """A document written by pydantic validates."""
+    value = CASES[schema_case]
+    validator = Draft202012Validator(_schema(type(value)))
+    document = _load(_dump(value, serializer), serializer)
+    assert [error.message for error in validator.iter_errors(document)] == []
