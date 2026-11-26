@@ -1,6 +1,7 @@
 ﻿using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.ComponentModel;
+using System.Globalization;
 using System.Text;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
@@ -86,10 +87,31 @@ namespace Bonsai.Sgen
                 var propertyType = ResolvePropertyType(property);
                 var isPrimitive = PrimitiveTypes.TryGetValue(propertyType, out string? underlyingType);
                 var isNullablePrimitive = IsNullablePrimitive(property);
+                var format = propertySchema?.ActualTypeSchema.Format;
+                var isDuration = format == "duration";
+                var isDateTime = format == "date-time";
                 var fieldDeclaration = new CodeMemberField(
                     isPrimitive ? underlyingType : propertyType,
                     property.FieldName);
-                if (propertySchema?.Default is JContainer defaultContainer)
+                if (isDuration && propertySchema?.Default is string durationDefault)
+                {
+                    defaultConstructor.Statements.Add(new CodeAssignStatement(
+                        new CodeVariableReferenceExpression(property.FieldName),
+                        new CodeMethodInvokeExpression(
+                            new CodeTypeReferenceExpression("System.Xml.XmlConvert"),
+                            nameof(System.Xml.XmlConvert.ToTimeSpan),
+                            new CodePrimitiveExpression(durationDefault))));
+                }
+                else if (isDateTime && propertySchema?.Default is DateTime or DateTimeOffset or string)
+                {
+                    defaultConstructor.Statements.Add(new CodeAssignStatement(
+                        new CodeVariableReferenceExpression(property.FieldName),
+                        new CodeMethodInvokeExpression(
+                            new CodeTypeReferenceExpression("System.DateTimeOffset"),
+                            nameof(DateTimeOffset.Parse),
+                            new CodePrimitiveExpression(FormatDateTime(propertySchema.Default)))));
+                }
+                else if (propertySchema?.Default is JContainer defaultContainer)
                 {
                     var fieldReference = new CodeVariableReferenceExpression(property.FieldName);
                     defaultConstructor.Statements.Add(new CodeAssignStatement(
@@ -200,7 +222,7 @@ namespace Bonsai.Sgen
                 type.Members.Add(fieldDeclaration);
                 type.Members.Add(propertyDeclaration);
 
-                var xmlPropertyDeclaration = propertySchema?.ActualSchema.Format switch
+                var xmlPropertyDeclaration = format switch
                 {
                     "date-time" => new CodeMemberProperty
                     {
@@ -244,9 +266,19 @@ namespace Bonsai.Sgen
                     xmlPropertyDeclaration.Attributes = MemberAttributes.Public | MemberAttributes.Final;
                     xmlPropertyDeclaration.Type = new CodeTypeReference(typeof(string));
                     if (jsonSerializer)
-                        xmlPropertyDeclaration.CustomAttributes.Add(new(new CodeTypeReference(typeof(JsonIgnoreAttribute))));
+                    {
+                        if (isDuration)
+                            SerializeProxy<JsonPropertyAttribute, JsonIgnoreAttribute>(propertyDeclaration, xmlPropertyDeclaration);
+                        else
+                            xmlPropertyDeclaration.CustomAttributes.Add(new(new CodeTypeReference(typeof(JsonIgnoreAttribute))));
+                    }
                     if (yamlSerializer)
-                        xmlPropertyDeclaration.CustomAttributes.Add(new(new CodeTypeReference(typeof(YamlIgnoreAttribute))));
+                    {
+                        if (isDuration || isDateTime)
+                            SerializeProxy<YamlMemberAttribute, YamlIgnoreAttribute>(propertyDeclaration, xmlPropertyDeclaration);
+                        else
+                            xmlPropertyDeclaration.CustomAttributes.Add(new(new CodeTypeReference(typeof(YamlIgnoreAttribute))));
+                    }
                     xmlPropertyDeclaration.CustomAttributes.Add(new(
                         new CodeTypeReference(typeof(BrowsableAttribute)),
                         new CodeAttributeArgument(new CodePrimitiveExpression(false))));
@@ -536,6 +568,30 @@ namespace Bonsai.Sgen
         {
             return Model.Resolver.Resolve(schema, schema.IsNullable(Settings.SchemaType), string.Empty);
         }
+
+        static void SerializeProxy<TAttribute, TIgnoreAttribute>(CodeTypeMember property, CodeTypeMember proxy)
+            where TAttribute : Attribute
+            where TIgnoreAttribute : Attribute
+        {
+            var attributes = property.CustomAttributes;
+            for (int i = 0; i < attributes.Count; i++)
+            {
+                if (attributes[i].AttributeType.BaseType == typeof(TAttribute).FullName)
+                {
+                    proxy.CustomAttributes.Add(attributes[i]);
+                    attributes[i] = new CodeAttributeDeclaration(new CodeTypeReference(typeof(TIgnoreAttribute)));
+                    return;
+                }
+            }
+        }
+
+        static string FormatDateTime(object value) => value switch
+        {
+            DateTime dateTime when dateTime.Kind == DateTimeKind.Local => dateTime.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+            DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
+            _ => (string)value
+        };
 
         static bool IsNullablePrimitive(PropertyModel property)
         {

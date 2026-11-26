@@ -16,6 +16,7 @@ from bonsai.sgen import TYPENAME_KEY, SgenWarning, export_schema, get_typename
 
 CAT = derived.Cat(name="Tom", lives=3)
 DOG = base.Dog(name="Rex", can_bark=False)
+START = datetime(2026, 10, 4, 12, 30, tzinfo=UTC)
 
 CASES: dict[str, BaseModel] = {
     "scalars": derived.Owner(
@@ -52,10 +53,9 @@ CASES: dict[str, BaseModel] = {
         nightbird=derived.Nightbird(derived.Owl(name="Hedwig")),
         flightless=derived.Kiwi(name="Kiri"),
     ),
-    "datetime": derived.Visit(start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC)),
-    "duration": derived.Visit(
-        start=datetime(2026, 10, 4, 12, 30, tzinfo=UTC), duration=timedelta(seconds=90)
-    ),
+    "datetime": derived.Visit(start=START),
+    "nullable-datetime": derived.Visit(start=START, end=datetime(2026, 10, 4, 13, tzinfo=UTC)),
+    "duration": derived.Visit(start=START, duration=timedelta(seconds=90)),
     "alias-union": derived.Home(
         companion=CAT,
         companions=[derived.Hamster(name="Hammy")],
@@ -102,8 +102,6 @@ ROUNDTRIP_KNOWN_FAILURES: dict[tuple[str, str | None, str | None, str | None], s
     ("string-enum", "Yaml", "net472", None): YAML_ENUM_FAILURE,
     ("local-integer-enum", "Yaml", "net472", "test_roundtrip_preserves_value"): YAML_ENUM_FAILURE,
     ("local-string-enum", "Yaml", "net472", None): YAML_ENUM_FAILURE,
-    ("datetime", "Yaml", None, None): "YAML reads date-time only in the round-trip format of .NET",
-    ("duration", None, None, None): "durations are not written in ISO 8601, #85",
     ("union-from-other-namespace", "Yaml", None, None): YAML_UNION_FAILURE,
     ("member-subclass-assigned-tag", None, None, "test_roundtrip_adds_no_members"): (
         "generated code writes the union tag on a property typed as a subclass of a member"
@@ -219,6 +217,13 @@ def test_roundtrip_reads_partial_defaults(runner: Runner, framework: str, serial
     text = runner.roundtrip(framework, serializer, get_typename(derived.Lodge), document)
     expected = derived.Lodge.model_validate_json(document)
     assert derived.Lodge.model_validate(_load(text, serializer)) == expected
+
+
+def test_roundtrip_reads_omitted_scalar_defaults(runner: Runner, framework: str, serializer: str):
+    """Durations and date-times omitted from a document are read as their defaults."""
+    document = '{"start": "2026-10-04T12:30:00Z"}'
+    text = runner.roundtrip(framework, serializer, get_typename(derived.Visit), document)
+    assert derived.Visit.model_validate(_load(text, serializer)) == derived.Visit(start=START)
 
 
 def _schema(model: type[BaseModel]) -> dict[str, Any]:

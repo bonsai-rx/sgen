@@ -75,7 +75,7 @@ namespace PersonAndDog
         }
     
         [System.Xml.Serialization.XmlIgnoreAttribute()]
-        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="dateOfBirth")]
+        [YamlDotNet.Serialization.YamlIgnoreAttribute()]
         public System.DateTimeOffset DateOfBirth
         {
             get
@@ -88,7 +88,7 @@ namespace PersonAndDog
             }
         }
     
-        [YamlDotNet.Serialization.YamlIgnoreAttribute()]
+        [YamlDotNet.Serialization.YamlMemberAttribute(Alias="dateOfBirth")]
         [System.ComponentModel.BrowsableAttribute(false)]
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
         [System.Xml.Serialization.XmlElementAttribute("DateOfBirth")]
