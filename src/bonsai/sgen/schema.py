@@ -450,13 +450,22 @@ class DiscriminatedUnion:
     def __get_pydantic_json_schema__(
         self, core_schema: CoreSchema, handler: GetJsonSchemaHandler
     ) -> JsonSchemaValue:
-        """Declares the tag mapping, which pydantic omits for tags assigned by the union."""
+        """Declares the tag mapping, which pydantic omits for tags assigned by the union.
+
+        Each member is also constrained to its own tag beside its reference.
+        """
         json_schema = handler(core_schema)
         definition = handler.resolve_ref_schema(json_schema)
+        key = self._key or self.property_name
+        tags = list(self._tags or {})
         references = [member["$ref"] for member in definition["oneOf"]]
+        definition["oneOf"] = [
+            {"$ref": reference, "properties": {key: {"const": tag}}, "required": [key]}
+            for tag, reference in zip(tags, references, strict=True)
+        ]
         definition["discriminator"] = {
-            "propertyName": self._key or self.property_name,
-            "mapping": dict(zip(self._tags or {}, references, strict=True)),
+            "propertyName": key,
+            "mapping": dict(zip(tags, references, strict=True)),
         }
         return json_schema
 

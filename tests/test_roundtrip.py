@@ -111,10 +111,7 @@ ROUNDTRIP_KNOWN_FAILURES: dict[tuple[str, str | None, str | None, str | None], s
 }
 """Reasons for known failures by case, serializer, framework and test, where None matches any."""
 
-SCHEMA_KNOWN_FAILURES: dict[str, str] = {
-    name: "union tags assigned by the union are not constrained in exported schemas, #185"
-    for name in ("union-tags", "member-derived-from-member", "alias-union")
-}
+SCHEMA_KNOWN_FAILURES: dict[str, str] = {}
 """Reasons for known failures of documents under their exported schema, by case."""
 
 
