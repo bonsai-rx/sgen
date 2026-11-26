@@ -1248,6 +1248,19 @@ def test_union_tags_mapped():
     }
 
 
+def test_union_tags_constrained_beside_members():
+    """A member of a union assigning tags is constrained to its own tag."""
+    definition = _definitions(derived.Aviary)["Songbird"]
+    assert definition["oneOf"] == [
+        {
+            "$ref": f"#/$defs/{member}",
+            "properties": {"species": {"const": member}},
+            "required": ["species"],
+        }
+        for member in ("Canary", "Finch")
+    ]
+
+
 def test_union_tags_written_and_read():
     """A union writes the tag of a member, and reads a member by its tag."""
     value = derived.Creature(derived.Goldfish(name="Bubbles"))
